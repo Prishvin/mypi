@@ -89,6 +89,18 @@ class KnowledgeTests(unittest.TestCase):
             research(self.root,'Request',folder,refresh=True,base=self.base)
             self.assertEqual(run.call_args.args[3],folder/'pass-1')
 
+    def test_research_frames_development_request_as_data_not_a_plan_command(self):
+        """A plan_store request cannot redefine the separate research phase."""
+        from research_service import research
+        request = 'Build the game and save a granular plan with plan_store.'
+        with patch('research_service.run',return_value=({'passed':False},None)) as run:
+            research(self.root,request,self.base/'fresh-research',base=self.base)
+        prompt = run.call_args.args[2]
+        self.assertTrue(prompt.startswith('RESEARCH PHASE ONLY.'))
+        payload = json.loads(prompt.split('\n\n',1)[1])
+        self.assertEqual(payload['task'], request)
+        self.assertIn('Do not design', prompt.split('\n\n',1)[0])
+
     def test_knowledge_changes_snapshot_scope_and_shadow_without_source_bodies(self):
         before=scan(self.root,['.'])
         publish(self.root,self.draft(),'Request',read_project(self.root),self.base)

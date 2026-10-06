@@ -26,8 +26,8 @@ def run(project, role, request, folder, backend, timeout=300):
                '--phase-output', str(output), '--prompt-file', str(prompt),
                '--context', '65536', '--input-tokens', '24576', '--output-tokens', '4096' if role=='memory' else '8192',
                '--thinking', 'on', '--reasoning', 'low' if role=='memory' else ('xhigh' if backend=='chatgpt' else 'medium')]
-    if role=='memory' and backend=='qwen':
-        command += ['--reasoning-budget','512']
+    if backend=='qwen' and role in ('memory', 'research'):
+        command += ['--reasoning-budget', '512' if role=='memory' else '1024']
     attempt = folder
     if folder.exists():
         attempt = folder/('retry-' + str(len(list(folder.glob('retry-*')))+1))
