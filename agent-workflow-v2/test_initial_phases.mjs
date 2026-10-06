@@ -61,6 +61,32 @@ test('first interactive request has at most two UI questions, then transforms on
   }finally{restore();rmSync(folder,{recursive:true,force:true});}
 });
 
+test('failed initial research exposes its log, keeps chat alive and allows the same request retry',async()=>{
+  for (const bridgeThrows of [false,true]) {
+    const folder=mkdtempSync(join(tmpdir(),'pi-intake-failure-'));
+    const restore=environment({QWEN_WORKFLOW_ROLE:'architect',QWEN_WORKFLOW_PLANNER:'local',
+      QWEN_WORKFLOW_INTERACTIVE:'1',QWEN_WORKFLOW_SESSION:folder,QWEN_WORKFLOW_PROJECT:folder,QWEN_WORKFLOW_TOOLKIT:base});
+    const handlers={},notices=[];let calls=0;
+    const log=join(folder,'research','pi.log');
+    const pi={on:(name,handler)=>{handlers[name]=handler;},exec:async()=>{
+      calls++;
+      if(calls===1 && bridgeThrows)throw new Error('Bridge process could not start');
+      const result=calls===1?{passed:false,stage:'research_failed',error:'Research exited with code 1. Process log: '+log}:
+        {passed:true,refined_prompt:'Validated prompt'};
+      writeFileSync(join(folder,'initial.bridge-result.json'),JSON.stringify(result));return {code:result.passed?0:1};
+    }};
+    const ctx={model:{provider:'local-qwen-workflow'},hasUI:true,ui:{setStatus:()=>{},notify:message=>notices.push(message)}};
+    try {
+      installInitialPrompt(pi,'python');
+      assert.equal((await handlers.input({text:'Original request'},ctx)).action,'handled');
+      assert.ok(notices[0].includes(bridgeThrows?'Bridge process could not start':log));
+      assert.ok(notices[0].includes('same request to retry'));
+      assert.equal((await handlers.input({text:'Original request'},ctx)).action,'transform');
+      assert.equal(calls,2);
+    }finally{restore();rmSync(folder,{recursive:true,force:true});}
+  }
+});
+
 test('intake has only its store; research cannot read implementation or bypass search skills',async()=>{
   const restore=environment({QWEN_WORKFLOW_ROLE:'intake',QWEN_WORKFLOW_PLANNER:'chatgpt'});
   const handlers={};let tools=[];

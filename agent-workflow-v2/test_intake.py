@@ -80,5 +80,17 @@ class IntakeTests(unittest.TestCase):
         self.assertEqual(research.call_args.args[1],'One combined prompt')
         self.assertEqual(result['refined_prompt'],'One combined prompt')
 
+    def test_research_failure_reports_exit_timeout_and_exact_process_log(self):
+        output=Path(self.temp.name)/'plan.json'
+        for exit_code, expected in [(1,'code 1'),(124,'timed out'),(0,'required verified draft')]:
+            failure={'passed':False,'exit_code':exit_code,'log':'/evidence/research/pi.log'}
+            with patch('request_pipeline.research',return_value=failure):
+                result=prepare(self.project,'Original',output,'qwen',300,clarifier='off')
+            self.assertFalse(result['passed'])
+            self.assertEqual(result['stage'],'research_failed')
+            self.assertIn(expected,result['error'])
+            self.assertIn(failure['log'],result['error'])
+            self.assertEqual(__import__('json').loads(output.with_suffix('.pipeline-result.json').read_text())['error'],result['error'])
+
 
 if __name__=='__main__': unittest.main()

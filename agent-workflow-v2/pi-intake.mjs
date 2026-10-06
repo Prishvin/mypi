@@ -30,6 +30,10 @@ export function installInitialPrompt(pi,python) {
           '--project',process.env.QWEN_WORKFLOW_PROJECT,'--request-file',request,'--out',prefix+'.json',
           '--answers-file',answerFile,'--backend',backend],{timeout:660000});
         result=JSON.parse(readFileSync(prefix+'.bridge-result.json','utf8'));
+      }catch(error){
+        ctx.ui.notify('Initial stage failed: '+String(error.message || error)+'. Evidence: '+session+
+          '. The request is paused; submit the same request to retry after fixing the error.','error');
+        return {action:'handled'};
       }finally{clearInterval(timer);ctx.ui.setStatus('initial-phases',undefined);}
       if (result.passed) {
         complete=true;
@@ -39,7 +43,8 @@ export function installInitialPrompt(pi,python) {
         return {action:'transform',text:result.refined_prompt+brief};
       }
       if (result.stage!=='awaiting_clarification') {
-        ctx.ui.notify(result.error || 'Initial stages stopped: '+result.stage+'. Evidence: '+session,'error');
+        ctx.ui.notify((result.error || 'Initial stages stopped: '+result.stage+'. Evidence: '+session)+
+          '. The request is paused; submit the same request to retry after fixing the error.','error');
         return {action:'handled'};
       }
       const question=result.intake.decision.question;

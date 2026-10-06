@@ -26,6 +26,14 @@ def prepare(project, request, output, planner, timeout, clarifier='auto', resear
                           planner if researcher == 'auto' else researcher, min(timeout, 300), refresh)
         state['research'] = result
         if not result['passed']:
-            state.update(passed=False, stage='research_failed')
+            if result.get('timed_out') or result.get('exit_code') == 124:
+                reason = 'Research timed out before saving its verified draft.'
+            elif result.get('exit_code'):
+                reason = f"Research Pi process exited with code {result['exit_code']} before saving its verified draft."
+            else:
+                reason = 'Research did not save its required verified draft.'
+            if result.get('log'):
+                reason += ' Process log: ' + result['log']
+            state.update(passed=False, stage='research_failed', error=reason)
     save(output.with_suffix('.pipeline-result.json'), state)
     return state
