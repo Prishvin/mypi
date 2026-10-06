@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "model": {
+    "repo": "Youssofal/Qwen3.8-27B-MTPLX-Optimized-Quality-FP16",
+    "revision": "9b53320d1e15d40add84584ccf6c5134ef1d332b",
+    "directory": "Qwen3.8-27B-MTPLX-Optimized-Quality-FP16",
+    "total_bytes": 29973199603,
+    "files": [
+      {
+        "rfilename": ".gitattributes",
+        "size": 1570,
+        "blob_id": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+        "lfs": null
+      },
+      {
+        "rfilename": "MTPLX_FP16_CONVERSION_MANIFEST.json",
+        "size": 486926,
+        "blob_id": "fd503554ead6d453579760217c6d234166b18533",
+        "lfs": null
+      },
+      {
+        "rfilename": "README.md",
+        "size": 4698,
+        "blob_id": "ab0eb1209d50145764333821cc7b82529a59364b",
+        "lfs": null
+      },
+      {
+        "rfilename": "chat_template.jinja",
+        "size": 8952,
+        "blob_id": "c0c686f9c38d70d179fb7b5f5aa7530bc913dda3",
+        "lfs": null
+      },
+      {
+        "rfilename": "config.json",
+        "size": 4929,
+        "blob_id": "e944b0f6b9c8c12b54775c2b00d1efa2abbcf067",
+        "lfs": null
+      },
+      {
+        "rfilename": "generation_config.json",
+        "size": 202,
+        "blob_id": "023756cfadf88e5bf69eefeee3e172f38c448d64",
+        "lfs": null
+      },
+      {
+        "rfilename": "model-00001-of-00006.safetensors",
+        "size": 5305469113,
+        "blob_id": "c19415e3bebc373531396cfab959dd3e460cea52",
+        "lfs": {
+          "size": 5305469113,
+          "sha256": "9491f84a467c35baefa3979344bf5b5f6f88b6e3f996ffdecf998ae579b32ceb",
+          "pointer_size": 135
+        }
+      },
+      {
+        "rfilename": "model-00002-of-00006.safetensors",
+        "size": 5354102394,
+        "blob_id": "2dad20fa1c9cc7c98709e6382229d956135f7499",
+        "lfs": {
+          "size": 5354102394,
+          "sha256": "469ecd6059833f765705e6107ff25465749e6029fc1949c02bbdd40b053d961c",
+          "pointer_size": 135
+        }
+      },
+      {
+        "rfilename": "model-00003-of-00006.safetensors",
+        "size": 5337392740,
+        "blob_id": "32bd112025119794cef92bcdd6718f272801352d",
+        "lfs": {
+          "size": 5337392740,
+          "sha256": "6f26eca9788a48024c03c9755c1e2b9de90d38bdfbdf71a762d089f226696b2a",
+          "pointer_size": 135
+        }
+      },
+      {
+        "rfilename": "model-00004-of-00006.safetensors",
+        "size": 5292846872,
+        "blob_id": "741457f70a56f1290a7677c91b503dbcadd220ff",
+        "lfs": {
+          "size": 5292846872,
+          "sha256": "25ecb3a3802a1e942794fd6045d9fa2f74cafa03a4ebc3d504513df725000c38",
+          "pointer_size": 135
+        }
+      },
+      {
+        "rfilename": "model-00005-of-00006.safetensors",
+        "size": 5354102367,
+        "blob_id": "a80d9ea4871869bb59f0e05da670f9bd1d2d710e",
+        "lfs": {
+          "size": 5354102367,
+          "sha256": "788eea30868a2e142aa182b5370c9d299701f04b796756894bbb044d5c9a8893",
+          "pointer_size": 135
+        }
+      },
+      {
+        "rfilename": "model-00006-of-00006.safetensors",
+        "size": 1935805708,
+        "blob_id": "f029454a0a188b210a78dbfc0d8e5b70a6066d57",
+        "lfs": {
+          "size": 1935805708,
+          "sha256": "486e14f0c4c0fbdc10649dcf54861986d6ad5892965bffe3b8bc28ba64c80beb",
+          "pointer_size": 135
+        }
+      },
+      {
+        "rfilename": "model-vision.safetensors",
+        "size": 921497225,
+        "blob_id": "4142c69bfc720e2a12c8a3ee7a77e9ee11c7e4ee",
+        "lfs": {
+          "size": 921497225,
+          "sha256": "964bef26c740bdb6fe464b4c7c48840d4c952ea597c181c41cb131c65ea3c5d5",
+          "pointer_size": 134
+        }
+      },
+      {
+        "rfilename": "model.safetensors.index.json",
+        "size": 206923,
+        "blob_id": "02b632743d9505529c016df31d51b05c9133074b",
+        "lfs": null
+      },
+      {
+        "rfilename": "mtp.safetensors",
+        "size": 451270880,
+        "blob_id": "308728d0a951f33c5c3df6127e2bec3d23f55eda",
+        "lfs": {
+          "size": 451270880,
+          "sha256": "70770d89b61c9e82a58092187d80abcd9f6f6d5e71ec3fddccf1ca9855f6190b",
+          "pointer_size": 134
+        }
+      },
+      {
+        "rfilename": "mtplx_runtime.json",
+        "size": 6476,
+        "blob_id": "6175c47871716a4c417c29d4cfce6cb5669cb7b4",
+        "lfs": null
+      },
+      {
+        "rfilename": "preprocessor_config.json",
+        "size": 390,
+        "blob_id": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64",
+        "lfs": null
+      },
+      {
+        "rfilename": "processor_config.json",
+        "size": 367,
+        "blob_id": "ced889f70f1cb8677dbe31691071ca473302258d",
+        "lfs": null
+      },
+      {
+        "rfilename": "tokenizer.json",
+        "size": 19989325,
+        "blob_id": "5520bfd2dd834ce386c1312c410fa71af56db5ad",
+        "lfs": {
+          "size": 19989325,
+          "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "pointer_size": 133
+        }
+      },
+      {
+        "rfilename": "tokenizer_config.json",
+        "size": 1161,
+        "blob_id": "8d610519919e32dd25f499e61f4bd38d7a0ad9b2",
+        "lfs": null
+      },
+      {
+        "rfilename": "video_preprocessor_config.json",
+        "size": 385,
+        "blob_id": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe",
+        "lfs": null
+      }
+    ]
+  },
+  "runtime": {
+    "mtplx": "2.12.2",
+    "server_sha256": "42e602b9bcc7f2d8fdfd711c97202bcc963bfd92e973ef5d0528a375245dc2b9"
+  },
+  "serving": {
+    "model_id": "mtplx-quality",
+    "context_window": 98304,
+    "max_tokens": 32768,
+    "memory_limit": "48G",
+    "generation_mode": "mtp",
+    "depth": 3,
+    "kv_cache": "off",
+    "reasoning": "on",
+    "reasoning_effort": "medium",
+    "thinking_budget": 4096,
+    "preserve_thinking": "auto",
+    "scheduler_mode": "serial",
+    "fan_mode": "default",
+    "ssd_session_cache": "on",
+    "ssd_session_cache_max_size": "2G"
+  },
+  "guard": {
+    "swap_growth_limit_bytes": 8589934592,
+    "critical_pressure_level": 4,
+    "cooldown_seconds": 60
+  }
+}

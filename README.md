@@ -1,107 +1,389 @@
 # mypi
 
-A portable Pi coding workflow for macOS and Linux, using Qwen on this machine or a separate server. Projects, tools, tests, shadow maps and execution run on the client; model weights stay on the Qwen host.
+A Pi workflow for effective local Qwen development, with optional ChatGPT subscription planning and review. It runs on **Linux and macOS**. The client owns projects, tools, tests and execution; a separate **Apple Silicon Mac** runs Qwen through MTPLX.
 
-The default endpoint is **`http://localhost:8000`**. The tested server is MTPLX Quality, with 96k capacity, MTP3, normal KV and the request-local thinking-cap adapter. Context capacity is a ceiling: workers send only the material selected for their atomic task.
+The default Qwen endpoint is **http://localhost:8000**. Select another machine with **mypi server IP:PORT** or **/server IP:PORT** in chat. The tested model is MTPLX Quality: Qwen 3.8 27B, packed 8-bit weights with FP16 floating tensors, 96k capacity, MTP3 and normal KV.
 
-## Install
+## First run on another Linux machine
 
-Requires Python **3.12+**, Node **22.19+**, Git, ripgrep (`rg`) and `ps` (Linux package `procps`). macOS and Linux use the same installer:
+Install Python **3.12+**, Node **22.19+** with npm, Git, ripgrep and **ps**. On Ubuntu 24.04, the Python/system prerequisites are:
 
-```sh
-git clone git@github.com:Prishvin/mypi.git
+~~~sh
+sudo apt-get update
+sudo apt-get install -y python3.12 python3.12-venv git ripgrep procps
+~~~
+
+Install a supported Node version separately if needed; check its version before running the installer. Other distributions use their own package manager. Then:
+
+~~~sh
+python3 --version
+node --version
+git clone https://github.com/Prishvin/mypi.git
 cd mypi
 ./install.sh
+./mypi server 192.168.1.34:8000
+./mypi chat ~/projects/my-project
+~~~
+
+Use your Qwen Mac's current IP. Both machines must be able to reach that address. HTTPS cloning works without importing the Mac's SSH key. SSH cloning is also available:
+
+~~~sh
+git clone git@github.com:Prishvin/mypi.git
+~~~
+
+Wait for **Installed mypi** before running **./mypi**. Its Python executable lives in **agent-workflow-v2/.venv/bin/python**, which is created locally and excluded from Git. If Python is missing or older, install Python 3.12+ and rerun; select a particular interpreter with:
+
+~~~sh
+MYPI_PYTHON=python3.12 ./install.sh
+~~~
+
+The installer creates a private virtual environment, installs locked Pi dependencies and links **~/.local/bin/mypi**. To use the short command:
+
+~~~sh
 export PATH="$HOME/.local/bin:$PATH"
-```
-
-Set `MYPI_PYTHON=python3.12` when the default `python3` is older. The installer creates a private virtual environment, installs the locked Pi dependency and links `~/.local/bin/mypi`. It does not alter global Pi or Codex configuration.
-
-## Connect and work
-
-```sh
-mypi server                       # show endpoint; default localhost:8000
-mypi server 192.168.1.34:8000      # verify and save another Qwen instance
 mypi status
-mypi chat /absolute/path/to/project
-```
+~~~
 
-In the Pi conversation:
+Put that PATH line in your shell's startup file if desired. Run **git pull**, then **./install.sh** to update. A virtual environment copied from another OS must be rebuilt; the installer detects a broken interpreter. Model weights and subscription credentials are not copied to clients.
 
-```text
-/server                         Show endpoint
-/server 192.168.1.34:8000        Verify and switch the Qwen instance
+## First run on macOS
+
+Install the same client prerequisites, then use the same clone and installer commands. When Qwen is already on this Mac, the default localhost:8000 endpoint is sufficient.
+
+To install the **model host** too, on an Apple Silicon Mac with **64 GiB+ RAM**:
+
+~~~sh
+./setup-qwen.sh
+./mypi qwen start
+./mypi status
+~~~
+
+The host installer requires **Python 3.12** for its pinned environment. It installs MTPLX and its dependencies into **~/.local/share/mypi/qwen/.venv**, downloads the checkpoint sequentially into **~/Models/Qwen3.8-27B-MTPLX-Optimized-Quality-FP16**, verifies hashes and tensor indexes, and checks the thinking-cap adapter without loading weights. The download is approximately **30 GB**. Rerun the script to resume; verified files are reused.
+
+~~~sh
+./setup-qwen.sh --start
+./setup-qwen.sh --verify-only
+./setup-qwen.sh --model-dir /path/to/model
+./setup-qwen.sh --gpu-lock /path/to/shared/local-gpu.lock
+./mypi qwen status
+./mypi qwen stop
+~~~
+
+Use **MYPI_QWEN_ROOT** to select another host state/environment directory. **MYPI_GPU_LOCK** selects a shared image/video GPU lock. Set the same lock as other GPU jobs when integrating with an existing studio.
+
+The recipe pins the model revision **9b53320d1e15d40add84584ccf6c5134ef1d332b**, all dependency versions and the MTPLX server-source hash. Unknown server source fails the adapter check. The installed MTPLX files are not patched.
+
+| Host setting | Value |
+| --- | --- |
+| MTPLX / MLX / mlx-lm | 2.12.2 / 0.32.2 / 0.31.3 |
+| Native API | 127.0.0.1:8000 |
+| Model ID | mtplx-quality |
+| Context capacity / maximum total output | 98,304 / 32,768 tokens |
+| Generation / depth / runtime profile | MTP / 3 / turbo |
+| KV quantization | Off — normal KV |
+| Thinking / default effort / default cap | On / medium / 4,096 tokens |
+| Thinking history | auto |
+| Runtime memory limit | 48G |
+| Scheduler / SSD session cache | Serial / on, 2G |
+| Cooling / memory stop | 60 seconds; critical pressure or >8 GiB new swap |
+
+The guard holds the GPU lock for the whole model lifetime, prevents sleep with caffeinate, and records logs and memory. It does not change macOS power settings or the system GPU limit. Start reuses a matching running instance; stop signals only this installer's verified guard. If another launcher owns the existing model, stop it through that launcher.
+
+Linux runs the client; this exact MLX/Metal model-host recipe runs on macOS.
+
+## Expose Qwen to other machines
+
+After host setup, a single command starts/reuses Qwen and exposes its API on the Mac's LAN address:
+
+~~~sh
+mypi serve --start-qwen --listen 192.168.1.34 --port 8000 --background
+~~~
+
+The native engine keeps its loopback listener; the gateway binds the LAN address at the same port. It forwards streaming completions, models, health, thinking-cap capabilities and native telemetry. It adds same-host process RAM to health. It does not load a second model.
+
+When an existing launcher already serves Qwen:
+
+~~~sh
+mypi serve --listen 192.168.1.34 --port 8000 --background
+mypi serve --qwen-launcher /path/to/existing/pi-local --listen 192.168.1.34 --port 8000 --background
+~~~
+
+Use the current LAN address. If the engine occupies all interfaces, choose a different gateway port, for example **--listen 0.0.0.0 --port 8001**, and connect clients to that port. An incompatible occupied address is rejected. **--upstream** selects an existing native API. Repeating a compatible gateway start reuses it.
+
+Gateway logs are in **~/.local/state/mypi/gateway/server.log**. Foreground mode omits **--background**; Ctrl+C stops the gateway. Optional **MYPI_SERVER_TOKEN** requires bearer authentication on the gateway and supplies it from clients. **MYPI_UPSTREAM_TOKEN** supplies a separate upstream bearer token. Tokens are not stored in Git.
+
+## Use the terminal or web UI
+
+~~~sh
+mypi chat /path/to/project
+# Equivalent shorthand:
+mypi /path/to/project
+mypi web --no-open
+~~~
+
+The web UI opens at **http://localhost:8099**. Use **--port 8120** if another app owns 8099. It supports:
+
+- New/deleted/renamed conversations, each with its own default project folder.
+- Pi or raw Qwen mode, with streamed output and reasoning.
+- Local or ChatGPT planner/reviewer selection.
+- Independent input, total output and thinking controls.
+- Inline clarification questions, plans, progress, stop/resume and measured results.
+- Conversation links that another user can open on the local network.
+
+To expose the **client's UI**, rather than the model API:
+
+~~~sh
+mypi web --listen 0.0.0.0 --allow-address CLIENT_MACHINE_LAN_IP
+~~~
+
+Open **http://CLIENT_MACHINE_LAN_IP:8099** from another device. The allowlist and sharing links refer to the machine hosting this UI, which can differ from the Qwen Mac. Do not confuse UI port **8099** with model API port **8000**.
+
+The terminal starts an architectural conversation and prepares a development project. The web UI additionally classifies ordinary questions and read-only inspection before choosing a development flow. **Raw Qwen** is direct chat: saved history and token/thinking limits apply, but it has no Pi tools, research, planning or source edits.
+
+## Complete Pi workflow
+
+### 1. Bind a workspace and classify intent
+
+A web conversation starts with a separate local classification request, without editing tools. Slash settings commands are handled directly.
+
+| Route | Behavior |
+| --- | --- |
+| Discuss | Answer, explain pasted code or use bounded research skills. |
+| Inspect | Read an explicitly referenced existing folder through scoped tools; no source edits or Git initialization. |
+| Develop | Build/change/fix software through clarification, research, planning and atomic execution. |
+| Clarify | Ask what the user wants when given only code, a folder or ambiguous instructions. |
+
+A pasted implementation or folder path alone does not authorize development. Explicit development targeting an existing folder edits that folder directly. Otherwise the conversation's isolated project is used. Development bootstrap can create a project and Git repository when neither exists. A shadow-project skill creates or refreshes missing interfaces.
+
+Fenced supplied code stays local. A cloud planning request receives refined requirements and prototype locations rather than copied implementation bodies. Initial user requirements and interface descriptions can still contain sensitive information; choose local planning when they must remain on the local machines.
+
+### 2. Clarify and consolidate the request
+
+Routing and development intake share a budget of **at most two clarification answers**. Questions appear in the main chat. The intake model combines the original request and answers into one faithful request, retaining constraints, commands and acceptance cases.
+
+Unanswered clarification pauses. It is not permission to guess or begin edits. Routing and planning state are persisted so the same request can resume.
+
+### 3. Research and publish essential knowledge
+
+A research phase identifies project-specific keywords or unknown formats/APIs. It uses fixed executable skills, searches public sources, follows the first two DuckDuckGo links where reachable, removes page noise and selects question-relevant excerpts.
+
+The model distills those excerpts into a short **knowledge.md** with source URLs. Full fetched pages are archived outside the project context; workers receive only selected briefs/topics. A blocked site or missing source is reported, not treated as verified evidence.
+
+Built-in executable skills:
+
+| Skill | Purpose |
+| --- | --- |
+| duckduckgo-search | Discover documentation and implementation links. |
+| duckduckgo-research | Search, follow the first two links and extract focused content. |
+| wikipedia-search | Find articles and retrieve short introductions with URLs. |
+| public-page-fetch | Fetch an exact public source and return bounded relevant excerpts. |
+| shadow-project | Create/refresh the architecture-linked interface shadow. |
+| text-metrics | Example deterministic multi-step script with typed output. |
+
+Default workflow skills cover granular planning, scoped retrieval, verification/shadow updates and dependency contracts. Skills have fixed input/output contracts, purposes, native scripts and pre/post-processing instructions. Optional electronics/KiCad bundles remain external, selected with **MYPI_DOMAIN_SKILLS**.
+
+### 4. Build an architecture-linked shadow
+
+**architecture.md** records brief decisions, module ownership and dependency direction. It is limited to **80 lines / 8 KiB**. Generated shadow files contain interfaces, signatures, symbols and short descriptions. They live in private session folders, outside source.
+
+The planner measures **all prototypes + generated architecture** with the matching bundled tokenizer:
+
+- At **32,768 tokens or below**, bounded shadow navigation is available.
+- **Above 32,768**, generated architecture is the only project-wide map. The planner reads its pages, selects relevant modules, then supplements with selected shadow files.
+- Each selected read is limited to **five files / 8,192 text tokens**. Architecture page evidence must precede prototype reads or scoped searches.
+- Global catalogs and unscoped searches are rejected in this larger-project mode. Prompts forbid reconstructing the whole shadow by repeated batches.
+
+Source changes invalidate stale navigation evidence. **shadow-budget.json** records counts and tokenizer identity. Selection remains a model judgment; native tools enforce access scope and read limits.
+
+### 5. Create a granular plan and context recipe
+
+The selected planner sees requirements, knowledge, architecture and interfaces. It creates a validated V3 plan; it does not execute source edits.
+
+Each atomic todo specifies:
+
+- A concrete goal, exact editable files, dependencies and small implementation steps.
+- Observable acceptance cases and an exact test strategy, commands and coverage links.
+- Expected change size, assumptions, deadline and failure action **replan**.
+- Required interfaces, named source symbols, static references, test fixtures and knowledge topics.
+- Estimated framework, shadow, source, tests and history tokens, plus at least **25% margin**.
+- Task window, maximum input, maximum total output, reasoning effort and thinking-token cap.
+
+The planner must include tool/schema overhead in the estimate. A short function can still require several thousand framework tokens. **96k capacity is not a 96k prompt**: small tasks can use a 32k worker window, 16k input limit and 8k output limit while the server stays at 96k.
+
+Review the plan and acceptance before choosing **Run plan**, or explicitly run the CLI executor.
+
+### 6. Execute through a deterministic scheduler
+
+The plan executor is Python, not an LLM. It selects dependency-ready todos, records checkpoints and starts one fresh Pi worker for each todo. The worker cannot schedule more todos or widen its contract.
+
+Each worker receives only:
+
+1. Its selected task and budget.
+2. Brief architecture and selected interfaces.
+3. Named implementation spans, primitive declarations and small exact editable files.
+4. Relevant immutable fixtures and selected knowledge.
+5. Bounded failure/resume evidence when applicable.
+
+Scoped **source_query** tools locate symbols and read focused functions, variables or test pages instead of dumping the repository. Small files may be prefetched in full when explicitly selected. Source retrieval stays with the local Qwen worker.
+
+The worker uses native tools to edit and run the declared tests. Test results, scope checks and a fresh shadow gate determine acceptance; a model's claim that work is complete is insufficient.
+
+### 7. Refresh after every edit and completion
+
+The Pi extension refreshes shadow after each source edit and relevant tool/test result. Before accepting completion it checks the current source snapshot, declared file scope, size rules and fresh test evidence. Source functions should be individually testable, with small modules and pure boundaries where practical.
+
+Frozen external fixtures protect acceptance across retries. Known completed behavior is rechecked before later or resumed work. Native guards enforce scope, hashes and size; whether an architecture is well designed or every function is suitably testable also needs reviewer judgment.
+
+### 8. Stop with evidence, or resume interruption
+
+A failed test, unexpected scope change, stale fixture, deadline or budget overflow stops the run with an evidence packet. The packet contains the task, changed files, bounded failure details, measurements and the reason to replan. Failure does not authorize an unbounded repair loop.
+
+Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
+
+Use **resume** for an interruption. Use **replan** for an actual failed contract. A changed source baseline or fixture requires recovery rather than silent acceptance.
+
+### 9. Review the outcome
+
+The independently selected reviewer reads shadow/architecture, accepted task outcomes, test evidence and run results. It proposes useful missing unit/e2e tests and evidenced fixes as a separate granular follow-up plan. It does not execute that plan automatically.
+
+The web UI can adopt a valid follow-up plan for review/execution. Coding success and review success are tracked separately.
+
+## Planner, reviewer, server and memory commands
+
+~~~text
+/server                         Show the Qwen endpoint
+/server 192.168.1.34:8000        Verify and switch the endpoint
 /planner local                  Qwen planning, medium reasoning
 /planner chatgpt                ChatGPT 6.1 Sol, xhigh
-/reviewer local                 Select the final reviewer independently
-/reviewer chatgpt
-/thinkingcap 8192               Default cap; explicit atomic task caps win
-/remember                       Fresh request distills the last answer into knowledge.md
-```
+/reviewer local                 Qwen final review
+/reviewer chatgpt               ChatGPT 6.1 Sol, xhigh
+/thinkingcap 8192               Project default thinking-token cap
+/thinkingcap 0                  Remove the separate thinking cap
+/thinkingcap default            Restore the profile default
+/remember                       Fresh distillation of the last completed answer
+~~~
 
-Endpoint validation checks model identity, actual capacity, thinking-history policy and the thinking-cap adapter before saving. `/server` changes an idle main session, refreshing Pi's actual model connection. A frozen worker cannot switch endpoints. Each paused/running attempt retains its original endpoint; new turns and workers use the new choice.
+Local planning and review are the default. For subscription planning on this client:
 
-Local planning/review is the default. For subscription planning, run `mypi login`, then `/login openai` and choose ChatGPT sign-in. Credentials stay in the ignored private planner configuration; each machine signs in separately.
+~~~sh
+mypi login
+~~~
 
-## Qwen host
+In Pi choose **/login openai** and ChatGPT sign-in. Private OAuth credentials stay in the ignored planner configuration. Each machine signs in separately; Codex credentials/global Pi settings are not modified. Access depends on the account's subscription and model entitlement.
 
-Start the existing guarded Qwen service on the model Mac. Then expose its API with the small gateway; the gateway does not load weights or change model parameters:
+**/remember** runs a fresh request with the current provider to extract essential, source-grounded information from the last completed answer. It saves a bounded note to **knowledge.md** and refreshes shadow. It does not copy the whole answer or raw reasoning as a fallback.
 
-```sh
-# Native model serves 127.0.0.1:8000; bind the gateway to this Mac's LAN IP.
-mypi serve --listen 192.168.1.34 --port 8000 --background
-```
+**/server** validates the served model, real context capacity, history policy and request-local thinking-cap adapter before saving. In an idle terminal session it refreshes Pi's model registry and active connection. Frozen workers cannot change server; saved attempts retain their original endpoint.
 
-To call an existing model launcher first:
+Server preferences are in **~/.config/mypi/server.json**. **MYPI_SERVER_URL** and **MYPI_MODEL** override saved preferences. The bundled tokenizer matches Quality; another model family requires a matching **MYPI_TOKENIZER**.
 
-```sh
-mypi serve --qwen-launcher /absolute/path/to/pi-local \
-  --listen 192.168.1.34 --port 8000 --background
-```
+## Context and thinking controls
 
-The gateway forwards streaming completions, models, health, capabilities and native metrics to the default upstream `http://127.0.0.1:8000`. Native loopback and LAN gateway listeners can use the same port because they bind different addresses. An occupied incompatible address is rejected. Use the Mac's current LAN IP; `--listen 0.0.0.0 --port 8001` is an alternative when the native engine already uses all interfaces. `--upstream` selects another existing upstream. Stopping a client never stops the shared model.
+| Control | Meaning |
+| --- | --- |
+| Server capacity | Physical/configured ceiling; normally 98,304 tokens. |
+| Worker window | A per-task client context selection, without restarting the server. |
+| Maximum input | Admission limit for serialized selected material. |
+| Maximum total output | Reasoning, answer and tool-generation tokens together. |
+| Thinking cap | Separate backend guard threshold inside total output. |
+| Reasoning effort | Low/medium/etc. policy, independent of the thinking cap. |
 
-Gateway logs: `~/.local/state/mypi/gateway/server.log`. Running without `--background` keeps the gateway in the foreground; Ctrl+C stops only that gateway. Optional `MYPI_SERVER_TOKEN` requires a bearer token on the gateway and supplies it on clients. `MYPI_UPSTREAM_TOKEN` is separate when the upstream itself needs authentication. Tokens are never stored in the repository.
+Explicit frozen task caps override project/profile defaults. Positive thinking caps must leave at least **2,048 tokens** for answers/tools; zero means uncapped thinking, not thinking off. Thinking is separately enabled/disabled. A threshold can be slightly exceeded by the model's closing bridge/batched decoding; total output remains bounded.
 
-## Web UI
+Admission uses the matching tokenizer on serialized payload, a **25% margin** and template allowance. It is an estimate, not the server's exact rendered token count. Native usage receipts report the actual count. Pi compaction operates within the input budget, retaining recent material; each atomic worker starts fresh.
 
-```sh
-mypi web
-```
+The active release profiles are **mtplx-quality** and **chatgpt-quality**. Historical comparison templates remain available for separately installed engines; they are not additional bundled model downloads or newly validated remote profiles.
 
-Open **http://localhost:8099**. Choose Pi or raw Qwen, create/delete conversations, attach a project, change planner/reviewer, and use `/server`. Development runs in the client's selected folder. A new conversation creates a separate default project. Clarifications appear in chat; busy/queued status, sharing, stop/resume, plans and final review are retained.
+## CLI planning, execution and recovery
 
-Use `mypi web --port 8100` if another app owns 8099. Optional LAN UI: `mypi web --listen 0.0.0.0 --allow-address YOUR_CLIENT_LAN_IP`. The UI allowlist and conversation sharing refer to the client hosting this UI, which can be a different machine from Qwen.
+~~~sh
+mypi plan /path/to/project "Implement a pure parser with edge-case tests" \
+  --planner qwen --out /path/outside/project/plan.json
 
-## Workflow
+mypi execute /path/to/project /path/outside/project/plan.json \
+  --run-dir /path/outside/project/run --reviewer qwen
 
-The UI first classifies discussion, inspection, ambiguity or development. At most two clarification answers refine one request. Bounded research skills find public sources, follow the first two DuckDuckGo links and distill relevant content into `knowledge.md`. Planning uses interfaces rather than whole implementations.
+mypi run /path/to/project /path/outside/project/plan.json T1
 
-Above **32,768 shadow + architecture tokens**, generated `architecture.md` is the only project-wide map. The planner reads its pages, explains task-relevant selections, then reads up to five shadow files / 8,192 text tokens per read. Native tools require page evidence before prototype reads/scoped searches and reject global catalogs/unscoped searches. Selection still requires model judgment; the tools enforce scope and limits.
+mypi resume /path/to/project /path/outside/project/plan.json \
+  --run-dir /path/outside/project/run
 
-Granular V3 todos declare files, observable acceptance, tests, dependencies, context estimates/margins, input/output/thinking caps and deadlines. A deterministic executor starts one fresh Pi worker per todo, retrieves only selected source/fixtures, verifies edits and refreshes shadow after every edit and completion. Failure stops with an evidence packet for replanning. Accepted tasks are preserved; interrupted work resumes. The final reviewer proposes only evidenced fixes and useful missing tests.
+mypi replan /path/to/project /path/outside/project/run/replan-request.json \
+  --planner qwen --out /path/outside/project/replacement.json
 
-See [run_local.md](run_local.md) for planning, execution and resume commands, and [architecture.md](architecture.md) for the implementation map.
+mypi review /path/to/project /path/outside/project/plan.json \
+  --run-dir /path/outside/project/run --reviewer chatgpt
 
-## Linux container
+mypi skills
+mypi settings /path/to/project --planner local --reviewer chatgpt
+~~~
 
-```sh
+Noninteractive planning can supply **--answers-file**, a JSON array of at most two answers. Unanswered clarification returns a pause. Plans/evidence must be outside the editable project. Keep the original run directory for resume.
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | Requested operation passed. |
+| 2 | Planning awaits clarification. |
+| 20 | Atomic execution stopped and requests replanning. |
+| 21 | Coding finished but final review failed. |
+| 130 | Interrupted execution; checkpoint retained. |
+
+Progress reports are recorded every **30 seconds** during active workers. Metrics include execution time, native input/cache/output/reasoning usage, prompt/decode tokens/s, first-token delay, backend allocation and separately sampled model-process RSS. Token sums over repeated requests are not occupied context. RSS is available through the host gateway; native metrics retain the recent 32 requests, so long-term evidence is collected promptly and missing records remain unavailable.
+
+## Linux container alternative
+
+With Docker installed:
+
+~~~sh
+git clone https://github.com/Prishvin/mypi.git
+cd mypi
 docker build -t mypi .
 docker run --rm -it \
   -e MYPI_SERVER_URL=http://192.168.1.34:8000 \
   -v "$PWD/my-project:/workspace/project" \
   -v mypi-sessions:/opt/mypi/agent-workflow-v2/sessions \
   mypi chat /workspace/project
-```
+~~~
 
-Mount `/root/.config/mypi` to retain server preferences and `/opt/mypi/agent-workflow-v2/planner-config` to retain a container's private subscription login. For durable runs, mount a separate evidence folder and pass it with `--run-dir`.
+For a container UI, run its server in the foreground, publish port 8099, bind to 0.0.0.0 and allow the address used in the browser:
 
-## Verification
+~~~sh
+docker run --rm -p 8099:8099 \
+  --entrypoint /opt/mypi/agent-workflow-v2/.venv/bin/python \
+  -e MYPI_SERVER_URL=http://192.168.1.34:8000 \
+  -v mypi-web:/opt/mypi/pi-web/data \
+  -v mypi-sessions:/opt/mypi/agent-workflow-v2/sessions \
+  mypi /opt/mypi/pi-web/server.py --listen 0.0.0.0 --allow-address CLIENT_MACHINE_LAN_IP --port 8099
+~~~
 
-```sh
-agent-workflow-v2/.venv/bin/python -m unittest discover -s agent-workflow-v2
-agent-workflow-v2/.venv/bin/python -m unittest discover -s pi-web/tests
-npm test
-```
+Mount **/root/.config/mypi** to retain server settings and **/opt/mypi/agent-workflow-v2/planner-config** to retain that container's private subscription login. Mount project, session and run/evidence directories at stable paths for durable resume; **--run-dir** selects the latter. Do not copy another OS's virtual environment into the image.
 
-GitHub Actions runs the same CPU checks on macOS and Linux. [VALIDATION.md](VALIDATION.md) records measured release checks and live proofs; tests do not require a model or ChatGPT login.
+## Troubleshooting and verification
+
+| Symptom | Action |
+| --- | --- |
+| exec .../python: not found | Run ./install.sh in the cloned repository and wait for successful completion. |
+| Python missing/too old | Install Python 3.12+; set MYPI_PYTHON to its command. |
+| Node missing/too old | Install Node 22.19+ and npm; rerun the installer. |
+| Cannot reach Qwen | Check the Mac's current IP, shared network and mypi qwen/status/gateway logs. |
+| Server validation rejects adapter | Use the pinned host setup or install the reviewed adapter on the existing compatible engine. |
+| Port 8099 belongs to another app | Select a free UI port; existing unrelated UI is not replaced. |
+| Raw chat reaches its input limit | Start a new chat or raise its input cap; raw history is not silently dropped. |
+| Source changed after interruption | Review the evidence and replan/recover explicitly. |
+| Qwen stop says another owner | Stop through the launcher that started that model. |
+
+~~~sh
+agent-workflow-v2/.venv/bin/python scripts/check.py
+MYPI_SERVER_URL=http://YOUR_SERVER:8000 \
+  agent-workflow-v2/.venv/bin/python examples/smoke.py /new/evidence/directory
+~~~
+
+CPU checks cover workflow, UI, host artifacts/guards and JavaScript. The live smoke uses genuine Pi tools to repair a small isolated function, run frozen acceptance, refresh shadow and record native usage/speed/RAM. GitHub Actions runs CPU checks on macOS and Ubuntu.
+
+See **[VALIDATION.md](VALIDATION.md)** for measured results, **[run_local.md](run_local.md)** for operational commands, **[architecture.md](architecture.md)** for implementation ownership, and **[qwen-host/recipe.json](qwen-host/recipe.json)** for the complete pinned host recipe.
+
+## Scope and privacy
+
+These rules apply to mypi's private Pi workflow. Global Pi and Codex are unchanged. Qwen receives selected task material over the chosen connection; projects and tests run on the client. ChatGPT planning/review is optional and sends the selected requirements/interfaces/evidence to that provider.
+
+The repository excludes weights, user projects, conversations, private auth, endpoint settings, generated sessions and logs. The text-only tokenizer and its attribution/license are included. Native scripts and tests are trusted local programs; mypi is not an OS sandbox.

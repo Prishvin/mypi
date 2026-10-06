@@ -26,4 +26,5 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: agent-workflow-v2/.venv/bin/python -m unittest discover -s agent-workflow-v2
       - run: agent-workflow-v2/.venv/bin/python -m unittest discover -s pi-web/tests
+      - run: agent-workflow-v2/.venv/bin/python -m unittest discover -s qwen-host
       - run: npm test

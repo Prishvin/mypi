@@ -1,6 +1,12 @@
 # Running mypi
 
-Install with `./install.sh`, then put `~/.local/bin` on PATH. Python 3.12+, Node 22.19+, Git and ripgrep are required on macOS or Linux.
+Install with `./install.sh`, then put `~/.local/bin` on PATH. Python 3.12+, Node 22.19+, Git, ripgrep and ps (Linux procps) are required on macOS or Linux.
+
+## Optional Qwen host setup
+
+On a 64 GiB+ Apple Silicon Mac, run `./setup-qwen.sh` with Python 3.12. It installs the tested isolated engine, downloads/reuses the pinned Quality checkpoint, verifies every hash/index and checks the adapter. `--verify-only` checks existing artifacts; `--start` starts/reuses the guarded model. `mypi qwen start|status|stop` manages only this installer’s host owner.
+
+`mypi serve --start-qwen --listen SERVER_LAN_IP --port 8000 --background` starts/reuses that host and exposes its API. Linux clients only need the client installer and `mypi server SERVER_LAN_IP:8000`. The full algorithm and first-time Linux setup are in [README.md](README.md).
 
 ## Endpoint
 

@@ -7,7 +7,7 @@ import sys
 
 from quality_service import ENDPOINT, ROOT, WORKFLOW, start, status, stop
 
-COMMANDS = {'start', 'stop', 'status', 'web', 'chat', 'plan', 'run', 'execute', 'resume', 'replan', 'research', 'skills','review','settings', 'web-raw', 'server', 'serve', 'login'}
+COMMANDS = {'start', 'stop', 'status', 'web', 'chat', 'plan', 'run', 'execute', 'resume', 'replan', 'research', 'skills','review','settings', 'web-raw', 'server', 'serve', 'login', 'setup-qwen', 'qwen'}
 
 
 def client_command(args, extra):
@@ -36,6 +36,14 @@ def initialize(project):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == 'setup-qwen':
+        return subprocess.call([str(ROOT / 'setup-qwen.sh'), *argv[1:]])
+    if argv and argv[0] == 'qwen':
+        sys.path.insert(0, str(ROOT / 'qwen-host'))
+        import qwen_config
+        python = qwen_config.root() / '.venv/bin/python'
+        return subprocess.call([str(python) if python.is_file() else sys.executable,
+                                str(ROOT / 'qwen-host/service.py'), *argv[1:]])
     if argv and argv[0] in {'web', 'web-raw'}:
         parser = argparse.ArgumentParser(prog='mypi web', description='Start mypi conversations UI on the client machine')
         parser.add_argument('--port', type=int, default=8099); parser.add_argument('--listen', default='127.0.0.1')
@@ -65,6 +73,8 @@ def main(argv=None):
     sub.add_parser('server', help='Show or verify/save a Qwen endpoint (default localhost:8000)')
     sub.add_parser('serve', help='Expose an existing Qwen API to LAN clients; see mypi serve --help')
     sub.add_parser('login', help='Sign this client in for optional ChatGPT subscription planning')
+    sub.add_parser('setup-qwen', help='Mac host only: install pinned MTPLX Quality and verify downloads')
+    sub.add_parser('qwen', help='Mac host only: start, inspect or stop this installer\'s guarded model')
     starting = sub.add_parser('start', help='Verify the configured shared Qwen server')
     starting.add_argument('--timeout', type=int, default=180)
     sub.add_parser('stop', help='Explain model ownership; clients cannot unload shared Qwen')

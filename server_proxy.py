@@ -140,10 +140,13 @@ def main(argv=None):
     parser.add_argument('--upstream', default='http://127.0.0.1:8000')
     parser.add_argument('--listen', default='0.0.0.0'); parser.add_argument('--port', type=int, default=8001)
     parser.add_argument('--background', action='store_true')
+    parser.add_argument('--start-qwen', action='store_true', help='Start/reuse the host installed by setup-qwen.sh first')
     parser.add_argument('--qwen-launcher', type=Path, help='Explicit existing launcher to call with start; optional, server host only')
     args = parser.parse_args(argv)
     if not 1 <= args.port <= 65535:
         parser.error('Port must be 1..65535')
+    if args.start_qwen:
+        subprocess.run([str(FLOW.parent / 'mypi'), 'qwen', 'start'], check=True)
     if args.qwen_launcher:
         subprocess.run([str(args.qwen_launcher.expanduser().resolve()), 'start'], check=True)
     upstream = server_config.normalize(args.upstream)

@@ -9,6 +9,7 @@ The client owns projects and execution; the Qwen server owns inference. No worke
 | `agent-workflow-v2/server_config.py`, `pi-server.mjs` | Validate and persist endpoints; refresh idle Pi model selection; pin worker connections. |
 | `quality_service.py` | Client compatibility layer that checks a server without owning model processes. |
 | `server_proxy.py` | Optional host-side LAN API gateway, streaming preservation and host RSS telemetry. |
+| `qwen-host/`, `setup-qwen.sh` | Optional Mac host: pinned downloads/dependencies, artifact verification, measured 96k/MTP3/normal-KV recipe and owned GPU/memory guard. |
 | `agent-workflow-v2/launch.py`, `runtime.py`, `platform_paths.py` | Private per-role sessions, immutable runtime, platform-neutral executable resolution and token budgets. |
 | `project_map.py`, `shadow.py`, `architecture_map.py`, `shadow_navigation.py` | Current interface shadow, architectural links, measured 32k rule and bounded selected reads. |
 | `planning_service.py`, `plans.py`, `plan_runner.py`, `runner_resume.py` | V3 contracts, deterministic task scheduling, gates, evidence checkpoints and recovery. |
@@ -21,4 +22,4 @@ The internal workflow directory name preserves existing imports and test contrac
 
 Input budgets limit actual requests. A 96k server does not imply a 96k prompt. Planning above 32k combined shadow/map tokens navigates only through generated architecture and task-relevant prototype supplements. Atomic execution gets only its selected todo, evidence and implementation spans.
 
-Model hosting is separate: the gateway forwards an already-running compatible server. MTPLX remains a Mac-side dependency, not a Linux client requirement. The request-local cap adapter is retained as a small independently testable module, without vendoring MTPLX or model weights.
+Model hosting is separate: the gateway forwards a compatible server and can explicitly start the optional host owner first. MTPLX remains a Mac-side dependency, not a Linux client requirement. The request-local cap adapter is retained as a small independently testable module, without vendoring MTPLX or model weights.
