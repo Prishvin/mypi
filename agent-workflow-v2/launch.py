@@ -360,6 +360,13 @@ def run(prepared: dict) -> int:
             and not prepared.get('interactive') and not Path(prepared['plan']).exists()):
         print('Planner did not save structured todos; planning is incomplete')
         return 1
+    if prepared['role'] in ('inspect', 'chat') and not prepared.get('interactive'):
+        from inspection_stop import completion
+        planner_exit, reason = completion(planner_exit, prepared['session'])
+        timing.update(workflow_exit_code=planner_exit, failure_reason=reason)
+        (Path(prepared['session'])/'execution-result.json').write_text(json.dumps(timing, indent=2))
+        if reason:
+            print(reason)
     return planner_exit
 
 
