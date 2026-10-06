@@ -1,0 +1,23 @@
+{
+  "name": "chatgpt-gemma",
+  "model": "gemma",
+  "planner": "chatgpt",
+  "executor": "local",
+  "planner_model": "gpt-6-sol",
+  "context": 98304,
+  "architect": {
+    "input_tokens": 57344,
+    "output_tokens": 32768,
+    "thinking": "on",
+    "reasoning": "medium",
+    "reasoning_budget": null
+  },
+  "code": {
+    "input_tokens": 24576,
+    "output_tokens": 16384,
+    "thinking": "on",
+    "reasoning": "medium",
+    "reasoning_budget": null,
+    "stop_after_pass": true
+  }
+}

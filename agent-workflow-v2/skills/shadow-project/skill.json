@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "shadow-project",
+  "purpose": "Create or refresh an interface-only shadow for the bound project, including architecture links and knowledge, without changing source or requiring Git.",
+  "roles": ["architect", "code"],
+  "side_effects": "session-artifacts",
+  "pre_prompt": "The orchestrator binds the actual project in session launch.json. No model-supplied project path is accepted. Native AST parsing creates prototypes; no project code is executed. Output lives in owned skill artifacts, outside source.",
+  "post_prompt": "Use architecture.md and INDEX.txt to select relevant prototypes. This is a navigation map, not proof of behavior. Parse errors and missing descriptions remain explicit. Never upload the source implementation as a planning substitute.",
+  "input_schema": {"type": "object", "additionalProperties": false, "properties": {}},
+  "binaries": {"python": "python"},
+  "steps": [{"argv": ["{python}", "{skill}/scripts/create.py", "{project}", "{work}/shadow"], "timeout_seconds": 45, "max_output_bytes": 4096}]
+}

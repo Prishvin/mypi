@@ -1,0 +1,10 @@
+{
+  "default_skills": [
+    "web-research",
+    "granular-planning",
+    "scoped-retrieval",
+    "verification-shadow",
+    "dependency-contracts"
+  ],
+  "loading": "Explicit private Pi extension, pinned and active at every session start; no global skill discovery"
+}

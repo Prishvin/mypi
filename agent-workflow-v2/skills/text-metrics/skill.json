@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "name": "text-metrics",
+  "purpose": "Normalize text and report deterministic character, byte, line and word counts in two script steps.",
+  "roles": [
+    "research",
+    "architect",
+    "code",
+    "chat",
+    "inspect"
+  ],
+  "side_effects": "session-artifacts",
+  "pre_prompt": "Supply a short text whose length matters. This function needs no project paths or implementation. The first step normalizes line endings; the second measures the saved normalized text. Do not use word or byte counts as exact model-token counts.",
+  "post_prompt": "Interpret the counts against the requested brevity or file limit. Describe normalization if it affects the result. Counts are measured; usefulness and what to shorten require model judgment. This skill does not tokenize text or edit the project.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "text"
+    ],
+    "properties": {
+      "text": {
+        "type": "string",
+        "maxLength": 8000
+      }
+    }
+  },
+  "binaries": {
+    "python": "python"
+  },
+  "steps": [
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/normalize.py",
+        "{input}",
+        "{work}/normalized.json"
+      ],
+      "timeout_seconds": 5,
+      "max_output_bytes": 1024
+    },
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/measure.py",
+        "{work}/normalized.json"
+      ],
+      "timeout_seconds": 5,
+      "max_output_bytes": 1024
+    }
+  ]
+}

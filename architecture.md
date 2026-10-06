@@ -1,0 +1,24 @@
+# mypi architecture
+
+The client owns projects and execution; the Qwen server owns inference. No worker may start/stop the shared model or change a frozen task's endpoint.
+
+| Component | Responsibility |
+| --- | --- |
+| `mypi`, `install.sh` | Portable entry, symlink resolution, private Python environment and locked Pi dependencies. |
+| `pi_local.py` | Chat/plan/execute/resume/review and server configuration dispatch. |
+| `agent-workflow-v2/server_config.py`, `pi-server.mjs` | Validate and persist endpoints; refresh idle Pi model selection; pin worker connections. |
+| `quality_service.py` | Client compatibility layer that checks a server without owning model processes. |
+| `server_proxy.py` | Optional host-side LAN API gateway, streaming preservation and host RSS telemetry. |
+| `agent-workflow-v2/launch.py`, `runtime.py`, `platform_paths.py` | Private per-role sessions, immutable runtime, platform-neutral executable resolution and token budgets. |
+| `project_map.py`, `shadow.py`, `architecture_map.py`, `shadow_navigation.py` | Current interface shadow, architectural links, measured 32k rule and bounded selected reads. |
+| `planning_service.py`, `plans.py`, `plan_runner.py`, `runner_resume.py` | V3 contracts, deterministic task scheduling, gates, evidence checkpoints and recovery. |
+| `research_*`, `skills/`, `remember.py` | Bounded public research, executable skills and fresh knowledge distillation. |
+| `review_*`, `role_selection.py`, `thinking_caps.py` | Independent review choice and per-project reasoning controls outside source. |
+| `pi-web/` | Client-side persisted conversations, intent routing, inline clarifications, genuine Pi RPC, raw Qwen and sharing. |
+| `remote_metrics.py`, `run_metrics.py`, `runner_process.py` | Native remote timings/token counts plus client-side execution evidence; no remote PID signaling. |
+
+The internal workflow directory name preserves existing imports and test contracts. Public commands and UI are named mypi. Mutable sessions, logs, user projects and authentication are ignored by Git.
+
+Input budgets limit actual requests. A 96k server does not imply a 96k prompt. Planning above 32k combined shadow/map tokens navigates only through generated architecture and task-relevant prototype supplements. Atomic execution gets only its selected todo, evidence and implementation spans.
+
+Model hosting is separate: the gateway forwards an already-running compatible server. MTPLX remains a Mac-side dependency, not a Linux client requirement. The request-local cap adapter is retained as a small independently testable module, without vendoring MTPLX or model weights.

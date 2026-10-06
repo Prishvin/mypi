@@ -1,0 +1,23 @@
+{
+  "name": "chatgpt-baseline",
+  "model": "27b",
+  "planner": "chatgpt",
+  "executor": "chatgpt",
+  "planner_model": "gpt-6-sol",
+  "context": 98304,
+  "architect": {
+    "input_tokens": 57344,
+    "output_tokens": 32768,
+    "thinking": "on",
+    "reasoning": "xhigh",
+    "reasoning_budget": null
+  },
+  "code": {
+    "thinking": "on",
+    "reasoning": "medium",
+    "stop_after_pass": false,
+    "input_tokens": 24576,
+    "output_tokens": 16384,
+    "reasoning_budget": null
+  }
+}

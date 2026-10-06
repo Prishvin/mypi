@@ -1,0 +1,100 @@
+"""Create plans with subscription ChatGPT or local Qwen, using one shared contract."""
+import copy
+import json
+from pathlib import Path
+from project_map import scan
+import tasks
+from runner_process import BASE, invoke, read, save
+
+
+def create(project, request, output, planner='chatgpt', timeout=600, handoff=None, *,
+           clarifier='auto', researcher='auto', answers=None, interactive=False, refresh=False):
+    """Generate a new external plan; planning never invokes the todo executor."""
+    project, output = project.resolve(), output.resolve()
+    if output.exists() or output.is_relative_to(project):
+        raise ValueError('Choose a new plan path outside the project')
+    if planner not in ('chatgpt', 'qwen'):
+        raise ValueError('Planner must be chatgpt or qwen')
+    lineage = None
+    if handoff:
+        packet = json.loads(handoff.read_text())
+        if Path(packet['project']).resolve() != project or packet['current_snapshot'] != scan(project, ['.'])['snapshot']:
+            raise ValueError('Replanning evidence belongs to another project or is stale')
+        from replan_brief import distill
+        request += '\n\nREPLANNING EVIDENCE (no implementation bodies):\n' + json.dumps(distill(packet), ensure_ascii=False)
+        request += '\nRECOVERY OVERRIDES THE INITIAL TODO REQUEST: plan remaining work only. COPY the original acceptance objects (id/given/when/then) and test argv EXACTLY, without rewording or renumbering. Keep file scope. Change implementation steps, estimates, budgets or deadlines as evidence requires. Never repeat accepted todos. Remove already-completed todo IDs from depends_on; their behavior remains protected by separate lineage regression tests. Dependencies on remaining todos must refer to preceding todos in this replacement plan.'
+        lineage = packet
+    output.parent.mkdir(parents=True, exist_ok=True)
+    pipeline = None
+    if not handoff:
+        from request_pipeline import prepare
+        pipeline = prepare(project, request, output, planner, timeout, clarifier, researcher,
+                           answers, interactive, refresh)
+        if not pipeline['passed']:
+            return pipeline
+        request = pipeline['refined_prompt']
+    request_path = output.with_suffix('.request.txt')
+    request_path.write_text(request)
+    command = [str(BASE / 'qwen-agent'), '--profile', 'chatgpt-quality' if planner == 'chatgpt' else 'mtplx-quality',
+        '--project', str(project), '--role', 'architect', '--batch', '--json', '--quiet',
+        '--plan', str(output), '--prompt-file', str(request_path)]
+    result = invoke(command, output.with_suffix('.planning'), timeout)
+    from run_metrics import collect
+    result['metrics'] = collect(result, output.with_suffix('.planning'))
+    result.update(planner=planner, plan=str(output))
+    if pipeline:
+        result['pipeline'] = pipeline
+    if result['exit_code'] == 0 and output.exists():
+        from plan_runner import validate
+        plan = json.loads(output.read_text())
+        try:
+            validate(project, plan)
+            if lineage:
+                attach_lineage(plan, lineage)
+                plan['replan_validation'] = {'passed': True}
+                save(output, plan)
+            result['passed'] = True
+        except ValueError as error:
+            plan['replan_validation'] = {'passed': False, 'reason': str(error)}
+            save(output, plan)
+            result.update(passed=False, validation_error=str(error))
+    else:
+        result['passed'] = False
+    save(output.with_suffix('.planning-result.json'), result)
+    return result
+
+
+def attach_lineage(plan, packet):
+    """Reject scope expansion or weakened acceptance when repairing a failed plan."""
+    remaining = packet['remaining']
+    for path, digest in packet.get('acceptance_fixtures', {}).items():
+        if tasks.hash_file(Path(path)) != digest:
+            raise ValueError('An immutable fixture changed since planning')
+    allowed_files = {p for t in remaining for p in t['files']}
+    proposed_files = {p for t in plan['tasks'] for p in t['files']}
+    if not proposed_files <= allowed_files:
+        raise ValueError('Replan expands file scope; requires an explicitly revised user request')
+    old_cases = {json.dumps(case, sort_keys=True) for t in remaining for case in t['acceptance']}
+    new_cases = {json.dumps(case, sort_keys=True) for t in plan['tasks'] for case in t['acceptance']}
+    old_tests = {tuple(argv) for t in remaining for argv in t['tests']}
+    new_tests = {tuple(argv) for t in plan['tasks'] for argv in t['tests']}
+    if not old_cases <= new_cases or not old_tests <= new_tests:
+        raise ValueError('Replan dropped frozen acceptance or test commands')
+    # Re-check immutable fixtures against the failed local baseline before executing.
+    if packet.get('session'):
+        frozen = read(Path(packet['session']) / 'task-state.json')
+        for path, digest in frozen.get('readonly_tests', {}).items():
+            if tasks.hash_file(Path(path)) != digest:
+                raise ValueError('An immutable fixture changed since failure')
+        # An unfinished identical atomic contract keeps its original source baseline.
+        # Failed oversized functions must not become grandfathered legacy code.
+        original=frozen.get('task',{})
+        for todo in plan['tasks']:
+            if (set(todo['files'])==set(original.get('files',[]))
+                and {tuple(argv) for argv in todo['tests']}=={tuple(argv) for argv in original.get('tests',[])}
+                and {json.dumps(case,sort_keys=True) for case in todo['acceptance']}==
+                    {json.dumps(case,sort_keys=True) for case in original.get('acceptance',[])}):
+                todo['baseline']=str(Path(packet['session'])/'task-state.json')
+    plan['replan_lineage'] = {'parent_plan': packet['plan'], 'reason': packet['reason'],
+                            'completed': copy.deepcopy(packet['completed']),
+                            'snapshot': packet['current_snapshot']}

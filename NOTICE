@@ -1,0 +1,12 @@
+mypi includes tokenizer.json from:
+Youssofal/Qwen3.8-27B-MTPLX-Optimized-Quality-FP16
+https://huggingface.co/Youssofal/Qwen3.8-27B-MTPLX-Optimized-Quality-FP16
+
+Its upstream model card declares Apache-2.0. This text-only tokenizer is used
+for request and shadow sizing; no model weights are redistributed.
+See agent-workflow-v2/tokenizer-manifest.json for its SHA-256.
+
+Pi and its dependencies are installed from npm under their respective licenses,
+and are not vendored. Optional user domain-skill bundles are not redistributed.
+
+The Apache-2.0 license text is included in licenses/APACHE-2.0.txt.

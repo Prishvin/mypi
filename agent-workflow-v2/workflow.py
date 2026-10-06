@@ -1,0 +1,137 @@
+"""CLI shared by Pi, OpenCode and human operators."""
+import argparse
+import json
+from pathlib import Path
+from project_map import scan, write_map, select_context, render_catalog
+import tasks
+import retrieval
+import shadow
+import plans
+
+
+def arguments():
+    """Define the bounded navigation and validation CLI contract."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root', type=Path, default=Path.cwd())
+    parser.add_argument('--prefix', action='append', default=[])
+    parser.add_argument('--briefs', type=Path)
+    sub = parser.add_subparsers(dest='command', required=True)
+    mapping = sub.add_parser('map')
+    mapping.add_argument('--output', type=Path, required=True)
+    catalogue = sub.add_parser('catalog')
+    catalogue.add_argument('--offset', type=int, default=0)
+    catalogue.add_argument('--limit', type=int, default=80)
+    architecture = sub.add_parser('architecture')
+    architecture.add_argument('--offset', type=int, default=0)
+    architecture.add_argument('--limit', type=int, default=20)
+    architecture.add_argument('--paths', nargs='*')
+    locating = sub.add_parser('locate')
+    locating.add_argument('query')
+    locating.add_argument('--paths', nargs='+')
+    context = sub.add_parser('context')
+    context.add_argument('paths', nargs='+')
+    context.add_argument('--max-bytes', type=int, default=24000)
+    context.add_argument('--symbol', default='')
+    refreshing = sub.add_parser('refresh')
+    refreshing.add_argument('--output', type=Path, required=True)
+    planning = sub.add_parser('save-plan')
+    planning.add_argument('--input', type=Path, required=True)
+    planning.add_argument('--output', type=Path, required=True)
+    start = sub.add_parser('begin')
+    start.add_argument('--task', type=Path, required=True)
+    start.add_argument('--state', type=Path, required=True)
+    for name in ['test', 'check']:
+        command = sub.add_parser(name)
+        command.add_argument('--state', type=Path, required=True)
+    reading = sub.add_parser('read-symbol')
+    reading.add_argument('path')
+    reading.add_argument('name')
+    reading.add_argument('--offset', type=int, default=0)
+    batch = sub.add_parser('read-symbols')
+    batch.add_argument('path')
+    batch.add_argument('names', nargs='+')
+    fixture = sub.add_parser('read-fixture')
+    fixture.add_argument('path')
+    fixture.add_argument('--offset', type=int, default=0)
+    variables = sub.add_parser('variables')
+    variables.add_argument('path')
+    variables.add_argument('--query', default='')
+    searching = sub.add_parser('search')
+    searching.add_argument('paths', nargs='+')
+    searching.add_argument('--pattern', required=True)
+    searching.add_argument('--regex', action='store_true')
+    return parser.parse_args()
+
+
+def main() -> int:
+    """Dispatch explicit map, context and task validation operations."""
+    args = arguments()
+    if args.briefs:
+        import os
+        os.environ['QWEN_WORKFLOW_BRIEFS'] = str(args.briefs.resolve())
+    root = args.root.resolve()
+    prefixes = args.prefix or ['.']
+    import shadow_navigation
+    navigation = shadow_navigation.planning_context(args, root, prefixes)
+    mapped = navigation[0] if navigation else None
+    if args.command == 'save-plan':
+        result = plans.save(root, prefixes, json.loads(args.input.read_text()), args.output.resolve())
+    elif args.command == 'refresh':
+        result = shadow.refresh(root, prefixes, args.output.resolve())
+    elif args.command == 'map':
+        result = write_map(scan(root, prefixes), args.output.resolve())
+    elif args.command == 'architecture':
+        from architecture_map import render
+        limit = max(1, min(args.limit, 10 if navigation and navigation[1]['architecture_only_navigation'] else 20))
+        text = render(mapped or scan(root, prefixes), args.paths, max(0, args.offset), limit)
+        if navigation:
+            shadow_navigation.record_architecture(navigation, args.paths, max(0, args.offset), limit)
+            print(shadow_navigation.instructions(navigation[1]))
+        print(text, end='')
+        return 0
+    elif args.command == 'catalog':
+        data = mapped or scan(root, prefixes)
+        total = len(data['files'])
+        data['files'] = data['files'][args.offset:args.offset + min(args.limit, 80)]
+        print(f'FILES {total}; page offset={args.offset}; next={args.offset + len(data["files"])}')
+        print(render_catalog(data), end='')
+        return 0
+    elif args.command == 'locate':
+        records = (mapped or scan(root, prefixes))['files']
+        if args.paths:
+            records = [f for f in records if f['path'] in set(args.paths)]
+        matches = [{'path': f['path'], **s} for f in records
+                   for s in f['symbols'] if args.query.casefold() in s['name'].casefold()
+                   or args.query.casefold() in f['path'].casefold()]
+        result = {'matches': matches[:20], 'total': len(matches), 'truncated': len(matches) > 20}
+    elif args.command == 'context':
+        text = select_context(mapped or scan(root, prefixes), args.paths, args.max_bytes, args.symbol)
+        if navigation:
+            shadow_navigation.check_selected(navigation[1], text)
+        print(text, end='')
+        return 0
+    elif args.command == 'begin':
+        tasks.begin(root, prefixes, json.loads(args.task.read_text()), args.state.resolve())
+        result = {'started': str(args.state), 'scope_frozen': True}
+    elif args.command == 'read-symbol':
+        result = retrieval.read_symbol(root, args.path, args.name, args.offset)
+    elif args.command == 'read-fixture':
+        result = retrieval.read_fixture(root, args.path, args.offset)
+    elif args.command == 'read-symbols':
+        result = retrieval.read_symbols(root, args.path, args.names)
+    elif args.command == 'variables':
+        result = retrieval.variables(root, args.path, args.query)
+    elif args.command == 'search':
+        result = retrieval.search(root, args.paths, args.pattern, args.regex)
+    elif args.command == 'test':
+        result = tasks.run_tests(args.state.resolve())
+    else:
+        result = tasks.check(args.state.resolve())
+    print(json.dumps(result, indent=2))
+    if args.command == 'test':
+        return int(any(row['exit_code'] for row in result['results']))
+    return int(result.get('passed') is False or bool(result.get('parse_errors')))
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

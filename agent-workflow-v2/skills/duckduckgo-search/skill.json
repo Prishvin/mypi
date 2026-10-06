@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "name": "duckduckgo-search",
+  "purpose": "Discover public documentation and implementation source links through DuckDuckGo.",
+  "roles": [
+    "research",
+    "architect",
+    "code",
+    "chat",
+    "inspect"
+  ],
+  "side_effects": "session-artifacts",
+  "pre_prompt": "Turn the unfamiliar term and its domain into one precise public query. Prefer official specifications or the author's implementation. Never put project source, credentials or private task details in the query. Search results are discovery links; fetch the underlying source before making factual claims.",
+  "post_prompt": "Select a small number of authoritative result URLs and fetch the actual pages. Distinguish an official specification from a community report. DuckDuckGo failures are reported honestly; this skill does not silently use another engine. Do not cite a search result as proof of its contents.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "query"
+    ],
+    "properties": {
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 400
+      },
+      "limit": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 6
+      }
+    }
+  },
+  "binaries": {
+    "python": "python"
+  },
+  "steps": [
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/search.py",
+        "{input}"
+      ],
+      "timeout_seconds": 20,
+      "max_output_bytes": 8192
+    }
+  ]
+}

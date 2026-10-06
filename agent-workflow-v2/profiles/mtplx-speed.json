@@ -1,0 +1,23 @@
+{
+  "name": "mtplx-speed",
+  "model": "speed",
+  "planner": "local",
+  "executor": "local",
+  "planner_model": null,
+  "context": 98304,
+  "architect": {
+    "input_tokens": 57344,
+    "output_tokens": 32768,
+    "thinking": "on",
+    "reasoning": "medium",
+    "reasoning_budget": 4096
+  },
+  "code": {
+    "input_tokens": 24576,
+    "output_tokens": 16384,
+    "thinking": "on",
+    "reasoning": "medium",
+    "reasoning_budget": 4096,
+    "stop_after_pass": true
+  }
+}

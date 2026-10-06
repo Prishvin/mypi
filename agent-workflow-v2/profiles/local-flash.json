@@ -1,0 +1,23 @@
+{
+  "name": "local-flash",
+  "model": "flash",
+  "planner": "local",
+  "executor": "local",
+  "planner_model": null,
+  "context": 98304,
+  "architect": {
+    "input_tokens": 57344,
+    "output_tokens": 32768,
+    "thinking": "on",
+    "reasoning": "medium",
+    "reasoning_budget": 4096
+  },
+  "code": {
+    "thinking": "on",
+    "reasoning": "medium",
+    "stop_after_pass": true,
+    "input_tokens": 24576,
+    "output_tokens": 16384,
+    "reasoning_budget": 4096
+  }
+}

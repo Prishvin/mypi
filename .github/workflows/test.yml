@@ -1,0 +1,29 @@
+name: macOS and Linux
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      MYPI_SERVER_URL: http://127.0.0.1:9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ripgrep procps
+      - if: runner.os == 'macOS'
+        run: brew install ripgrep
+      - run: python -m venv agent-workflow-v2/.venv
+      - run: agent-workflow-v2/.venv/bin/python -m pip install -r requirements.txt
+      - run: npm ci --ignore-scripts
+      - run: agent-workflow-v2/.venv/bin/python -m unittest discover -s agent-workflow-v2
+      - run: agent-workflow-v2/.venv/bin/python -m unittest discover -s pi-web/tests
+      - run: npm test

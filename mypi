@@ -1,0 +1,11 @@
+#!/bin/sh
+mypi_script=$0
+while [ -L "$mypi_script" ]; do
+  mypi_link=$(readlink "$mypi_script")
+  case "$mypi_link" in
+    /*) mypi_script=$mypi_link ;;
+    *) mypi_script=$(dirname -- "$mypi_script")/$mypi_link ;;
+  esac
+done
+mypi_root=$(CDPATH= cd -- "$(dirname -- "$mypi_script")" && pwd)
+exec "$mypi_root/agent-workflow-v2/.venv/bin/python" "$mypi_root/pi_local.py" "$@"

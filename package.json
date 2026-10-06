@@ -1,0 +1,17 @@
+{
+  "name": "mypi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Portable shadow-first Pi client for remote Qwen",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.0.0",
+    "@earendil-works/pi-ai": "1.0.0"
+  },
+  "scripts": {
+    "test": "node --test agent-workflow-v2/test_*.mjs pi-web/tests/test_*.mjs"
+  }
+}
