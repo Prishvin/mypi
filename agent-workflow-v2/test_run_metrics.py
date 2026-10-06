@@ -5,6 +5,32 @@ from unittest.mock import patch
 from run_metrics import collect,transport_for_session
 
 class MetricsTests(unittest.TestCase):
+    def test_cancelled_native_generation_is_counted_separately_from_provider_usage(self):
+        """An interrupted buffered tool payload must not disappear from performance evidence."""
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);session=root/'unique-session';session.mkdir()
+            folder=root/'attempt';folder.mkdir()
+            (session/'provider-timing.jsonl').write_text(json.dumps({'type':'request_end',
+                'usage':{'input':100,'output':20,'reasoning':5}})+'\n')
+            native=[{'request_id':'unique-session-1','completion_tokens':20},
+                    {'request_id':'unique-session-2','completion_tokens':500,
+                     'request_cancelled':True,'cancellation_reason':'client_disconnect'}]
+            with patch('run_metrics.BASE',root/'flow'),patch('remote_metrics.native_for',return_value=native):
+                result=collect({'session':str(session)},folder)
+            self.assertEqual(result['requests'],1)
+            self.assertEqual(result['output_tokens_sum'],20)
+            self.assertEqual(result['native_request_count'],2)
+            self.assertEqual(result['native_completion_tokens_sum'],520)
+            self.assertEqual(result['native_cancelled_requests'],1)
+            self.assertTrue(result['native_requests'][1]['request_cancelled'])
+            self.assertEqual(result['native_requests'][1]['cancellation_reason'],'client_disconnect')
+            self.assertFalse(result['server_rss_available'])
+            (folder/'memory.jsonl').write_text(json.dumps({'server_rss_bytes':1234})+'\n')
+            with patch('run_metrics.BASE',root/'flow'),patch('remote_metrics.native_for',return_value=native):
+                result=collect({'session':str(session)},folder)
+            self.assertTrue(result['server_rss_available'])
+            self.assertEqual(result['server_rss_peak_sampled_bytes'],1234)
+
     def test_generic_early_session_uses_only_its_attempt_time_range(self):
         events=[{'timestamp':10000},{'timestamp':20000}]
         transport=[{'request_id':'session-10000','phase':'usage'},

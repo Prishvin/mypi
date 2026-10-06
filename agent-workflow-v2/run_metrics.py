@@ -53,14 +53,19 @@ def collect(result, folder):
         'request_seconds': sum(r.get('wall_seconds', 0) for r in provider),
         'verifier_invocations':len(verifications),
         'failed_verifier_invocations':sum(r.get('exit_code',0)!=0 for r in verifications),
+        'native_request_count':len(native),
+        'native_completion_tokens_sum':sum(r.get('completion_tokens') or 0 for r in native),
+        'native_cancelled_requests':sum(bool(r.get('request_cancelled') or r.get('stream_cancelled_by_client')) for r in native),
         'native_requests': [{k: r.get(k) for k in ('request_id', 'prompt_tokens', 'cached_tokens',
             'completion_tokens', 'prefill_tok_s', 'decode_tok_s', 'ttft_s', 'request_elapsed_s',
             'active_memory_bytes', 'peak_memory_bytes','new_prefill_tokens','prompt_eval_time_s','decode_elapsed_s',
             'request_effective_mtp_depth','request_enable_thinking','resolved_reasoning_effort','thinking_guard',
-            'thermal_pressure','thermal_pressure_max','effective_temperature','effective_top_p','effective_top_k')} for r in native],
+            'thermal_pressure','thermal_pressure_max','effective_temperature','effective_top_p','effective_top_k',
+            'request_cancelled','stream_cancelled_by_client','cancellation_reason','cancellation_elapsed_s')} for r in native],
         'server_rss_peak_sampled_bytes': max((r.get('server_rss_bytes') or 0 for r in memory), default=0),
+        'server_rss_available':any((r.get('server_rss_bytes') or 0)>0 for r in memory),
         'admission_estimate': read(session / 'request-budget-result.json'),
-        'note': 'Input sum includes repeated requests; it is not maximum occupied context. Native peak is backend high-water allocation; RSS is sampled separately.'}
+        'note': 'Provider usage counts completed requests; native completion totals also include cancelled generation. Input sums repeat context, not maximum occupancy. Native peak is shared-backend high-water allocation. RSS is sampled separately; zero with server_rss_available=false means unavailable.'}
     if not provider:
         gateway=BASE.parent/'reports/overnight-quake-20261006/gateway'
         events=rows(folder / 'pi.log')
