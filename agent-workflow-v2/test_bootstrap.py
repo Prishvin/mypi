@@ -6,6 +6,16 @@ from unittest.mock import patch
 import bootstrap
 
 class Bootstrap(unittest.TestCase):
+    def test_initialization_accepts_existing_large_architecture_without_editing_it(self):
+        with tempfile.TemporaryDirectory() as folder,patch.object(bootstrap,'BASE',Path(folder)/'workflow'):
+            root=Path(folder)/'project';root.mkdir()
+            doc=root/'architecture.md'
+            original=('Existing architecture and module responsibilities.\n'*400).encode()
+            doc.write_bytes(original)
+            state=bootstrap.initialize(root)
+            self.assertTrue(state['shadow_snapshot'])
+            self.assertEqual(doc.read_bytes(),original)
+
     def test_initialize_without_git_or_plan_is_repeatable(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(bootstrap,'BASE',Path(folder)/'workflow'):
             root=Path(folder)/'project';root.mkdir();source=root/'math.py'

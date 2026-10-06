@@ -184,7 +184,7 @@ Default workflow skills cover granular planning, scoped retrieval, verification/
 
 ### 4. Build an architecture-linked shadow
 
-**architecture.md** records brief decisions, module ownership and dependency direction. It is limited to **80 lines / 8 KiB**. Generated shadow files contain interfaces, signatures, symbols and short descriptions. They live in private session folders, outside source.
+**architecture.md** records decisions, module ownership and dependency direction. Existing content is accepted as written, with no line-count or file-size limit. Model request budgets still apply to retrieved context. Generated shadow files contain interfaces, signatures, symbols and short descriptions. They live in private session folders, outside source.
 
 The planner measures **all prototypes + generated architecture** with the matching bundled tokenizer:
 

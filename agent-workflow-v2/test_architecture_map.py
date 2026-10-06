@@ -67,12 +67,21 @@ class ArchitectureTests(unittest.TestCase):
         self.assertFalse(validate_change(before, after, ['logic.py'])['passed'])
         self.assertTrue(validate_change(before, after, ['logic.py', 'architecture.md'])['passed'])
 
-    def test_oversized_decisions_and_symlinks_are_rejected(self):
+    def test_large_existing_architecture_is_preserved_and_snapshot_tracks_changes(self):
         doc = self.root / 'architecture.md'
-        doc.write_text('x\n' * 81)
-        with self.assertRaisesRegex(ValueError, '80 lines'):
-            scan(self.root, ['.'])
-        doc.unlink()
+        text = 'Module ownership and dependency decisions.\n' * 400
+        doc.write_text(text)
+        before = scan(self.root, ['.'])
+        self.assertEqual(before['architecture']['text'], text)
+        write_map(before, self.output)
+        self.assertIn(text.rstrip(), (self.output / 'architecture.md').read_text())
+        self.assertEqual(doc.read_text(), text)
+        self.assertEqual(shadow.verify({'shadow': str(self.output)}, before), [])
+        doc.write_text(text + 'New responsibility.\n')
+        self.assertNotEqual(before['snapshot'], scan(self.root, ['.'])['snapshot'])
+
+    def test_architecture_symlinks_are_rejected(self):
+        doc = self.root / 'architecture.md'
         doc.symlink_to(self.root / 'logic.py')
         with self.assertRaisesRegex(ValueError, 'regular project file'):
             scan(self.root, ['.'])

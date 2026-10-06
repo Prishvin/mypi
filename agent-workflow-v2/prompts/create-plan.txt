@@ -11,8 +11,9 @@ from the measured shadow-size policy: if shadow plus architecture exceeds 32768
 tokens, architecture.md is the only project-wide map. Select a few relevant
 shadow modules from it and read their prototypes, at most 5 files / 8192 text
 tokens per read. Explain selection; never load the entire shadow in batches.
-Plan a project architecture.md update when decisions or ownership change; keep it
-within 80 lines and 8 KiB. Narrow edits should select named symbols with
+Accept existing architecture.md as written, without a line count or file-size
+limit. Plan an update only when decisions or ownership change; do not rewrite it
+just to shorten it. Narrow edits should select named symbols with
 context.selected_symbols_only=true and relevant fixture_test_patterns.
 Use web_research only when documentation resolves a real question.
 Do not request implementation bodies, upload a whole project, or invent missing

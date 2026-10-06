@@ -5,7 +5,7 @@ from urllib.parse import quote
 
 
 def decisions(root: Path) -> dict:
-    """Read a bounded project decision brief without importing implementation."""
+    """Read existing project decisions as written without importing implementation."""
     path = root / 'architecture.md'
     if not path.exists():
         return {}
@@ -13,8 +13,6 @@ def decisions(root: Path) -> dict:
         raise ValueError('architecture.md must be a regular project file')
     raw = path.read_bytes()
     text = raw.decode('utf-8')
-    if len(raw) > 8192 or len(text.splitlines()) > 80:
-        raise ValueError('Keep architecture.md to 80 lines and 8 KiB; move detail to separate docs')
     return {'path': 'architecture.md', 'sha256': hashlib.sha256(raw).hexdigest(), 'text': text}
 
 

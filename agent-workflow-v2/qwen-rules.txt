@@ -8,8 +8,9 @@ uses it can discard the event instead of stopping repeated motion.
 
 These rules apply only to this explicitly launched Pi workflow, including its
 explicit ChatGPT comparison executor. They do not change Codex settings.
-Project architecture.md is a brief decision and ownership document, <=80 lines
-and 8 KiB. Include it in scope when architectural decisions change. Its generated
+Accept existing project architecture.md as written, regardless of line count or
+file size; do not shorten it merely to satisfy a size target. Include it in scope
+when architectural decisions change. Its generated
 shadow counterpart maps current prototypes and refreshes automatically.
 On explicit resume, preserve current partial edits and accepted todos. Use the
 supplied progress brief and fresh context; never replay the entire conversation.

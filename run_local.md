@@ -46,7 +46,7 @@ mypi run /path/to/project /path/outside/project/plan.json T1
 
 At most two clarification answers are shared by request routing and intake. Unanswered questions pause rather than guessing. Noninteractive planning can supply `--answers-file`, a JSON array of up to two answers. Research uses `knowledge.md` and selected briefs, not whole fetched pages.
 
-Generated shadow is outside source. Project `architecture.md` stays brief (80 lines / 8 KiB), and generated architecture links it to current module prototypes. Above 32768 combined prototype/map tokens, architecture-only navigation and selected prototype supplements are enforced. Session `shadow-budget.json` records counts and tokenizer hash. Architecture-page evidence is invalidated by source changes.
+Generated shadow is outside source. Existing project `architecture.md` is accepted as written without a line-count or file-size limit, and generated architecture links it to current module prototypes. Model request budgets still apply to retrieved context. Above 32768 combined prototype/map tokens, architecture-only navigation and selected prototype supplements are enforced. Session `shadow-budget.json` records counts and tokenizer hash. Architecture-page evidence is invalidated by source changes.
 
 Each V3 task has concrete steps, exact allowed files, observable acceptance, test argv, coverage links, dependencies, changed-line estimates and `on_failure=replan`. Its context recipe selects interfaces, functions, fixtures and knowledge topics; estimates plus at least 25% margin fit the input budget. Input, total output and thinking are separate caps. The verified model has 98304 capacity; 96k is not padded into each request. Keep at least 2048 output tokens beyond a positive thinking cap.
 
