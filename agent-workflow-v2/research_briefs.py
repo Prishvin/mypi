@@ -46,12 +46,18 @@ def distill(folder: Path, goal: str, findings: list[dict], decision: str, uncert
         raise ValueError('Keep at most 8 concise uncertainties')
     verified = []
     quote_words = {}
-    for row in findings:
+    for index, row in enumerate(findings, 1):
         source = load_source(folder,row['artifact_id'])
         quote = row.get('evidence','')
         normalize = lambda x: ' '.join(x.casefold().split())
-        if not quote or len(quote)>400 or normalize(quote) not in normalize(source['text']):
-            raise ValueError('Each evidence excerpt must occur in the fetched source and be <=400 characters')
+        if not quote or len(quote)>400:
+            raise ValueError(f'Finding {index}: evidence must contain 1-400 characters')
+        if normalize(quote) not in normalize(source['text']):
+            raise ValueError(f'Finding {index}, artifact {row["artifact_id"]}: evidence must occur as a contiguous '
+                'match in the fetched source. Copy 3-8 adjacent words exactly from the returned excerpt '
+                '(without wrapper quotation marks, ellipses, inserted punctuation or joined fragments). '
+                'Paraphrase only the claim; omit unsupported claims. Use web_research excerpt with this '
+                'artifact_id to retrieve narrower evidence if needed.')
         url = source['url']
         quote_words[url] = quote_words.get(url,0)+len(quote.split())
         if quote_words[url]>25:

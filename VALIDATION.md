@@ -79,3 +79,7 @@ New coverage includes nested/duplicate/Unicode/Setext headings, fenced code, sou
 The read-only upserver size proof used 110 source files and 3060 locally indexed function/class names. Its architecture was 37820 tokens; the compact Markdown map was 11375 (69.9% smaller). The complete JSON registry stays local and is searched in bounded pages. This is a real-project size example, not a guarantee that index overhead is smaller than a tiny architecture document. Section associations use literal filenames/directories and unique symbol mentions; they do not prove architectural meaning.
 
 Skills and hooks apply only to private mypi sessions. Existing sessions retain their pinned runtime; start a new session after upgrading to use this implementation.
+
+### Research recovery observed in the game pilot
+
+The first local-Qwen game research attempt stopped at its 300-second limit after two noncontiguous evidence quotations were correctly rejected. Errors now identify the offending finding/artifact and explain how to copy a short exact phrase without punctuation edits or joined fragments. Research instructions distinguish exact evidence from paraphrased claims and documentation from implementation pointers. Two new regression tests retain strict rejection and prove actionable diagnostics; 23 focused checks and the full **306-check macOS suite** passed after the change. The original 304-check Linux run predates this diagnostic improvement.

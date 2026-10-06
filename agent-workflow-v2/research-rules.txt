@@ -25,6 +25,11 @@ Save using knowledge_store: 0-4 topics, each with keyword, why, 1-3 findings
 (artifact_id, short paraphrased claim, exact short evidence, confidence), and
 optional implementation_artifacts containing fetched file artifact IDs.
 Evidence quotes must total at most 25 words per source across the entire draft.
+For evidence, copy a contiguous 3-8 word phrase exactly from the fetched excerpt:
+no wrapper quote marks, no ellipses, no joined fragments or changed punctuation.
+Paraphrase in claim only. A short quote must still support the claim: do not add
+unsupported browser behavior, and do not list a documentation page as an exact
+implementation artifact. On rejection, correct the identified finding or omit it.
 Keep claims <=300 characters. Use skipped_reason when no new research is needed.
 Do not invent facts, sources or artifact IDs. Unsupported details stay uncertain.
 Do not edit implementation, plan coding todos, or run project commands.

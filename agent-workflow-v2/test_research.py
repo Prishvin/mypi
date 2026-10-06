@@ -74,6 +74,33 @@ class ResearchTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             read_brief(Path(__file__).with_name('planner-config')/'auth.json')
 
+    def test_noncontiguous_quote_names_finding_and_offers_exact_copy_recovery(self):
+        """An actionable rejection never accepts stitched or quoted paraphrases."""
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            row = save_source(root, {'url':'https://example.com/docs',
+                'text':'The event is dispatched to the document. Wait for a new click.',
+                'source_type':'web-page'})
+            valid = {'artifact_id':row['artifact_id'], 'claim':'Observe the event.',
+                     'evidence':'event is dispatched', 'confidence':'high'}
+            for quote in ('event; Wait for a new click', '"event is dispatched"',
+                          'event is dispatched ... new click'):
+                with self.assertRaisesRegex(ValueError, 'Finding 2, artifact '+row['artifact_id']):
+                    distill(root, 'Events', [valid, {**valid, 'evidence':quote}], '', [])
+            result = distill(root, 'Events', [valid, {**valid, 'evidence':'Wait for a new click.'}], '', [])
+            self.assertEqual(len(result['brief']['findings']), 2)
+
+    def test_quote_character_limit_is_distinct_from_missing_match(self):
+        """Empty and oversized quotes get a precise length error before lookup."""
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            row = save_source(root, {'url':'https://example.com/docs', 'text':'x'*500,
+                                    'source_type':'web-page'})
+            for quote in ('', 'x'*401):
+                with self.assertRaisesRegex(ValueError, 'Finding 1: evidence must contain 1-400'):
+                    distill(root, 'Events', [{'artifact_id':row['artifact_id'], 'claim':'Fact',
+                        'evidence':quote, 'confidence':'high'}], '', [])
+
     def test_private_brief_handoff_is_hash_bound(self):
         """A real saved brief is reusable by tasks; later text edits invalidate it."""
         sessions=Path(__file__).resolve().parent/'sessions'
