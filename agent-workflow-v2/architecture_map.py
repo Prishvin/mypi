@@ -7,6 +7,8 @@ from urllib.parse import quote
 def decisions(root: Path) -> dict:
     """Read existing project decisions as written without importing implementation."""
     path = root / 'architecture.md'
+    if path.is_symlink():
+        raise ValueError('architecture.md must be a regular project file')
     if not path.exists():
         return {}
     if path.is_symlink() or not path.is_file():
@@ -46,3 +48,11 @@ def render(data: dict, paths=None, offset=0, limit=None) -> str:
     if data.get('knowledge'):
         lines += ['', '[Brief researched facts and source URLs](knowledge.md)']
     return '\n'.join(lines) + '\n'
+
+
+def navigation(data, paths=None, offset=0, limit=10, section_offset=0):
+    """Return compact decision headings and a bounded module page."""
+    import architecture_sections
+    index = architecture_sections.render(architecture_sections.build(data), section_offset, 10)
+    without_prose = {**data, 'architecture': {}}
+    return index + '\n' + render(without_prose, paths, offset, limit)

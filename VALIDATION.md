@@ -61,3 +61,21 @@ The host installer was run in a fresh private Python 3.12 environment. All pinne
 All 21 existing pinned checkpoint files, 29,973,199,603 bytes total, passed their full byte checksums. The tensor index resolved 2,180 tensors and the MTP sidecar was present. Existing weights were reused rather than redownloaded. A separate pinned Hugging Face download of generation_config.json passed its Git-blob checksum. Fixture tests cover sequential resume, corrupt/partial-file repair, index/sidecar failures and path boundaries.
 
 `mypi qwen start` and `mypi serve --start-qwen` reused the existing compatible model and LAN gateway. Its PID and 96k/MTP3/normal-KV settings stayed unchanged. The new guard’s pressure/swap thresholds and refusal to stop another launcher are tested; a second cold full-model launch was not performed while the current instance remained in use.
+
+## Architecture maintenance and navigation — 2026-10-07
+
+CPU verification ran against this implementation on macOS Apple Silicon and a rebuilt Linux ARM64 Docker image. No model inference was needed for these checks.
+
+| Check | macOS | Linux ARM64 |
+| --- | ---: | ---: |
+| Workflow Python | 217 passed | 217 passed |
+| Web Python | 21 passed | 21 passed |
+| Host artifacts/guards | 11 passed | 11 passed |
+| JavaScript | 55 passed | 55 passed |
+| Total | **304 passed** | **304 passed** |
+
+New coverage includes nested/duplicate/Unicode/Setext headings, fenced code, source line shifts, literal file/symbol associations, ambiguous names, compact search beyond displayed representative names, bounded long-line reads, stale document/section hashes, selective todo packets, preservation of authored prose and CRLF, atomic compare-and-swap insertions, two simultaneous native writers, failed refresh recovery, scope/root/role restrictions, change types, missing-map bootstrap, no-op maintenance, stale artifact detection, native rebuild verification, required decision receipts and the real fixed skill pipelines. Hook checks cover successful/partial failed edits, automatic tests, mutation mutexes, explicit rebuild and owned research publication. The web rebuild test verifies no classifier, model startup or inference call.
+
+The read-only upserver size proof used 110 source files and 3060 locally indexed function/class names. Its architecture was 37820 tokens; the compact Markdown map was 11375 (69.9% smaller). The complete JSON registry stays local and is searched in bounded pages. This is a real-project size example, not a guarantee that index overhead is smaller than a tiny architecture document. Section associations use literal filenames/directories and unique symbol mentions; they do not prove architectural meaning.
+
+Skills and hooks apply only to private mypi sessions. Existing sessions retain their pinned runtime; start a new session after upgrading to use this implementation.

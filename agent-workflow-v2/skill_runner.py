@@ -22,6 +22,8 @@ def prepare(session, name, role, base=BASE):
 def run(session, name, inputs, role, base=BASE):
     """Run an already-prepared project-independent pipeline with literal JSON input."""
     skill = load(name, base)
+    if role not in skill['roles']:
+        raise ValueError('This skill is unavailable in the selected workflow role')
     prepared = session / 'skill-prepared' / (name + '.json')
     if not prepared.exists() or json.loads(prepared.read_text()) != {'sha256': skill['sha256'], 'role': role}:
         raise ValueError('Prepare this exact skill version before running it')
@@ -31,7 +33,7 @@ def run(session, name, inputs, role, base=BASE):
     folder = session / 'skill-runs' / (name + '-' + uuid.uuid4().hex[:8]); folder.mkdir(parents=True)
     request = folder / 'input.json'; request.write_text(json.dumps(inputs))
     values = binaries(skill) | {'skill': skill['path'], 'input': str(request), 'work': str(folder),
-                                'research': str(session / 'research'), 'runtime': str(base)}
+                                'research': str(session / 'research'), 'runtime': str(base), 'session': str(session.resolve())}
     if any('{project}' in value for step in skill['steps'] for value in step['argv']):
         binding=json.loads((session/'launch.json').read_text())
         project=Path(binding['project']).resolve()
@@ -76,7 +78,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--session', type=Path, required=True)
     parser.add_argument('--request', type=Path, required=True)
-    parser.add_argument('--role', choices=['research', 'architect', 'code', 'chat', 'inspect'], required=True)
+    parser.add_argument('--role', choices=['research', 'architect', 'code', 'chat', 'inspect', 'reviewer'], required=True)
     args = parser.parse_args()
     try:
         print(json.dumps(dispatch(args.session, json.loads(args.request.read_text()), args.role)))

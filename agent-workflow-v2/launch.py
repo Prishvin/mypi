@@ -121,7 +121,7 @@ def prepare(args) -> dict:
         task = {**task, 'context': {**task.get('context', {}),
                 'max_input_tokens': effective['input_tokens'],
                 'max_output_tokens': effective['output_tokens']}}
-        tasks.begin(root, prefixes, task, state, shadow_path)
+        task = tasks.begin(root, prefixes, task, state, shadow_path)['task']
         if args.plan:
             plans.start_attempt(args.plan.resolve(), args.todo, state)
     else:
@@ -325,6 +325,9 @@ def run(prepared: dict) -> int:
     try:
         process = progress.run(prepared['command'], prepared['cwd'], env, prepared)
     finally:
+        if prepared['state']:
+            import architecture_sync
+            architecture_sync.sync(Path(prepared['state']))
         shadow.refresh(Path(prepared['project']), prepared['prefixes'], Path(prepared['shadow']))
     timing = {'started_epoch': prepared.get('started_epoch'), 'ended_epoch': time.time(),
               'process_exit_code': process.returncode}

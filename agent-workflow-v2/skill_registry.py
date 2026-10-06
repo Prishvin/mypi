@@ -35,9 +35,11 @@ def load(name, base=BASE):
     for key, maximum in [('purpose', 300), ('pre_prompt', 4000), ('post_prompt', 4000)]:
         if not isinstance(data.get(key), str) or not 1 <= len(data[key]) <= maximum:
             raise ValueError('Missing or oversized skill ' + key)
-    if not set(data.get('roles', [])) <= {'research', 'architect', 'code', 'chat', 'inspect'} or not data.get('roles'):
+    if not set(data.get('roles', [])) <= {'research', 'architect', 'code', 'chat', 'inspect', 'reviewer'} or not data.get('roles'):
         raise ValueError('A skill must declare its allowed workflow roles')
-    if data.get('side_effects') != 'session-artifacts':
+    scoped = name in {'architecture-update', 'architecture-maintenance'} and data.get('side_effects') == 'scoped-architecture' and data['roles'] == ['code']
+    bound = name == 'architecture-sync-check' and data.get('side_effects') == 'bound-navigation'
+    if data.get('side_effects') != 'session-artifacts' and not scoped and not bound:
         raise ValueError('Skills must declare generated files as owned session artifacts')
     Draft202012Validator.check_schema(data['input_schema'])
     binaries = data.get('binaries', {})

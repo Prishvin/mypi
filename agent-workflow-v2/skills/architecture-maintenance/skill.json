@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "architecture-maintenance",
+  "purpose": "Automatically classify each code change and update owned architecture metadata, shadow and compact map in Python, building missing maps and skipping fresh artifacts.",
+  "roles": [
+    "code"
+  ],
+  "side_effects": "scoped-architecture",
+  "pre_prompt": "Automatic native hook; no LLM call is needed. Session launch and frozen task bind the source root, architecture.md permission and shadow destination.",
+  "post_prompt": "Inspect reported change types and current snapshot. A stale/failed refresh blocks acceptance. Mechanical records do not replace authored decisions. Run frozen tests after code changes.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "binaries": {
+    "python": "python"
+  },
+  "steps": [
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/maintain.py",
+        "{session}"
+      ],
+      "timeout_seconds": 45,
+      "max_output_bytes": 8192
+    }
+  ]
+}

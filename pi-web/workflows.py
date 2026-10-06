@@ -31,6 +31,8 @@ def turn(job,text,develop=False):
 
 def conversation_turn(job,text,develop=False):
     row=job.store.get(job.ident);base=job.store.folder/job.ident
+    if text.strip() == '/rebuild':
+        return rebuild_navigation(job)
     if text.split(maxsplit=1)[0] == '/server':
         values=text.split(maxsplit=1)
         if len(values)==2:
@@ -51,7 +53,7 @@ def conversation_turn(job,text,develop=False):
     if command=='/remember' and text.strip()=='/remember':
         latest=next((m['text'] for m in reversed(row['messages']) if m['role']=='assistant' and m.get('mode')=='pi' and m.get('text') and m.get('stop') not in ('error','aborted')),None)
         if latest:text='/remember '+latest
-    controls={'/remember','/planner','/reviewer','/thinkingcap','/resume-planning'}
+    controls={'/remember','/planner','/reviewer','/thinkingcap','/resume-planning','/rebuild'}
     if command not in controls:
         routed=request_entry.resolve(job,text,resume=command=='/resume-request')
         if routed is None:return
@@ -150,3 +152,22 @@ def replan(job):
     code=command(job,[str(ROOT/'mypi'),'replan',row['project'],str(evidence),'--out',str(output),'--planner',row['settings']['planner']],output.parent/'replan.log')
     if code or not output.exists():raise ValueError('Replanning did not produce an accepted plan; inspect the log')
     job.store.update(job.ident,plan=str(output),run_dir=None);job.note('Replacement plan ready')
+
+
+def rebuild_navigation(job):
+    """Execute the user-requested native rebuild skill without a model or classifier."""
+    from skill_runner import prepare, run
+    row = job.store.get(job.ident)
+    if row['settings']['mode'] != 'pi':
+        raise ValueError('Choose Pi to rebuild project navigation')
+    session = job.store.folder/job.ident/'navigation-rebuild'/str(time.time_ns())
+    session.mkdir(parents=True, exist_ok=True)
+    output = Path(row.get('shadow_project') or session/'shadow')
+    binding = {'project':row['project'], 'prefixes':['.'], 'shadow':str(output), 'role':'inspect', 'state':None}
+    (session/'launch.json').write_text(json.dumps(binding))
+    prepare(session, 'architecture-sync-check', 'inspect', FLOW)
+    result = run(session, 'architecture-sync-check', {'action':'rebuild'}, 'inspect', FLOW)
+    job.store.update(job.ident, shadow_project=str(output), shadow_skill=result)
+    job.store.message(job.ident, 'notice', 'Architecture interface metadata, shadow and compact map rebuilt. Current evidence verified; no model request was used.')
+    job.note('Ready')
+    return result

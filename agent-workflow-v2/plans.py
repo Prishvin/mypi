@@ -10,6 +10,14 @@ from research_briefs import read_brief
 def validate_context(root: Path, task: dict) -> None:
     """Require a small retrieval recipe and explicit input/output reserves per todo."""
     context = task.get('context', {})
+    if 'architecture_update_required' in context and type(context['architecture_update_required']) is not bool:
+        raise ValueError('architecture_update_required must be boolean')
+    if context.get('architecture_update_required') and 'architecture.md' not in task['files']:
+        raise ValueError('A required architecture update must declare architecture.md in task files')
+    sections = context.get('architecture_sections', [])
+    if sections:
+        import architecture_sections
+        architecture_sections.references(scan(root, ['.']), sections)
     interfaces = context.get('interfaces', [])
     symbols = context.get('symbols', [])
     references = context.get('reference_files', [])
@@ -95,7 +103,10 @@ def save(root: Path, prefixes: list[str], plan: dict, output: Path) -> dict:
     if plan.get('plan_version', 1) not in [1, 2, 3]:
         raise ValueError('Unsupported plan version')
     known = set()
-    for task in plan['tasks']:
+    for index, task in enumerate(plan['tasks']):
+        from architecture_sync import scoped
+        task = scoped(task)
+        plan['tasks'][index] = task
         identifier = task.get('id')
         if not isinstance(identifier, str) or not identifier or identifier in known:
             raise ValueError('Todo ids must be unique nonempty strings')

@@ -30,9 +30,12 @@ function scopeArgs(root) {
   return ['--root', root, ...prefixes.flatMap(prefix => ['--prefix', prefix])];
 }
 
-export function commandFor(action, paths, query, state, offset = 0) {
+export function commandFor(action, paths, query, state, offset = 0, sectionOffset = 0, sha256 = '') {
+  if (action === 'sync-check' && process.env.QWEN_WORKFLOW_SHADOW) return ['architecture-status', '--shadow', process.env.QWEN_WORKFLOW_SHADOW, ...(process.env.QWEN_WORKFLOW_STATE ? ['--state', process.env.QWEN_WORKFLOW_STATE] : [])];
   if (action === 'catalog') return ['catalog', '--offset', String(offset)];
-  if (action === 'architecture') return ['architecture', '--offset', String(offset), ...(paths?.length ? ['--paths', ...paths] : [])];
+  if (action === 'architecture') return ['architecture', '--offset', String(offset), '--section-offset', String(sectionOffset), ...(paths?.length ? ['--paths', ...paths] : [])];
+  if (action === 'architecture-section' && query && sha256) return ['architecture-section', query, '--sha256', sha256, '--offset', String(offset)];
+  if (action === 'architecture-search' && query) return ['architecture-search', query, '--offset', String(offset)];
   if (action === 'locate' && query) return ['locate', query, ...(paths?.length ? ['--paths', ...paths] : [])];
   if (action === 'inspect' && paths?.length) return ['context', ...paths, '--max-bytes', '24000', ...(query ? ['--symbol', query] : [])];
   if (action === 'gate' && state) return ['check', '--state', state];
@@ -47,6 +50,21 @@ export default function (pi) {
   (process.env.QWEN_WORKFLOW_COMPACTION_FIX === '1' ? installFixedCompactionHooks : installCompactionHooks)(pi, python, cli);
   installTimingHooks(pi);
   registerMap(pi);
+  pi.registerCommand('rebuild', {description:'Rebuild this session architecture/shadow/map after an explicit user request',
+    handler:async (_args,ctx)=>{
+      if (!active(ctx.model)) throw new Error('Rebuild belongs only to mypi');
+      const session=process.env.QWEN_WORKFLOW_SESSION;
+      const request=join(session,'architecture-rebuild-request.json');
+      const runner=join(process.env.QWEN_WORKFLOW_RUNTIME || home,'skill_runner.py');
+      const role=process.env.QWEN_WORKFLOW_ROLE;
+      const argv=[runner,'--session',session,'--role',role,'--request',request];
+      writeFileSync(request,JSON.stringify({action:'prepare',name:'architecture-sync-check'}));
+      const prepared=await pi.exec(python,argv,{timeout:10000});
+      if(prepared.code)throw new Error(prepared.stdout+prepared.stderr);
+      writeFileSync(request,JSON.stringify({action:'run',name:'architecture-sync-check',inputs:{action:'rebuild'}}));
+      const result=await pi.exec(python,argv,{timeout:50000});
+      ctx.ui.notify(result.code ? 'Rebuild failed: '+result.stdout+result.stderr : 'Architecture, shadow and map rebuilt; current evidence verified.',result.code?'error':'info');
+    }});
   registerSource(pi);
   registerTests(pi);
   registerPlan(pi);
@@ -69,18 +87,20 @@ function registerMap(pi) {
   pi.registerTool({
     name: 'project_map',
     label: 'Project interfaces',
-    description: 'Brief architecture decisions and shadow links, symbol search, bounded prototypes, or atomic task gate. Planning size is measured at launch. Above 32768 shadow+architecture tokens, architecture is the only project-wide map: read its pages first, then inspect 1-5 relevant module paths already shown there (8192 text tokens maximum). locate must include those explicit paths; catalog is blocked. Architecture supports paths or offset pagination. Read implementations before editing.',
+    description: 'Brief architecture decisions and shadow links, symbol search, bounded prototypes, or atomic task gate. Planning size is measured at launch. Above 32768 shadow+architecture tokens, architecture is the only project-wide map: read its pages first, then inspect 1-5 relevant module paths already shown there (8192 text tokens maximum). locate must include those explicit paths; catalog is blocked. Architecture returns a compact section index and module page; offset pages modules, section_offset pages headings. architecture-search performs literal keyword/function/class map search (query, offset). architecture-section reads one section ID in query, current source sha256, and character offset. Reload relevant sections per todo, rather than full architecture prose. Read implementations before editing.',
     parameters: Type.Object({
-      action: Type.Union(['architecture', 'catalog', 'locate', 'inspect', 'gate'].map(x => Type.Literal(x))),
+      action: Type.Union(['architecture', 'architecture-section', 'architecture-search', 'sync-check', 'catalog', 'locate', 'inspect', 'gate'].map(x => Type.Literal(x))),
       paths: Type.Optional(Type.Array(Type.String())),
       query: Type.Optional(Type.String()),
       state: Type.Optional(Type.String()),
+      section_offset: Type.Optional(Type.Integer({ minimum: 0 })),
+      sha256: Type.Optional(Type.String()),
       offset: Type.Optional(Type.Integer({ minimum: 0 })),
     }),
     async execute(_id, params, signal, _update, ctx) {
       if (!active(ctx.model)) throw new Error('This tool belongs only to the explicit workflow');
       const root = process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd;
-      const args = [...scopeArgs(root), ...commandFor(params.action, params.paths, params.query, params.state, params.offset)];
+      const args = [...scopeArgs(root), ...commandFor(params.action, params.paths, params.query, params.state, params.offset, params.section_offset, params.sha256)];
       const result = await pi.exec(python, [cli, ...args], { signal, timeout: 30000 });
       if (result.code) throw new Error((result.stdout + result.stderr).slice(0, 8000));
       const text = result.stdout;
@@ -167,6 +187,8 @@ function registerPlan(pi) {
         tests: Type.Array(Type.Array(Type.String())), inspect: Type.Optional(Type.Array(Type.String())),
         coverage: Type.Array(Type.Object({ criterion: Type.String({ description: 'Exact acceptance id, e.g. T1-A; never a prose description.' }), test: Type.Integer({ minimum: 0, description: 'Zero-based index into THIS task tests array of argv commands. When there is one command, ALWAYS use literal 0, regardless of how many fixture files it names.' }) })),
         context: Type.Object({ interfaces: Type.Array(Type.String()),
+          architecture_sections: Type.Optional(Type.Array(Type.Object({id: Type.String(), sha256: Type.String()}), {maxItems:5})),
+          architecture_update_required: Type.Optional(Type.Boolean()),
           symbols: Type.Array(Type.Object({ path: Type.String(), name: Type.String() })),
           reference_files: Type.Array(Type.String()),
           preset: Type.Optional(Type.Union(['small','standard','large'].map(x=>Type.Literal(x)))),

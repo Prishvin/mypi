@@ -149,7 +149,7 @@ export function installToolHooks(pi, mutations = new Map()) {
     const phaseTools={chat:['project_map','skill_use','skill_read'],inspect:['project_map','source_query','skill_use','skill_read'],memory:['memory_store'],intake:['intake_store'],research:['project_map','web_research','skill_use','knowledge_store'],reviewer:['project_map','plan_store','review_store']};
     if (phaseTools[role] && !phaseTools[role].includes(event.toolName))
       return {block:true,reason:'This initial phase cannot read or edit implementation or run project commands'};
-    if (role==='research' && event.toolName==='project_map' && event.input?.action!=='architecture')
+    if (role==='research' && event.toolName==='project_map' && !['architecture','architecture-section','architecture-search','sync-check'].includes(event.input?.action))
       return {block:true,reason:'Research reads only the brief architecture map; no source catalogue needed'};
     if (role==='inspect' && event.toolName==='project_map' && event.input?.action==='gate')
       return {block:true,reason:'Inspection has no execution contract or completion gate'};
@@ -192,13 +192,17 @@ export function installToolHooks(pi, mutations = new Map()) {
     if (process.env.QWEN_WORKFLOW_ROLE === 'architect' && !['project_map', 'plan_store', 'web_research', 'skill_read','skill_use'].includes(event.toolName)) {
       return { block: true, reason: 'Architect mode can inspect interfaces and save plans only' };
     }
-    if (['edit', 'write'].includes(event.toolName)) {
+    const architectureEdit = event.toolName === 'skill_use' && event.input?.name === 'architecture-update' && event.input?.action === 'run';
+    if (['edit', 'write'].includes(event.toolName) || architectureEdit) {
       const state = process.env.QWEN_WORKFLOW_STATE;
       if (!state) return { block: true, reason: 'Start a frozen task contract before editing' };
       const contract = JSON.parse(readFileSync(state, 'utf8'));
-      const target = resolve(ctx.cwd, event.input.path || '');
+      const target = architectureEdit ? resolve(contract.before.root, 'architecture.md') : resolve(ctx.cwd, event.input.path || '');
       if (!contract.task.files.some(path => resolve(contract.before.root, path) === target)) {
         return { block: true, reason: 'File is outside the atomic task scope' };
+      }
+      if (!architectureEdit && target === resolve(contract.before.root, 'architecture.md')) {
+        return {block:true,reason:'Preserve authored architecture: use architecture-update insert/append_section; interface metadata refresh is automatic'};
       }
       if (mutations.has(target)) {
         return { block: true, reason: 'An edit of this file is still running. Batch disjoint replacements in one edit call, or wait for its shadow refresh.' };
@@ -215,7 +219,7 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
     if (!output) throw new Error('Shadow path missing');
     pending = pending.catch(() => {}).then(async () => {
       const result = await pi.exec(python, [cli, ...scopeArgs(process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd),
-        'refresh', '--output', output], { timeout: 30000 });
+        'refresh', '--output', output, ...(process.env.QWEN_WORKFLOW_STATE ? ['--state', process.env.QWEN_WORKFLOW_STATE] : [])], { timeout: 30000 });
       if (result.code) throw new Error(result.stderr || result.stdout);
       return JSON.parse(result.stdout);
     });
@@ -262,7 +266,10 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
       return {content: [...event.content, {type:'text', text:'Atomic task verified; execution finished.'}],
         details: {...event.details, acceptedCompletion:true}};
     }
-    if (!active(ctx.model) || !['edit', 'write'].includes(event.toolName)) return;
+    const architectureEdit = event.toolName === 'skill_use' &&
+      (event.input?.name || event.details?.skill) === 'architecture-update' &&
+      (event.input?.action || event.details?.action) === 'run';
+    if (!active(ctx.model) || (!['edit', 'write'].includes(event.toolName) && !architectureEdit)) return;
     try {
       const summary = await refresh(ctx);
       if (applies(ctx.model) && process.env.QWEN_WORKFLOW_ROLE === 'code' &&
@@ -291,15 +298,15 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
           details:{...(event.details||{}),shadow:summary,automaticTestsPassed:tests.code===0,
             gatePassed:gate.passed,acceptedCompletion:accepted}};
       }
-      const recovery=await failedEditEvidence(pi,event,ctx,python,cli,scopeArgs);
+      const recovery=architectureEdit ? '' : await failedEditEvidence(pi,event,ctx,python,cli,scopeArgs);
       return { content: [...event.content, { type: 'text', text: 'Shadow refreshed: ' + summary.snapshot + recovery }],
         details: { ...(event.details || {}), shadow: summary } };
     } catch (error) {
       return { isError: true, content: [...event.content,
         { type: 'text', text: 'Shadow refresh failed; completion is blocked: ' + error.message }] };
     } finally {
-      if (event.input?.path) {
-        const target = resolve(ctx.cwd, event.input.path);
+      if (event.input?.path || architectureEdit) {
+        const target = architectureEdit ? resolve(process.env.QWEN_WORKFLOW_PROJECT, 'architecture.md') : resolve(ctx.cwd, event.input.path);
         if (mutations.get(target) === event.toolCallId) mutations.delete(target);
       }
     }

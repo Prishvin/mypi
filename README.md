@@ -178,6 +178,10 @@ Built-in executable skills:
 | wikipedia-search | Find articles and retrieve short introductions with URLs. |
 | public-page-fetch | Fetch an exact public source and return bounded relevant excerpts. |
 | shadow-project | Create/refresh the architecture-linked interface shadow. |
+| architecture-navigation | Parse sections, search the compact map, read selected decisions. |
+| architecture-maintenance | Automatic Python after-change update of architecture metadata, shadow and map. |
+| architecture-sync-check | Detect drift; rebuild after confirmation and verify consistency. |
+| architecture-update | Append/insert scoped decision prose with a current document hash. |
 | text-metrics | Example deterministic multi-step script with typed output. |
 
 Default workflow skills cover granular planning, scoped retrieval, verification/shadow updates and dependency contracts. Skills have fixed input/output contracts, purposes, native scripts and pre/post-processing instructions. Optional electronics/KiCad bundles remain external, selected with **MYPI_DOMAIN_SKILLS**.
@@ -189,11 +193,15 @@ Default workflow skills cover granular planning, scoped retrieval, verification/
 The planner measures **all prototypes + generated architecture** with the matching bundled tokenizer:
 
 - At **32,768 tokens or below**, bounded shadow navigation is available.
-- **Above 32,768**, generated architecture is the only project-wide map. The planner reads its pages, selects relevant modules, then supplements with selected shadow files.
+- **Above 32,768**, the compact architecture index is the project-wide navigation map. The planner searches/paginates it, reads selected architecture sections and supplements with a few relevant shadow files.
 - Each selected read is limited to **five files / 8,192 text tokens**. Architecture page evidence must precede prototype reads or scoped searches.
 - Global catalogs and unscoped searches are rejected in this larger-project mode. Prompts forbid reconstructing the whole shadow by repeated batches.
 
-Source changes invalidate stale navigation evidence. **shadow-budget.json** records counts and tokenizer identity. Selection remains a model judgment; native tools enforce access scope and read limits.
+Python parses ATX/Setext headings, skips fenced code, preserves the source document and assigns hierarchical section IDs with current line ranges. It links explicit filenames/directories and unique function/class references to shadow files; ambiguous names are reported. **architecture-map.md** is a compact searchable summary with representative functions, classes and keywords. **architecture-map.json** retains the complete local symbol registry; it is searched locally, never dumped into model context. Small architecture documents can be shorter than index overhead; navigation is always paged.
+
+Use **project_map architecture** first, then **architecture-search** with literal function/class names or task keywords, and **architecture-section** with a section ID and current document SHA256. Module `offset`, heading `section_offset` and section character `offset` are distinct. A long single-line section is also readable in bounded pages.
+
+Each todo can pin up to five **context.architecture_sections** entries `{id, sha256}` using the returned **section_sha256**. The Python executor reloads only those decisions, counts them in the shadow estimate, and rejects changed selected sections. Unrelated edits and moved line numbers do not invalidate section content hashes. Source changes still invalidate navigation evidence. **shadow-budget.json** records counts and tokenizer identity. Selection remains a model judgment; native tools enforce access scope and read limits.
 
 ### 5. Create a granular plan and context recipe
 
@@ -230,7 +238,11 @@ The worker uses native tools to edit and run the declared tests. Test results, s
 
 ### 7. Refresh after every edit and completion
 
-The Pi extension refreshes shadow after each source edit and relevant tool/test result. Before accepting completion it checks the current source snapshot, declared file scope, size rules and fresh test evidence. Source functions should be individually testable, with small modules and pure boundaries where practical.
+After every successful or partial failed edit/write, the Pi extension directly invokes the **architecture-maintenance** Python skill. No model call is used. It classifies added/modified/deleted files and unambiguous exact-content renames, marks interface changes, updates the owned interface block in **architecture.md**, refreshes prototypes and rebuilds a missing/stale compact map. Already-current maps are retained. Every coding contract reserves architecture.md before editing; this consumes one of its eight file slots. Existing architectural prose and line endings are preserved.
+
+Changed responsibilities/invariants still need a human-readable explanation: the worker uses **architecture-update** to append a section or insert prose before a section's children. Full-document replacement is blocked. Set **context.architecture_update_required=true** when a todo needs such a decision; acceptance requires the current insertion receipt as well as tests. A mechanical interface record does not claim to understand behavior.
+
+The **architecture-sync-check** skill reports stale code/architecture hashes, prototypes or map content. It asks for confirmation in the main chat before rebuilding external drift. Use **/rebuild** to execute that native skill and verify the result; in the web UI this bypasses classification and model startup entirely. A coding rebuild respects frozen scope, and all rebuilds preserve authored decision prose. Before accepting completion it checks the current source snapshot, declared file scope, size rules and fresh test evidence. Source functions should be individually testable, with small modules and pure boundaries where practical.
 
 Frozen external fixtures protect acceptance across retries. Known completed behavior is rechecked before later or resumed work. Native guards enforce scope, hashes and size; whether an architecture is well designed or every function is suitably testable also needs reviewer judgment.
 

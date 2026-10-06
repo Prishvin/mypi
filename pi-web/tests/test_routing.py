@@ -95,5 +95,13 @@ class Routing(unittest.TestCase):
         self.assertIn('return 2*x',prompt);self.assertIn('Explain the pasted function only.',prompt)
         self.assertIn('Explain double without making changes',prompt)
 
+    def test_explicit_rebuild_runs_native_skill_without_classifier_or_model(self):
+        with patch('workflows.quality_service.start') as model, patch('workflows.request_entry.resolve') as classify, patch('workflows.rpc.run') as rpc:
+            result=workflows.conversation_turn(self.job,'/rebuild')
+        model.assert_not_called();classify.assert_not_called();rpc.assert_not_called()
+        self.assertTrue(result['data']['check']['in_sync'])
+        row=self.store.get(self.row['id'])
+        self.assertTrue((Path(row['shadow_project'])/'architecture-map.md').is_file())
+
 
 if __name__=='__main__':unittest.main()

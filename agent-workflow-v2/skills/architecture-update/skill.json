@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "name": "architecture-update",
+  "purpose": "Insert or append scoped architecture decisions, preserving existing text and refreshing shadow section links.",
+  "roles": [
+    "code"
+  ],
+  "side_effects": "scoped-architecture",
+  "pre_prompt": "Read the current architecture index and section. Declare architecture.md in the frozen task. Supply current source SHA256; use concrete file links and brief prose. Never replace the whole document.",
+  "post_prompt": "Verify the fresh receipt and updated section IDs. The edit invalidates prior tests; run frozen tests and the completion gate. If stale or out of scope, reload evidence and replan.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "action",
+      "expected_sha256",
+      "text"
+    ],
+    "properties": {
+      "action": {
+        "enum": [
+          "insert",
+          "append_section"
+        ]
+      },
+      "expected_sha256": {
+        "type": "string",
+        "pattern": "^([a-f0-9]{64})?$"
+      },
+      "text": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "section_id": {
+        "type": "string",
+        "maxLength": 300
+      },
+      "title": {
+        "type": "string",
+        "maxLength": 120
+      }
+    }
+  },
+  "binaries": {
+    "python": "python"
+  },
+  "steps": [
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/update.py",
+        "{session}",
+        "{input}"
+      ],
+      "timeout_seconds": 45,
+      "max_output_bytes": 4096
+    }
+  ]
+}

@@ -23,3 +23,11 @@ The internal workflow directory name preserves existing imports and test contrac
 Input budgets limit actual requests. A 96k server does not imply a 96k prompt. Planning above 32k combined shadow/map tokens navigates only through generated architecture and task-relevant prototype supplements. Atomic execution gets only its selected todo, evidence and implementation spans.
 
 Model hosting is separate: the gateway forwards a compatible server and can explicitly start the optional host owner first. MTPLX remains a Mac-side dependency, not a Linux client requirement. The request-local cap adapter is retained as a small independently testable module, without vendoring MTPLX or model weights.
+
+## Architecture navigation and maintenance
+
+`architecture_sections.py` parses decision headings and maps them to shadow filenames, functions/classes and keywords. The compact Markdown map shows representative vocabulary; the full local JSON registry supports native literal searches. Selected sections carry content hashes; line ranges and the whole-document hash are refreshed after edits. `prefetch.py` reloads only each todo's selected decisions.
+
+`architecture_maintenance.py` classifies changes and coordinates `architecture_sync.py`, `shadow.py` and compact-map generation. The private after-edit hook runs the reviewed architecture-maintenance skill directly in Python, without another model call. Frozen task scope reserves architecture.md. Only the owned interface record is mechanically updated; authored prose is preserved.
+
+`architecture_update.py` provides hash-checked, locked append/insert decisions. `architecture_consistency.py` and architecture-sync-check detect stale artifacts and implement user-approved rebuilds with final verification. `/rebuild` invokes the skill, and the web route bypasses classification/inference. Skill failures and stale selected contracts block completion.

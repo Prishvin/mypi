@@ -54,6 +54,8 @@ def editable_files(root: Path, task: dict, add) -> set[str]:
     """Prefetch small exact editable files; use named spans for large legacy files."""
     complete = set()
     for relative in task['files']:
+        if relative == 'architecture.md':
+            continue  # Decision sections are already selected; mutation uses the scoped insertion skill.
         path = (root / relative).resolve()
         if not path.is_file():
             continue
@@ -92,10 +94,30 @@ def packet(root: Path, prefixes: list[str], task: dict, state: Path, limit=24000
         add('PLANNED NEW FILES; currently absent, create from the frozen contract',
             json.dumps(sorted(planned_new)) + '\nDo not search for nonexistent implementations or re-fetch these files.')
     import architecture_map
+    import architecture_sections
+    data = scan(root, prefixes)
     architecture_paths = set(task['files'] + recipe.get('interfaces', []) +
                              [item['path'] for item in recipe.get('symbols', [])])
-    add('BRIEF ARCHITECTURE AND SELECTED SHADOW MAP',
-        architecture_map.render(scan(root, prefixes), architecture_paths))
+    add('SELECTED SHADOW MAP', architecture_map.render({**data, 'architecture': {}}, architecture_paths))
+    references = recipe.get('architecture_sections', [])
+    if references:
+        for row, text in architecture_sections.references(data, references):
+            if not add('ARCHITECTURE SECTION ' + row['id'] + ' section_sha256=' + row['content_sha256'], text):
+                raise ValueError('Selected architecture section exceeds task packet budget; split the section or replan')
+    else:
+        brief = data.get('architecture', {}).get('text', '')
+        if len(brief.encode()) <= 8000:
+            add('BRIEF ARCHITECTURE DECISIONS', brief)
+        elif brief:
+            index = architecture_sections.build(data)
+            relevant = [row for row in index['sections'] if architecture_paths.intersection(row['files'])]
+            # Prefer leaf/direct decisions to avoid duplicating a whole root section.
+            relevant = [row for row in relevant if not any(other['parent'] == row['id'] for other in relevant)]
+            for row in relevant[:5]:
+                text = architecture_sections.selected(data, [row['id']])[0][1]
+                if len(text.encode()) <= 8000:
+                    add('RELATED ARCHITECTURE SECTION ' + row['id'], text)
+            add('ARCHITECTURE RETRIEVAL', 'Large decisions document: read task-relevant section IDs via project_map architecture and architecture-section; never request the whole document.')
     if recipe.get('knowledge_topics'):
         from knowledge_context import select
         add('SELECTED RESEARCH KNOWLEDGE', select(root, recipe['knowledge_topics']))

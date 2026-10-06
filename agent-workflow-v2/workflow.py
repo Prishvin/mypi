@@ -25,6 +25,20 @@ def arguments():
     architecture.add_argument('--offset', type=int, default=0)
     architecture.add_argument('--limit', type=int, default=20)
     architecture.add_argument('--paths', nargs='*')
+    architecture.add_argument('--section-offset', type=int, default=0)
+    section = sub.add_parser('architecture-section')
+    section.add_argument('identifier')
+    section.add_argument('--sha256', required=True)
+    section.add_argument('--offset', type=int, default=0)
+    searching_map = sub.add_parser('architecture-search')
+    searching_map.add_argument('query')
+    searching_map.add_argument('--offset', type=int, default=0)
+    status = sub.add_parser('architecture-status')
+    status.add_argument('--shadow', type=Path, required=True)
+    status.add_argument('--state', type=Path)
+    rebuild = sub.add_parser('architecture-rebuild')
+    rebuild.add_argument('--shadow', type=Path, required=True)
+    rebuild.add_argument('--state', type=Path)
     locating = sub.add_parser('locate')
     locating.add_argument('query')
     locating.add_argument('--paths', nargs='+')
@@ -34,6 +48,7 @@ def arguments():
     context.add_argument('--symbol', default='')
     refreshing = sub.add_parser('refresh')
     refreshing.add_argument('--output', type=Path, required=True)
+    refreshing.add_argument('--state', type=Path)
     planning = sub.add_parser('save-plan')
     planning.add_argument('--input', type=Path, required=True)
     planning.add_argument('--output', type=Path, required=True)
@@ -77,18 +92,48 @@ def main() -> int:
     if args.command == 'save-plan':
         result = plans.save(root, prefixes, json.loads(args.input.read_text()), args.output.resolve())
     elif args.command == 'refresh':
-        result = shadow.refresh(root, prefixes, args.output.resolve())
+        if args.state:
+            from architecture_maintenance import maintain
+            session = args.state.resolve().parent
+            binding = session / 'launch.json'
+            if binding.exists():
+                from skill_runner import prepare, run
+                launch = json.loads(binding.read_text())
+                if Path(launch.get('state','')).resolve() != args.state.resolve() or Path(launch['project']).resolve() != root or Path(launch['shadow']).resolve() != args.output.resolve():
+                    raise ValueError('Maintenance launch differs from the frozen task')
+                prepare(session, 'architecture-maintenance', 'code')
+                result = run(session, 'architecture-maintenance', {}, 'code')['data']
+            else:
+                result = maintain(root, prefixes, args.output, args.state)
+        else:
+            result = shadow.refresh(root, prefixes, args.output.resolve())
     elif args.command == 'map':
         result = write_map(scan(root, prefixes), args.output.resolve())
     elif args.command == 'architecture':
-        from architecture_map import render
+        from architecture_map import navigation as render
         limit = max(1, min(args.limit, 10 if navigation and navigation[1]['architecture_only_navigation'] else 20))
-        text = render(mapped or scan(root, prefixes), args.paths, max(0, args.offset), limit)
+        text = render(mapped or scan(root, prefixes), args.paths, max(0, args.offset), limit, max(0, args.section_offset))
         if navigation:
             shadow_navigation.record_architecture(navigation, args.paths, max(0, args.offset), limit)
             print(shadow_navigation.instructions(navigation[1]))
         print(text, end='')
         return 0
+    elif args.command in ('architecture-status', 'architecture-rebuild'):
+        import architecture_consistency
+        handler = architecture_consistency.check if args.command == 'architecture-status' else architecture_consistency.rebuild
+        result = handler(root, prefixes, args.shadow, args.state)
+    elif args.command == 'architecture-search':
+        import architecture_sections
+        result = architecture_sections.search(architecture_sections.build(mapped or scan(root, prefixes)), args.query, args.offset)
+        if navigation:
+            exposed = [row['path'] for row in result['matches'] if row['kind'] == 'file']
+            exposed += [p for row in result['matches'] if row['kind'] == 'section' for p in row['files']]
+            shadow_navigation.record_section(navigation, exposed)
+    elif args.command == 'architecture-section':
+        import architecture_sections
+        result = architecture_sections.page(mapped or scan(root, prefixes), args.identifier, args.sha256, args.offset)
+        if navigation:
+            shadow_navigation.record_section(navigation, result['files'])
     elif args.command == 'catalog':
         data = mapped or scan(root, prefixes)
         total = len(data['files'])

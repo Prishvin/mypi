@@ -80,3 +80,19 @@ When a todo needs researched facts, name at most four exact knowledge_topics in 
 Do not add unrelated knowledge topics or full fetched pages to each executor context.
 
 Acceptance must include all declared new deliverable files and a nonempty discovered unit suite. Plan an assertion for keyword-call compatibility when a public Python signature specifies parameter names. Do not add unrelated requirements or arbitrary input-scale goals beyond the request.
+
+ARCHITECTURE SECTION RECIPE
+Start with the compact architecture-map index, not full decision prose. Search
+architecture-search using literal task keywords, function or class names; read
+matching architecture-section IDs with current sha256 and a character offset.
+The map contains sections linked to shadow filenames and a separate interface
+vocabulary. Reload only the relevant sections for each atomic todo. Put up to
+5 {id,sha256: section_sha256} references in context.architecture_sections and include their text
+tokens in context.estimate.shadow. A changed selected section requires fresh planning; unrelated document changes and line shifts do not invalidate its content hash. Tool reads and insertions still use the current whole-document source SHA256.
+Every coding task reserves architecture.md in its frozen files for an owned
+interface record updated after each mutation; authored prose is preserved.
+When responsibilities, invariants or dependency decisions change, set
+context.architecture_update_required=true and add a step to use the scoped
+architecture-update skill (insert/append_section). The gate requires its fresh
+receipt as well as tests; mechanical interface refresh does not replace authored
+architectural reasoning. Leave input/output margin for the metadata edit.

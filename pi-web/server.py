@@ -53,8 +53,8 @@ class App:
             text=data.get('text','').strip()
             if not text or len(text.encode())>48000:raise ValueError('Message must contain 1–48000 bytes')
             first=text.split()[0]
-            if text.startswith('/') and first not in ('/server','/remember','/planner','/reviewer','/thinkingcap','/develop','/resume-planning','/resume-request') and '/' not in first[1:] and not Path(first).is_dir():
-                raise ValueError('Supported commands: /server, /remember, /planner, /reviewer, /thinkingcap, /develop, /resume-planning')
+            if text.startswith('/') and first not in ('/server','/remember','/planner','/reviewer','/thinkingcap','/develop','/resume-planning','/resume-request','/rebuild') and '/' not in first[1:] and not Path(first).is_dir():
+                raise ValueError('Supported commands: /server, /remember, /planner, /reviewer, /thinkingcap, /develop, /resume-planning, /rebuild')
             self.store.message(ident,'user',text,mode=row['settings']['mode'])
             if row['title']=='New conversation':self.store.update(ident,title=text[:70])
             self.jobs.submit(ident,workflows.turn,text,bool(data.get('develop')))

@@ -23,10 +23,14 @@ def verify(data: dict, after: dict) -> list[str]:
         if saved != after:
             return ['Shadow manifest is stale; refresh after every edit']
         from architecture_map import render
-        if (folder / 'architecture.md').read_text() != render(after):
+        if (folder / 'architecture.md').read_bytes().decode('utf-8') != render(after):
             return ['Shadow architecture map is stale; refresh after every edit']
-        if (folder / 'knowledge.md').read_text() != after.get('knowledge', {}).get('text', '# Project knowledge\nNo research brief yet.\n'):
+        if (folder / 'knowledge.md').read_bytes().decode('utf-8') != after.get('knowledge', {}).get('text', '# Project knowledge\nNo research brief yet.\n'):
             return ['Shadow knowledge brief is stale; refresh after every edit']
+        import architecture_sections
+        index = architecture_sections.build(after)
+        if json.loads((folder / 'architecture-map.json').read_text()) != index or (folder / 'architecture-map.md').read_text() != architecture_sections.artifact(index):
+            return ['Shadow architecture section index is stale; refresh after every edit']
         from project_map import outline
         for record in after['files']:
             if (folder / 'prototypes' / (record['path'] + '.txt')).read_text() != outline(record):

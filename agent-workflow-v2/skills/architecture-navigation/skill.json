@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "name": "architecture-navigation",
+  "purpose": "Build and search a compact map of architectural sections, shadow filenames, functions, classes and keywords; read selected decisions only.",
+  "roles": [
+    "architect",
+    "code",
+    "research",
+    "inspect",
+    "chat",
+    "reviewer"
+  ],
+  "side_effects": "session-artifacts",
+  "pre_prompt": "Use index first. Search literal task keywords/function/class names, then read matching section IDs with the current source SHA256. All source inspection is read-only; no implementation bodies are included.",
+  "post_prompt": "Select a few relevant section IDs and associated shadow files. Include their tokens in each todo context estimate. Unknown links are uncertainties. Architecture metadata is mechanical; decision prose remains authored.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "action"
+    ],
+    "properties": {
+      "action": {
+        "enum": [
+          "index",
+          "search",
+          "section"
+        ]
+      },
+      "query": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "section_id": {
+        "type": "string",
+        "maxLength": 300
+      },
+      "sha256": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "offset": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  },
+  "binaries": {
+    "python": "python"
+  },
+  "steps": [
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/navigate.py",
+        "{project}",
+        "{work}/shadow",
+        "{input}",
+        "{session}"
+      ],
+      "timeout_seconds": 45,
+      "max_output_bytes": 8192
+    }
+  ]
+}

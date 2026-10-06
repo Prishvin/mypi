@@ -4,7 +4,10 @@
     "granular-planning",
     "scoped-retrieval",
     "verification-shadow",
-    "dependency-contracts"
+    "dependency-contracts",
+    "architecture-navigation",
+    "architecture-sync-check",
+    "architecture-maintenance"
   ],
   "loading": "Explicit private Pi extension, pinned and active at every session start; no global skill discovery"
 }

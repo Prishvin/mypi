@@ -10,12 +10,16 @@ def instructions(base: Path, role='code') -> str:
         return ''
     chunks = []
     names = json.loads(manifest.read_text())['default_skills']
-    if role in ('intake','memory','chat','inspect'):
+    if role in ('intake','memory'):
         return ''
+    if role in ('chat', 'inspect'):
+        names = ['architecture-navigation', 'architecture-sync-check']
     if role == 'research':
-        names = ['web-research']
+        names = ['web-research', 'architecture-navigation', 'architecture-sync-check']
     if role == 'reviewer':
-        names = ['granular-planning']
+        names = ['granular-planning', 'architecture-navigation', 'architecture-sync-check']
+    if role != 'code':
+        names = [name for name in names if name != 'architecture-maintenance']
     for name in names:
         path = base/'skills'/name/'SKILL.md'
         if path.parent.parent != base/'skills':

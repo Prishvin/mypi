@@ -67,6 +67,21 @@ Progress is recorded/reported every 30 seconds. Metrics distinguish native token
 
 `/remember` makes a fresh model request that distills essential information from the last completed assistant response into bounded `knowledge.md`, then refreshes shadow. It never copies the full answer as a fallback. `mypi skills` lists built-in executable skills and fixed input/output contracts. Web research includes DuckDuckGo, Wikipedia and focused public-page extraction. Optional domain skill bundles can be installed outside this repository and selected with `MYPI_DOMAIN_SKILLS`.
 
+## Architecture navigation and rebuild
+
+The default skills parse architecture sections and shadow interfaces in Python. `project_map architecture` returns a compact index; `architecture-search` searches literal keywords/function/class names, and `architecture-section` reads selected IDs. No model request is needed to build/search/check/rebuild the map. The complete symbol registry stays local.
+
+After each coding edit, the automatic maintenance skill updates the owned architecture interface record, shadow and compact map. The map is built when absent or stale. Existing decision prose is preserved; architectural explanations use the append/insert skill. Todos pin section content hashes, so unrelated edits do not require loading the full architecture again.
+
+If the sync-check skill reports drift, confirm with `/rebuild` in terminal Pi or the web chat. It rebuilds navigation using the native skill and verifies consistency. Start a new Pi session after upgrading mypi because existing sessions retain their pinned runtime.
+
+To run the focused CPU tests:
+
+```sh
+agent-workflow-v2/.venv/bin/python -m unittest discover -s agent-workflow-v2 -p 'test_architecture*.py'
+node --test agent-workflow-v2/test_architecture_hooks.mjs
+```
+
 ## Privacy and scope
 
 Projects and tests run on the client. Qwen receives selected request material; a ChatGPT planner receives refined requirements and interfaces, so prototype signatures/descriptions can leave the client when that planner is chosen. Implementation retrieval stays with the local worker. Executable skills/tests are trusted local programs; mypi is not an OS sandbox. Global Pi, Codex, conversations, model weights, private source projects and OAuth credentials are not included in the published repository.

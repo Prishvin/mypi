@@ -44,3 +44,11 @@ Projects depend on their own interfaces, never on the model's conversation histo
 Thinking controls: `thinking_caps.py` stores private project defaults; `pi-thinking-cap.mjs` validates slash commands and backend capability. Explicit frozen task caps win. The opt-in `../mtplx-pi-adapter` wraps native guard resolution with request-local state and pins server source; installed MTPLX files remain unchanged.
 
 Memory distillation: `/remember` runs an isolated `memory` phase with only `memory_store`, using the current chat provider at low effort. `memory_draft.py` validates bounded source-grounded bullets; `remember.py` publishes only essentials and refreshes shadow under the project lock. No raw-copy fallback; generation failure leaves knowledge unchanged.
+
+## Architecture navigation and maintenance
+
+`architecture_sections.py` parses decision headings and maps them to shadow filenames, functions/classes and keywords. The compact Markdown map shows representative vocabulary; the full local JSON registry supports native literal searches. Selected sections carry content hashes; line ranges and the whole-document hash are refreshed after edits. `prefetch.py` reloads only each todo's selected decisions.
+
+`architecture_maintenance.py` classifies changes and coordinates `architecture_sync.py`, `shadow.py` and compact-map generation. The private after-edit hook runs the reviewed architecture-maintenance skill directly in Python, without another model call. Frozen task scope reserves architecture.md. Only the owned interface record is mechanically updated; authored prose is preserved.
+
+`architecture_update.py` provides hash-checked, locked append/insert decisions. `architecture_consistency.py` and architecture-sync-check detect stale artifacts and implement user-approved rebuilds with final verification. `/rebuild` invokes the skill, and the web route bypasses classification/inference. Skill failures and stale selected contracts block completion.

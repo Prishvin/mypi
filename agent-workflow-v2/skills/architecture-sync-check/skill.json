@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "name": "architecture-sync-check",
+  "purpose": "Detect stale architecture, shadow and map; rebuild bound navigation after user confirmation and verify consistency.",
+  "roles": [
+    "architect",
+    "code",
+    "research",
+    "inspect",
+    "chat",
+    "reviewer"
+  ],
+  "side_effects": "bound-navigation",
+  "pre_prompt": "Run before trusting saved navigation, especially after external edits or interruption. Project, prefixes, shadow and coding state come only from the session binding. Use action=check first. If stale, ask for confirmation in the main chat. Use action=rebuild only after the user confirms; /rebuild invokes this skill directly.",
+  "post_prompt": "Report reasons when stale and ask before rebuilding. After an approved rebuild, verify check.in_sync. A coding contract permits only owned architecture metadata, preserving authored prose. Rebuild failure blocks navigation.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "action"
+    ],
+    "properties": {
+      "action": {
+        "enum": [
+          "check",
+          "rebuild"
+        ]
+      }
+    }
+  },
+  "binaries": {
+    "python": "python"
+  },
+  "steps": [
+    {
+      "argv": [
+        "{python}",
+        "{skill}/scripts/check.py",
+        "{session}",
+        "{input}"
+      ],
+      "timeout_seconds": 45,
+      "max_output_bytes": 4096
+    }
+  ]
+}

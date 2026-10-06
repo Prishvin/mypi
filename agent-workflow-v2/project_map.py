@@ -32,6 +32,7 @@ def inspect_file(path: Path, root: Path) -> dict:
 
 def scan(root: Path, prefixes: list[str]) -> dict:
     """Snapshot the current source, including uncommitted and untracked source files."""
+    root = root.resolve()
     files = [inspect_file(path, root) for path in discover(root, prefixes)]
     stale = annotate(files)
     identity = '\n'.join(f['path'] + ':' + f['sha256'] for f in files)
@@ -113,6 +114,10 @@ def write_map(data: dict, output: Path) -> dict:
     (output / 'CATALOG.txt').write_text(catalog)
     architectural_map = architecture_map.render(data)
     (output / 'architecture.md').write_text(architectural_map)
+    import architecture_sections
+    section_index = architecture_sections.build(data)
+    (output / 'architecture-map.json').write_text(json.dumps(section_index, indent=2))
+    (output / 'architecture-map.md').write_text(architecture_sections.artifact(section_index))
     (output / 'knowledge.md').write_text(data.get('knowledge', {}).get('text', '# Project knowledge\nNo research brief yet.\n'))
     return {'files': len(data['files']), 'symbols': sum(len(f['symbols']) for f in data['files']),
             'parse_errors': [f['path'] for f in data['files'] if f['error']],
@@ -121,6 +126,7 @@ def write_map(data: dict, output: Path) -> dict:
             'index_bytes': len(index.encode()), 'bundle_bytes': len(bundle.encode()),
             'catalog_bytes': len(catalog.encode()),
             'architecture_bytes': len(architectural_map.encode()),
+            'architecture_sections': len(section_index['sections']),
             'stale_briefs': data.get('stale_briefs', []),
             'snapshot': data['snapshot']}
 

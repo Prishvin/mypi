@@ -55,6 +55,8 @@ def begin(root: Path, prefixes: list[str], task: dict, state: Path, shadow_path:
         raise ValueError('Task state already exists; use a new state file')
     if not task.get('goal') or not task.get('acceptance') or not task.get('tests'):
         raise ValueError('A task requires goal, acceptance and test argv lists')
+    import architecture_sync
+    task = architecture_sync.scoped(task)
     allowed = task.get('files', [])
     validate_paths(root, allowed)
     for command in task['tests']:
@@ -97,6 +99,8 @@ def inherit_baseline(state: Path, baseline: Path) -> None:
 
 def run_tests(state: Path, timeout=None) -> dict:
     """Run declared commands once and save full logs outside the target project."""
+    import architecture_sync
+    architecture_sync.sync(state)
     data = json.loads(state.read_text())
     timeout = timeout or data['task'].get('execution', {}).get('test_timeout_seconds', 300)
     _, _, snapshot = current_snapshot(data)
@@ -151,11 +155,14 @@ def check(state: Path) -> dict:
     if any(hash_file(Path(p)) != digest for p, digest in data.get('readonly_tests', {}).items()):
         result['violations'].append('An immutable external acceptance test changed')
     result['violations'].extend(shadow.verify(data, after))
+    import architecture_sync
+    result['violations'].extend(architecture_sync.verify(data, after))
     result['shadow_snapshot'] = after['snapshot']
     changed = set(result['changed']) | {p for p, h in declared.items()
                                       if h != data['declared_hashes'].get(p)}
     result['changed'] = sorted(changed)
-    missing=[p for p in task['files'] if data['declared_hashes'].get(p) is None and declared.get(p) is None]
+    missing=[p for p in task['files'] if data['declared_hashes'].get(p) is None and declared.get(p) is None
+             and not (p == 'architecture.md' and task.get('architecture_maintenance') and not data.get('declared_text', {}).get(p))]
     if missing:result['violations'].append('Declared new files are missing: '+', '.join(missing))
     if len(changed) > 8:
         result['violations'].append('More than 8 changed source/declaration files')
@@ -178,6 +185,17 @@ def check(state: Path) -> dict:
         result['violations'].append('Declared tests have not all passed')
     if any(t.get('tests_collected')==0 for t in tests):
         result['violations'].append('A declared unittest command ran zero tests')
+    if task.get('context', {}).get('architecture_update_required'):
+        receipt = state.parent / 'architecture-update.json'
+        try:
+            update = json.loads(receipt.read_text())
+            valid = (update.get('state') == str(state.resolve()) and
+                     update.get('after_sha256') == declared.get('architecture.md') and
+                     update.get('before_sha256') != update.get('after_sha256'))
+        except (OSError, ValueError):
+            valid = False
+        if not valid:
+            result['violations'].append('Required scoped architecture insertion is missing or stale')
     result['passed'] = not result['violations']
     result['limits'] = 'Checks indexed source and declared files. Testability requires review; this is not an OS sandbox.'
     return result

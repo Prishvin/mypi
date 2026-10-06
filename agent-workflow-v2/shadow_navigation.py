@@ -45,7 +45,7 @@ def instructions(policy: dict) -> str:
             f"threshold={THRESHOLD}. These are text counts, not the complete request budget.\n")
     if policy['architecture_only_navigation']:
         return text + ("Large-project planning: use ONLY generated architecture.md for project-wide navigation. "
-            "Call project_map architecture first, paging as needed. Determine task-relevant module paths "
+            "Call project_map architecture first, paging module offset and section_offset separately. Read relevant section IDs with architecture-section and the current source_sha256 before making granular todos. Determine task-relevant module paths "
             "from that map, then inspect at most 5 selected shadow files per read, at most 8192 text tokens. "
             "Explain their relevance before reading them. Use query to narrow named interfaces when needed. "
             "locate must include explicit paths already seen in architecture. Global catalogues and "
@@ -70,10 +70,16 @@ def planning_context(args, root: Path, prefixes: list[str]):
     """Recheck the snapshot for each planning tool; edits invalidate prior navigation."""
     if os.environ.get('QWEN_WORKFLOW_ROLE') not in ('architect', 'reviewer'):
         return None
-    if args.command not in ('architecture', 'catalog', 'locate', 'context', 'save-plan'):
+    if args.command not in ('architecture', 'architecture-section', 'architecture-search', 'catalog', 'locate', 'context', 'save-plan'):
         return None
     session = Path(os.environ['QWEN_WORKFLOW_SESSION'])
     data = scan(root, prefixes)
+    output = os.environ.get('QWEN_WORKFLOW_SHADOW')
+    if output:
+        import architecture_consistency
+        report = architecture_consistency.check(root, prefixes, Path(output))
+        if report['rebuild_required']:
+            raise ValueError('Navigation is out of sync: ' + '; '.join(report['reasons']) + '. Ask the user to run /rebuild before continuing.')
     budget_path = session / 'shadow-budget.json'
     policy = json.loads(budget_path.read_text()) if budget_path.exists() else {}
     if policy.get('snapshot') != data['snapshot']:
@@ -123,3 +129,10 @@ def check_selected(policy: dict, text: str, counter=None) -> None:
     tokens = counter(text) if counter else count(text, policy.get('tokenizer_path'))
     if tokens > MAX_SELECTED_TOKENS:
         raise ValueError('Selected shadow exceeds 8192 tokens; select fewer files or named interfaces')
+
+
+def record_section(context, paths):
+    """Record only associated paths actually exposed by a bounded section read."""
+    _, _, state, state_path = context
+    state['seen_paths'] = sorted(set(state['seen_paths']) | set(paths))
+    state_path.write_text(json.dumps(state, indent=2))
