@@ -8,4 +8,8 @@ while [ -L "$mypi_script" ]; do
   esac
 done
 mypi_root=$(CDPATH= cd -- "$(dirname -- "$mypi_script")" && pwd)
+if [ ! -x "$mypi_root/agent-workflow-v2/.venv/bin/python" ]; then
+  printf 'mypi is not installed here. Run: cd "%s" && ./install.sh\nRequires Python 3.12+ and Node 22.19+.\n' "$mypi_root" >&2
+  exit 1
+fi
 exec "$mypi_root/agent-workflow-v2/.venv/bin/python" "$mypi_root/pi_local.py" "$@"
