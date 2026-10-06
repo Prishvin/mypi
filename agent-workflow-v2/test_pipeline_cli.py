@@ -12,6 +12,17 @@ pi_local=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(pi_local
 
 
 class CliTests(unittest.TestCase):
+    def test_draft_option_reaches_planning_service_without_execution(self):
+        with tempfile.TemporaryDirectory() as folder:
+            draft=Path(folder)/'draft.json'
+            with (patch.object(pi_local,'initialize'),patch.object(pi_local,'start'),
+                  patch('planning_service.create',return_value={'passed':True}) as create,
+                  patch('plan_runner.execute') as execute):
+                code=pi_local.main(['plan',folder,'Repair metadata','--planner','qwen',
+                                   '--draft-plan',str(draft),'--out',folder+'-plan.json'])
+            self.assertEqual(code,0)
+            self.assertEqual(create.call_args.kwargs['draft_plan'],draft)
+            execute.assert_not_called()
     def test_final_review_runs_after_success_but_never_after_failed_execution(self):
         with tempfile.TemporaryDirectory() as folder:
             argv=['execute',folder,folder+'-plan.json','--run-dir',folder+'-run']

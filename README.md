@@ -332,6 +332,18 @@ mypi settings /path/to/project --planner local --reviewer chatgpt
 
 Noninteractive planning can supply **--answers-file**, a JSON array of at most two answers. Unanswered clarification returns a pause. Plans/evidence must be outside the editable project. Keep the original run directory for resume.
 
+If a model finishes an unaccepted proposal but `plan_store` rejects missing metadata, preserve its `.draft.json` and repair it without regenerating the full plan:
+
+~~~sh
+mypi plan /path/to/project --request-file /path/outside/project/corrections.md \
+  --draft-plan /path/outside/project/rejected.draft.json --planner qwen \
+  --out /path/outside/project/repaired.json
+~~~
+
+Draft repair skips already completed intake/research and accepts sparse model-authored corrections. Python pins the project snapshot, retains unchanged contracts, checks splits preserve files/cases/test commands and runs full V3 validation before saving. Explicit corrections to a contradictory unaccepted criterion require its exact old object, matching ID and a recorded reason. This mode cannot repair executed work: use evidence-bound **replan** after execution failures. No edit-size estimates are invented or clamped by Python.
+
+At execution start, a new project receives the accepted planner's decisions as `architecture.md`; Python adds section headings to plain API lists for selective retrieval, including modules not created yet. Existing authored architecture stays unchanged. Atomic workers receive relevant contract sections rather than the full implementation or full todo plan.
+
 | Exit | Meaning |
 | --- | --- |
 | 0 | Requested operation passed. |

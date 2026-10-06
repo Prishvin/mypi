@@ -112,6 +112,12 @@ def prepare(args) -> dict:
     shadow_path = session / 'shadow'
     prefixes = args.prefix or ['.']
     summary = shadow.refresh(root, prefixes, shadow_path)
+    draft_path = None
+    if getattr(args, 'plan_draft', None):
+        if args.role != 'architect' or getattr(args, 'interactive', False):
+            raise ValueError('Unaccepted draft repair needs a batch architect session')
+        from plan_draft import bind
+        draft_path = bind(root, args.plan_draft, session/'plan-draft.json', summary['snapshot'])
     if args.role in ('architect', 'reviewer'):
         import shadow_navigation
         summary['planning_navigation'] = shadow_navigation.initialize(
@@ -155,6 +161,8 @@ def prepare(args) -> dict:
     prompt = args.prompt or 'Plan the architecture for the requested change using project interfaces only.'
     if args.role == 'architect':
         prompt = task_prompts.planning(prompt, effective)
+        if draft_path:
+            prompt += '\n\nPINNED DRAFT REPAIR MODE: plan_store accepts only sparse task_updates and optional architecture_replacements. Do not send goal/architecture/tasks or replay the full proposal. Python retains unchanged contracts. Missing metadata must come from your estimates; no automatic clamping. Preserve original cases/tests/files when splitting and keep the original ID in the final replacement todo. All final V3 gates remain mandatory.'
         from knowledge import read_project
         knowledge = read_project(root)
         if knowledge:
@@ -196,7 +204,8 @@ def prepare(args) -> dict:
                   phase_output=str(phase_output.resolve()) if phase_output else None,
                   initial_stages=getattr(args,'initial_stages',True),
                   review_packet=str(args.review_packet.resolve()) if getattr(args,'review_packet',None) else None,
-                  plan=str(args.plan.resolve()) if args.plan else str(session / 'plan.json'), todo=args.todo)
+                  plan=str(args.plan.resolve()) if args.plan else str(session / 'plan.json'), todo=args.todo,
+                  plan_draft=draft_path)
     (session / 'launch.json').write_text(json.dumps(result, indent=2))
     return result
 
@@ -269,6 +278,9 @@ def environment(prepared: dict) -> dict:
     env['QWEN_WORKFLOW_EXECUTOR'] = prepared.get('executor', 'local')
     env['QWEN_WORKFLOW_SHADOW'] = prepared['shadow']
     env['QWEN_WORKFLOW_PLAN'] = prepared['plan']
+    env.pop('QWEN_WORKFLOW_PLAN_DRAFT', None)
+    if prepared.get('plan_draft'):
+        env['QWEN_WORKFLOW_PLAN_DRAFT'] = prepared['plan_draft']
     env['QWEN_WORKFLOW_SESSION'] = prepared['session']
     env['QWEN_WORKFLOW_SKILLS'] = prepared['active_skills']
     env['QWEN_WORKFLOW_RUNTIME'] = prepared['runtime']
@@ -401,6 +413,7 @@ def main() -> int:
     parser.add_argument('--executor', choices=['local', 'chatgpt'])
     parser.add_argument('--planner-model')
     parser.add_argument('--plan', type=Path)
+    parser.add_argument('--plan-draft', type=Path, help='Pin an unaccepted proposal for sparse model repair')
     parser.add_argument('--todo')
     parser.add_argument('--login-chatgpt', action='store_true')
     parser.add_argument('--prompt')

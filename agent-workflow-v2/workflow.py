@@ -90,7 +90,14 @@ def main() -> int:
     navigation = shadow_navigation.planning_context(args, root, prefixes)
     mapped = navigation[0] if navigation else None
     if args.command == 'save-plan':
-        result = plans.save(root, prefixes, json.loads(args.input.read_text()), args.output.resolve())
+        import os
+        proposal = json.loads(args.input.read_text())
+        if os.environ.get('QWEN_WORKFLOW_PLAN_DRAFT'):
+            if os.environ.get('QWEN_WORKFLOW_ROLE') != 'architect':
+                raise ValueError('Unaccepted draft repair is architect-only')
+            from plan_draft import restore
+            proposal = restore(root, prefixes, os.environ['QWEN_WORKFLOW_PLAN_DRAFT'], proposal)
+        result = plans.save(root, prefixes, proposal, args.output.resolve())
     elif args.command == 'refresh':
         if args.state:
             from architecture_maintenance import maintain

@@ -61,6 +61,8 @@ mypi replan /path/to/project /path/outside/project/run/replan-request.json \
 
 Resume uses the original run directory and immutable task scope/acceptance. Completed tasks are not repeated. Failure exit 20 requests a replan; exit 21 means coding finished but final review failed. Changed baselines or fixtures require explicit recovery. A reviewer follow-up plan is saved separately and does not execute automatically.
 
+For a complete but unaccepted planner proposal, use `mypi plan PROJECT --request-file corrections.md --draft-plan rejected.draft.json --planner qwen --out repaired.json`. Keep all proposal/correction/output files outside source. Qwen supplies sparse metadata or task-split corrections; Python preserves unchanged contracts and validates the full plan. Executed tasks still require `replan` and their recorded evidence.
+
 Progress is recorded/reported every 30 seconds. Metrics distinguish native token speed, first-token delay, token usage, model memory and sampled host RSS. Native metrics retain only the server's recent 32 requests; unavailable remote records are reported as unavailable. An SSH tunnel can be used in place of direct LAN serving, provided it forwards health/capabilities/metrics as well as completions.
 
 ## Remember and skills

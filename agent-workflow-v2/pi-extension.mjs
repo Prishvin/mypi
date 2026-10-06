@@ -19,6 +19,7 @@ import {registerThinkingCap} from './pi-thinking-cap.mjs';
 import {registerChat} from './pi-chat.mjs';
 import {registerMemory} from './pi-memory.mjs';
 import {registerServer} from './pi-server.mjs';
+import {repairParameters} from './pi-plan-draft.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -172,14 +173,14 @@ function registerPlan(pi) {
   /** Persist structured todos outside the project; planning cannot execute them. */
   pi.registerTool({
     name: 'plan_store', label: 'Save architecture and todos',
-    description: 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
-    parameters: Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
+    description: process.env.QWEN_WORKFLOW_PLAN_DRAFT ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.' : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
+    parameters: process.env.QWEN_WORKFLOW_PLAN_DRAFT ? repairParameters() : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
       goal: Type.String(), architecture: Type.String(),
       tasks: Type.Array(Type.Object({ id: Type.String(), goal: Type.String(),
         steps: Type.Optional(Type.Array(Type.String(), {minItems:2,maxItems:6})),
         assumptions: Type.Optional(Type.Array(Type.String())),
         test_strategy: Type.Optional(Type.String()),
-        estimated_changed_lines: Type.Optional(Type.Integer({minimum:1,maximum:300})),
+        estimated_changed_lines: Type.Integer({minimum:1,maximum:300}),
         execution: Type.Optional(Type.Object({timeout_seconds:Type.Integer({minimum:30,maximum:1200}),
           test_timeout_seconds:Type.Integer({minimum:1,maximum:300}),on_failure:Type.Literal('replan')})),
         acceptance: Type.Array(Type.Object({ id: Type.String(), given: Type.String(), when: Type.String(), then: Type.String() })),
@@ -212,7 +213,7 @@ function registerPlan(pi) {
       const output = process.env.QWEN_WORKFLOW_PLAN;
       if (!output) throw new Error('Plan destination missing');
       const input = output + '.draft.json';
-      writeFileSync(input, JSON.stringify({...params,plan_version:params.plan_version || 3}));
+      writeFileSync(input, JSON.stringify(process.env.QWEN_WORKFLOW_PLAN_DRAFT ? params : {...params,plan_version:params.plan_version || 3}));
       const result = await pi.exec(python, [cli, ...scopeArgs(process.env.QWEN_WORKFLOW_PROJECT),
         'save-plan', '--input', input, '--output', output], { signal, timeout: 30000 });
       if (result.code) throw new Error(result.stdout + result.stderr);

@@ -8,7 +8,7 @@ from runner_process import BASE, invoke, read, save
 
 
 def create(project, request, output, planner='chatgpt', timeout=600, handoff=None, *,
-           clarifier='auto', researcher='auto', answers=None, interactive=False, refresh=False):
+           clarifier='auto', researcher='auto', answers=None, interactive=False, refresh=False, draft_plan=None):
     """Generate a new external plan; planning never invokes the todo executor."""
     project, output = project.resolve(), output.resolve()
     if output.exists() or output.is_relative_to(project):
@@ -16,6 +16,8 @@ def create(project, request, output, planner='chatgpt', timeout=600, handoff=Non
     if planner not in ('chatgpt', 'qwen'):
         raise ValueError('Planner must be chatgpt or qwen')
     lineage = None
+    if handoff and draft_plan:
+        raise ValueError('Accepted-run replanning and unaccepted draft repair are separate')
     if handoff:
         packet = json.loads(handoff.read_text())
         if Path(packet['project']).resolve() != project or packet['current_snapshot'] != scan(project, ['.'])['snapshot']:
@@ -26,7 +28,7 @@ def create(project, request, output, planner='chatgpt', timeout=600, handoff=Non
         lineage = packet
     output.parent.mkdir(parents=True, exist_ok=True)
     pipeline = None
-    if not handoff:
+    if not handoff and not draft_plan:
         from request_pipeline import prepare
         pipeline = prepare(project, request, output, planner, timeout, clarifier, researcher,
                            answers, interactive, refresh)
@@ -38,6 +40,11 @@ def create(project, request, output, planner='chatgpt', timeout=600, handoff=Non
     command = [str(BASE / 'qwen-agent'), '--profile', 'chatgpt-quality' if planner == 'chatgpt' else 'mtplx-quality',
         '--project', str(project), '--role', 'architect', '--batch', '--json', '--quiet',
         '--plan', str(output), '--prompt-file', str(request_path)]
+    if draft_plan:
+        command += ['--plan-draft', str(draft_plan.resolve()), '--context','65536',
+                    '--input-tokens','24576','--output-tokens','8192']
+        if planner == 'qwen':
+            command += ['--reasoning-budget','1024']
     result = invoke(command, output.with_suffix('.planning'), timeout)
     from run_metrics import collect
     result['metrics'] = collect(result, output.with_suffix('.planning'))

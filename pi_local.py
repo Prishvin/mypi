@@ -91,6 +91,7 @@ def main(argv=None):
     planning.add_argument('--planner', choices=['chatgpt', 'qwen','local'])
     planning.add_argument('--out', type=Path, required=True)
     planning.add_argument('--timeout', type=int, default=600)
+    planning.add_argument('--draft-plan', type=Path, help='Repair an unaccepted model proposal with sparse patches')
     researching = sub.add_parser('research', help='Clarify and research one request; write a concise knowledge.md')
     researching.add_argument('project', type=Path)
     researching.add_argument('request', nargs='?')
@@ -214,7 +215,8 @@ def main(argv=None):
                 options = dict(clarifier=args.clarifier,researcher=args.researcher,answers=answers,
                     interactive=sys.stdin.isatty() and not args.non_interactive,refresh=args.refresh_research)
                 if args.action == 'plan':
-                    result = create(args.project, request, args.out, args.planner, args.timeout, **options)
+                    result = create(args.project, request, args.out, args.planner, args.timeout,
+                                    draft_plan=args.draft_plan, **options)
                 else:
                     if args.out.resolve().is_relative_to(args.project.resolve()):
                         parser.error('--out must be outside the project')

@@ -120,6 +120,10 @@ def run_locked(root, path, plan, folder, invoke_fn, resume=False):
     """Resume only unchanged work; failed checkpoints never automatically run again."""
     digest = contract_digest(plan)
     state = read(folder / 'state.json')
+    architecture_seed = None
+    if not state:
+        from plan_architecture import bootstrap
+        architecture_seed = bootstrap(root, plan)
     snapshot = scan(root, ['.'])['snapshot']
     if state:
         if state['plan'] != str(path) or state['contract_digest'] != digest:
@@ -150,6 +154,7 @@ def run_locked(root, path, plan, folder, invoke_fn, resume=False):
             raise ValueError('Use the original run directory for an existing execution')
         state = {'plan': str(path), 'project': str(root), 'contract_digest': digest,
                  'attempts': [], 'started_epoch': time.time(), 'snapshot': snapshot}
+        state['architecture_seed'] = architecture_seed
     checkpoint(folder, state, status='ready')
     return advance(root, path, plan, folder, state, invoke_fn)
 

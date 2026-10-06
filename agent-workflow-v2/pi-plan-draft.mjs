@@ -1,0 +1,18 @@
+/** A compact authoring schema for repairing unaccepted proposals, without a full resend. */
+import { Type } from '@earendil-works/pi-ai';
+
+export function repairParameters() {
+  /** Keep corrections typed; full V3 validation remains native and mandatory. */
+  return Type.Object({task_updates:Type.Array(Type.Object({id:Type.String(),
+    estimated_changed_lines:Type.Optional(Type.Integer({minimum:1,maximum:300})),
+    steps:Type.Optional(Type.Array(Type.String(),{minItems:2,maxItems:6})),
+    test_strategy:Type.Optional(Type.String()), assumptions:Type.Optional(Type.Array(Type.String())),
+    context_overlay:Type.Optional(Type.Any()), execution:Type.Optional(Type.Any()),
+    criterion_replacements:Type.Optional(Type.Array(Type.Object({old:Type.Any(),new:Type.Any(),reason:Type.String({minLength:16})}))),
+    add_files:Type.Optional(Type.Array(Type.String())),
+    add_tests:Type.Optional(Type.Array(Type.Array(Type.String()))),
+    add_coverage:Type.Optional(Type.Array(Type.Object({criterion:Type.String(),test:Type.Integer({minimum:0})}))),
+    replace_with:Type.Optional(Type.Array(Type.Any(),{minItems:1}))
+  }),{minItems:1}), architecture_replacements:Type.Optional(Type.Array(
+    Type.Object({old:Type.String({minLength:1}),new:Type.String({minLength:1})}))) });
+}

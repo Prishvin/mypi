@@ -110,7 +110,8 @@ def packet(root: Path, prefixes: list[str], task: dict, state: Path, limit=24000
             add('BRIEF ARCHITECTURE DECISIONS', brief)
         elif brief:
             index = architecture_sections.build(data)
-            relevant = [row for row in index['sections'] if architecture_paths.intersection(row['files'])]
+            relevant = [row for row in index['sections'] if architecture_paths.intersection(row['files'])
+                        or row['title'] in architecture_paths]
             # Prefer leaf/direct decisions to avoid duplicating a whole root section.
             relevant = [row for row in relevant if not any(other['parent'] == row['id'] for other in relevant)]
             for row in relevant[:5]:
