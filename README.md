@@ -290,7 +290,7 @@ Server preferences are in **~/.config/mypi/server.json**. **MYPI_SERVER_URL** an
 
 Explicit frozen task caps override project/profile defaults. Positive thinking caps must leave at least **2,048 tokens** for answers/tools; zero means uncapped thinking, not thinking off. Thinking is separately enabled/disabled. A threshold can be slightly exceeded by the model's closing bridge/batched decoding; total output remains bounded.
 
-Admission uses the matching tokenizer on serialized payload, a **25% margin** and template allowance. It is an estimate, not the server's exact rendered token count. Native usage receipts report the actual count. Pi compaction operates within the input budget, retaining recent material; each atomic worker starts fresh.
+Admission uses the matching tokenizer on serialized payload, a **25% margin** and template allowance. It is an estimate, not the server's exact rendered token count. Native usage receipts report the actual count. Pi's compaction trigger subtracts that margin and reserves space for the serialized envelope, so history compacts before the admission cap. At 32768 input tokens the history trigger is 21913 tokens; server capacity and output limits stay unchanged. Each atomic worker starts fresh. A batch inspection stopped by admission or a provider abort reports failure, even if Pi's raw process exits zero.
 
 The active release profiles are **mtplx-quality** and **chatgpt-quality**. Historical comparison templates remain available for separately installed engines; they are not additional bundled model downloads or newly validated remote profiles.
 

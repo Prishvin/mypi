@@ -6,11 +6,20 @@ import math
 from pathlib import Path
 from tokenizers import Tokenizer
 
+ADMISSION_FACTOR = 1.25
+TEMPLATE_RESERVE = 256
+
+
+def history_trigger(limit: int, envelope_reserve: int = 4096) -> int:
+    """Compact history before serialized envelope and admission margin consume the cap."""
+    raw_capacity = math.floor((limit - TEMPLATE_RESERVE) / ADMISSION_FACTOR)
+    return max(512, raw_capacity - envelope_reserve)
+
 
 def count_request(path: Path, limit: int, tokenizer: Path) -> dict:
     """Count the full payload and add headroom for differing backend serialization."""
     tokens = len(Tokenizer.from_file(str(tokenizer)).encode(path.read_text()).ids)
-    admitted = math.ceil(tokens * 1.25) + 256
+    admitted = math.ceil(tokens * ADMISSION_FACTOR) + TEMPLATE_RESERVE
     return {'estimated_input_tokens': tokens, 'admission_tokens': admitted,
             'limit': limit, 'passed': admitted <= limit,
             'method': 'Tokenizer on serialized payload + 25% + 256 template tokens; estimate, not exact backend count.'}

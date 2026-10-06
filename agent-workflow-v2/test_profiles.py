@@ -30,6 +30,24 @@ class ProfileTests(unittest.TestCase):
         args = options(**kwargs)
         return args, profiles.resolve(args, task or {}, profiles.apply_identity(args))
 
+    def test_compaction_precedes_serialized_admission_with_envelope_headroom(self):
+        import math
+        from token_budget import ADMISSION_FACTOR, TEMPLATE_RESERVE
+        with tempfile.TemporaryDirectory() as folder,patch('launch.server_config.load',return_value={
+                'model':'mtplx-quality','url':'http://localhost:8000'}):
+            folder=Path(folder)
+            for budget in [16384,24576,32768,57344]:
+                launch.configure(folder,'quality',98304)
+                launch.tune_context(folder,budget,8192)
+                settings=json.loads((folder/'settings.json').read_text())
+                trigger=98304-settings['compaction']['reserveTokens']
+                self.assertLessEqual(math.ceil((trigger+4096)*ADMISSION_FACTOR)+TEMPLATE_RESERVE,budget)
+                self.assertEqual(settings['compaction']['keepRecentTokens'],min(4000,budget//3))
+                model=json.loads((folder/'models.json').read_text())['providers']['local-qwen-workflow']['models'][0]
+                self.assertEqual((model['contextWindow'],model['maxTokens']),(98304,8192))
+                if budget==32768:
+                    self.assertLess(trigger,26513) # observed Linux payload that overflowed admission
+
     def test_all_combinations_and_cloud_caps(self):
         """Both roles are configurable for all five planner/executor combinations."""
         self.assertEqual(len(profiles.catalog()['profiles']), 11)
