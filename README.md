@@ -13,7 +13,7 @@ sudo apt-get update
 sudo apt-get install -y python3.12 python3.12-venv git ripgrep procps
 ~~~
 
-Install a supported Node version separately if needed; check its version before running the installer. Other distributions use their own package manager. Then:
+Install a supported Node version separately if needed; check its version before running the installer. With [nvm](https://github.com/nvm-sh/nvm#install--update-script) already installed, use `nvm install 24` and `nvm use 24`. Other distributions use their own package manager. Run **./install.sh without sudo**, so it uses your selected Node and installs into your user account. Then:
 
 ~~~sh
 python3 --version
