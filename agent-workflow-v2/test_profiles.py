@@ -148,6 +148,16 @@ class ProfileTests(unittest.TestCase):
                 self.assertEqual(prepared['profile'], 'local-flash')
                 self.assertIn('steps', launch.prepare(options(profile='local-flash', project=repo,
                                                             role='architect'))['command'][-1])
+                source=base/'proposal.json'
+                source.write_text(json.dumps({'plan_version':3,'goal':'Utility','architecture':'Pure API',
+                                              'tasks':[example_task()]}))
+                for mode in ({'refine_task':'T1'},{'plan_coverage':True},{}):
+                    reviewed=launch.prepare(options(profile='local-flash',project=repo,role='architect',
+                        plan_draft=source,prompt='Exact review packet',**mode))
+                    prompt=reviewed['command'][-1]
+                    self.assertIn('Exact review packet',prompt)
+                    self.assertNotIn('Save exactly one object with plan_version: 3',prompt)
+                    self.assertIn('coverage_plan only' if mode.get('plan_coverage') else 'sparse task_updates',prompt)
 
     def test_profile_path_traversal_rejected(self):
         """Named profiles cannot read credentials or arbitrary files."""

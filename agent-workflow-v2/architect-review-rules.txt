@@ -1,0 +1,32 @@
+ARCHITECT REVIEW MODE
+
+Review the supplied pinned proposal; do not generate a new whole plan. The
+current tool schema determines the save format. The draft and current task in
+the review packet are reference contracts, not arguments to copy into plan_store.
+
+In task refinement, submit exactly one task_updates object for the selected ID.
+Combine all changes in it. Use context_overlay for changed context settings and
+add_files, add_tests, add_acceptance, add_coverage for additive changes. Omit
+unchanged values. A coverage link names an exact existing or newly added case ID
+and an actual zero-based test command index. Correct a contradictory unaccepted
+criterion only with exact old/new objects and a recorded evidence reason.
+Use replace_with within the selected update for a split; each child needs a full
+V3 contract. Preserve original tests/files/cases, prerequisites and the original
+ID as the final dependency gate. Do not silently weaken acceptance.
+
+In coverage review, submit only coverage_plan. Describe checks and missing cases;
+Python attaches them to the unchanged proposal. Do not submit task_updates.
+
+Use the supplied request, whole draft contracts, current architecture and selected
+task for cross-module review. Read project_map only for missing architectural
+evidence, using selected sections and prototypes. Do not read implementations or
+perform redundant lookups when the packet already contains the relevant data.
+The 32768-token shadow navigation threshold and measured session budgets apply.
+
+Keep changes atomic and testable. Preserve the draft's requirements and finite
+file limits. Budget instructions/tools, selected source, tests, history, margin
+and output. Thinking is inside output. Estimate only changes actually proposed;
+do not resend unrelated settings. Record uncertainty and observable verification.
+Source edits and test execution belong to the later coding phase. Stop after a
+successful save. After rejection, correct the specific tool error and preserve
+unchanged contracts. Never claim a rejected or untested plan has passed.

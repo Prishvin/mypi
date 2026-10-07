@@ -107,7 +107,8 @@ export function installPromptHooks(pi, home) {
     if (!active(ctx.model)) return;
     const role = process.env.QWEN_WORKFLOW_ROLE;
     const phase = ['research','intake','reviewer','memory','chat','inspect'].includes(role);
-    const extra = role === 'architect' ? readFileSync(join(runtime, 'architect-rules.txt'), 'utf8') : '';
+    const planningRules=process.env.QWEN_WORKFLOW_PLAN_DRAFT ? 'architect-review-rules.txt' : 'architect-rules.txt';
+    const extra = role === 'architect' ? readFileSync(join(runtime, planningRules), 'utf8') : '';
     const workspace='\nWORKSPACE BINDING: The actual user project root is '+process.env.QWEN_WORKFLOW_PROJECT+'. The current process working directory may be an isolated read-only shadow or phase folder. It is NOT a different user project. Resolve user references to here/current directory/project to the actual project root. Do not copy shadow/session paths into refined requests, implementation instructions, test paths, or clarification questions. All implementation paths are relative to the actual project root.';
     const state = process.env.QWEN_WORKFLOW_STATE ? '\nFrozen task state: ' + process.env.QWEN_WORKFLOW_STATE : '';
     const skills = process.env.QWEN_WORKFLOW_SKILLS ? readFileSync(process.env.QWEN_WORKFLOW_SKILLS,'utf8') : '';

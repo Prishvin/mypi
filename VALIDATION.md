@@ -255,3 +255,18 @@ repair, native validation, checkpoint resume and immutable session runtimes.
 Spawn review already had the preceding field-diagnostic fix; the tighter schema
 will take effect in the next newly created session. Existing runtimes and model
 work were not modified or restarted.
+
+### Planning prompt mode separation — 2026-10-07
+
+Inspection found that pinned task/coverage reviews also received both the initial
+create-plan request template and system instructions to save a full plan. These
+conflicted with their sparse or coverage-only tool schemas. New pinned sessions
+use dedicated architect review rules and a mode-specific request wrapper. The
+granular planning skill explicitly distinguishes full resulting contracts from
+sparse patch arguments. New draft generation retains its full-plan instructions.
+
+Verification: **47 Python and 9 JavaScript tests pass**. Actual launch preparation
+for draft, generic repair, selected-task refinement and coverage selects compatible
+prompts. Pi system prompt hooks are checked for local and cloud planners, and the
+new review rules are copied and hashed into immutable session runtimes. No game
+contract, acceptance test or implementation was authored or changed by Codex.

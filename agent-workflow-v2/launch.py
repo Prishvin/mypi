@@ -168,7 +168,8 @@ def prepare(args) -> dict:
         command.append('--offline')
     prompt = args.prompt or 'Plan the architecture for the requested change using project interfaces only.'
     if args.role == 'architect':
-        prompt = task_prompts.planning(prompt, effective)
+        mode='coverage' if getattr(args,'plan_coverage',False) else 'repair' if draft_path else 'draft'
+        prompt = task_prompts.planning(prompt, effective, mode)
         if getattr(args,'plan_coverage',False):
             prompt += '\n\nCOVERAGE REVIEW MODE: plan_store accepts only coverage_plan. Review the draft and map requirements to observable checks; record missing cases as gaps. Do not rewrite the plan or implement tests. Python attaches your coverage plan to the unchanged draft.'
         elif draft_path:
