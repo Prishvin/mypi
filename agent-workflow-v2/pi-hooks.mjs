@@ -9,6 +9,7 @@ import {failedEditEvidence} from './pi-edit-recovery.mjs';
 import {requireThinkingCaps} from './pi-thinking-cap.mjs';
 import {admit} from './pi-admission.mjs';
 import {planFailure,planFailureContext} from './pi-plan-feedback.mjs';
+import {mutationProgress} from './pi-progress-guard.mjs';
 
 export function applies(model) { return model?.provider === 'local-qwen-workflow'; }
 
@@ -213,13 +214,18 @@ export function installToolHooks(pi, mutations = new Map()) {
       const contract = JSON.parse(readFileSync(state, 'utf8'));
       const target = architectureEdit ? resolve(contract.before.root, 'architecture.md') : resolve(ctx.cwd, event.input.path || '');
       if (!contract.task.files.some(path => resolve(contract.before.root, path) === target)) {
-        return { block: true, reason: 'File is outside the atomic task scope' };
+        return { block: true, reason: 'File is outside the atomic task scope. Allowed files: '+contract.task.files.join(', ')+
+          '. Put diagnostic tests in the declared test file; use workflow_test to run frozen commands. Dependency changes require replanning.' };
       }
       if (!architectureEdit && target === resolve(contract.before.root, 'architecture.md')) {
         return {block:true,reason:'Preserve authored architecture: use architecture-update insert/append_section; interface metadata refresh is automatic'};
       }
       if (mutations.has(target)) {
         return { block: true, reason: 'An edit of this file is still running. Batch disjoint replacements in one edit call, or wait for its shadow refresh.' };
+      }
+      if (!architectureEdit) {
+        const blocked=mutationProgress(contract,target);
+        if(blocked) {if(blocked.stop)ctx.abort();return {block:true,reason:blocked.reason};}
       }
       mutations.set(target, event.toolCallId);
     }
@@ -289,6 +295,10 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
     try {
       const summary = await refresh(ctx);
       const revisionNotice = architectureRevisionNotice(summary);
+      if(!event.isError && !architectureEdit && process.env.QWEN_WORKFLOW_STATE && event.input?.path) {
+        const contract=JSON.parse(readFileSync(process.env.QWEN_WORKFLOW_STATE,'utf8'));
+        mutationProgress(contract,resolve(ctx.cwd,event.input.path),true);
+      }
       if (applies(ctx.model) && process.env.QWEN_WORKFLOW_ROLE === 'code' &&
           process.env.QWEN_WORKFLOW_STOP_AFTER_PASS === '1' && !event.isError && process.env.QWEN_WORKFLOW_STATE) {
         const state = process.env.QWEN_WORKFLOW_STATE;

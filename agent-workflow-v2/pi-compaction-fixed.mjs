@@ -17,7 +17,8 @@ export function compactSummary(task, gate, failures = []) {
       failed_names:row.failed_names.slice(0,8).map(name => name.slice(0,160)),
       truncated_failed_names:row.failed_names.slice(0,8).filter(name => name.length>160).length,
       omitted_failed_names:Math.max(0,row.failed_names.length-8)})),
-    next_action:gate.passed ? 'Review current evidence and finish.' :
+    ...(gate.progress ? {progress:gate.progress} : {}),
+    next_action:gate.passed ? 'Review current evidence and finish.' : gate.progress?.next_action ||
       'Repair one named mechanism within scope; run workflow_test and project_map gate.',
     evidence_rule:'Every acceptance case and declared test below is preserved. Any later edit invalidates this gate. Truncated diagnostics are marked; project_map gate retrieves current violations.',
     retrieval_rule:'Use current shadow and bounded source_query, including pinned acceptance fixture pages. Discard old implementation assumptions.'};

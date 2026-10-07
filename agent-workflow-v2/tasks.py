@@ -197,5 +197,7 @@ def check(state: Path) -> dict:
         if not valid:
             result['violations'].append('Required scoped architecture insertion is missing or stale')
     result['passed'] = not result['violations']
+    from task_progress import describe
+    result['progress'] = describe(data, declared, identity)
     result['limits'] = 'Checks indexed source and declared files. Testability requires review; this is not an OS sandbox.'
     return result

@@ -306,6 +306,17 @@ If review generation itself failed or timed out before publishing a plan, explic
 
 This retains the failed review logs, uses a new repair artifact, checks evidence freshness, and preserves the one execution-repair allowance. It does not rerun the failed coding attempt before reviewing it. A completed generated plan or a failed corrective execution cannot use this option to bypass acceptance.
 
+After a corrective execution has failed, explicitly authorize **one further** review and repair with:
+
+```bash
+./mypi resume /path/to/project /path/to/original-plan.json \
+  --run-dir /path/to/original-run --allow-repair --reviewer qwen
+```
+
+This records the authorization, checks the current failure/source binding and keeps prior attempts and spent allowances. It reviews before starting another worker, preserves accepted tasks, and stops again if that corrective attempt fails. It cannot be combined with `--retry-review`.
+
+Recovery includes a Python audit of actual tool outcomes: mutation counts, repeated identical writes, compactions and bounded tool errors. Source bodies and reasoning stay local. During execution, a file may be mutated twice while other declared new files are absent; further rewrites pause until those files exist. The worker can still create missing tests, inspect source, run frozen tests and insert architecture notes. Three ignored rewrite blocks stop the attempt for review. The guard's private journal survives compaction, whose native handoff now includes actual file hashes/states, missing files and whether tests are absent, stale, failed or passing. File existence alone never proves acceptance.
+
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 
 Use **resume** for an interruption. Use **replan** when behavior, scope or acceptance needs changing. For a stopped timeout/execution/acceptance failure with unchanged source and contracts, an explicit **retry** creates a new plan without asking an LLM to regenerate it. It preserves original baselines, completed tasks, files, criteria, tests and context budgets, and changes only task deadlines. Changed source or immutable fixtures block this retry.

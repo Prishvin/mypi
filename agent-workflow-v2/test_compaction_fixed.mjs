@@ -35,6 +35,14 @@ test('large diagnostics are bounded and omissions are explicit',()=>{
   assert.deepEqual(data.task.acceptance,state.task.acceptance);
 });
 
+test('compaction preserves concrete missing files and prioritizes runnable evidence',()=>{
+  const progress={files:[{path:'numbers.py',status:'new',sha256:'current'}],
+    pending_files:['test_numbers.py'],tests_status:'not_run',next_action:'Create the missing declared files.'};
+  const data=JSON.parse(compactSummary(state.task,{...gate,progress},[]).split('\n').slice(1).join('\n'));
+  assert.deepEqual(data.progress,progress);assert.equal(data.next_action,progress.next_action);
+  assert.deepEqual(data.task,state.task);
+});
+
 test('oversized contract cancels the hook without Pi model fallback',async()=>{
   const folder=mkdtempSync(join(tmpdir(),'pi-compaction-'));
   const old={...process.env};let handler;let aborted=false;

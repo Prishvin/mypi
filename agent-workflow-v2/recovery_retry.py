@@ -26,3 +26,29 @@ def authorize(root, folder, state):
     state['status'] = 'retrying_review'
     state.pop('reason', None)
     save(folder / 'recovery-state.json', state)
+
+
+def authorize_repair(root, folder, state):
+    """Honor one explicit continuation after corrective execution failed, retaining history."""
+    repairs = state.get('repairs', [])
+    if state.get('status') != 'awaiting_user' or not repairs:
+        raise ValueError('Allow-repair requires a stopped corrective execution')
+    last = repairs[-1]
+    current = Path(state['current_plan'])
+    if (not last.get('review_result', {}).get('passed') or not current.is_file()
+            or current.resolve() != Path(last['plan']).resolve()):
+        raise ValueError('Use retry-review for failed generation; no executed corrective plan exists')
+    evidence = Path(state['current_run']) / 'replan-request.json'
+    packet = read(evidence)
+    if (not packet or packet.get('project') != str(root.resolve()) or
+            packet.get('current_snapshot') != scan(root, ['.'])['snapshot'] or
+            Path(packet.get('plan', '')).resolve() != current.resolve() or
+            packet.get('failed_todo', {}).get('id') != last['todo'] or
+            last['todo'] not in state.get('spent_ids', [])):
+        raise ValueError('Allow-repair evidence is stale or differs from the stopped corrective execution')
+    state.setdefault('repair_authorizations', []).append({
+        'epoch': time.time(), 'failed_plan': str(current), 'evidence': str(evidence),
+        'reason': 'Explicit --allow-repair: one further review and corrective execution; prior allowance history preserved'})
+    state['status'] = 'retrying_review'
+    state.pop('reason', None)
+    save(folder / 'recovery-state.json', state)

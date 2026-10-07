@@ -43,9 +43,39 @@ class RecoveryTests(unittest.TestCase):
         attach_lineage(data,packet);plans.save(root,['.'],data,output)
         return {'passed':True,'plan':str(output)}
 
-    def run_flow(self,resume=False,retry_review=False):
+    def run_flow(self,resume=False,retry_review=False,allow_repair=False):
         with patch('role_selection.load',return_value={'planner':'qwen'}):
-            return execute(self.root,self.path,self.folder,resume=resume,executor=self.runner,reviewer=self.reviewer,retry_review=retry_review)
+            return execute(self.root,self.path,self.folder,resume=resume,executor=self.runner,reviewer=self.reviewer,retry_review=retry_review,allow_repair=allow_repair)
+
+    def test_explicit_continuation_grants_only_one_further_repair_and_preserves_history(self):
+        self.codes=[20,20];self.assertEqual(self.run_flow()['code'],20)
+        before=read(self.folder/'recovery-state.json')
+        self.codes=[20];self.assertEqual(self.run_flow(allow_repair=True)['code'],20)
+        after=read(self.folder/'recovery-state.json')
+        self.assertEqual(after['spent_ids'],before['spent_ids']);self.assertEqual(after['spent_cases'],before['spent_cases'])
+        self.assertEqual(len(after['repair_authorizations']),1)
+        self.assertEqual(len(self.runs),3);self.assertEqual(len(self.reviews),2)
+        self.assertEqual(self.run_flow(resume=True)['code'],20)
+        self.assertEqual(len(self.runs),3);self.assertEqual(len(self.reviews),2)
+
+    def test_explicit_continuation_can_complete_without_replaying_failed_execution_first(self):
+        self.codes=[20,20];self.run_flow();self.codes=[0]
+        result=self.run_flow(allow_repair=True)
+        self.assertEqual(result['code'],0);self.assertEqual(result['plan'].name,'repair-2.json')
+        self.assertEqual(len(self.runs),3);self.assertEqual(len(self.reviews),2)
+
+    def test_continuation_rejects_stale_mismatched_and_nonexecuted_evidence(self):
+        with self.assertRaisesRegex(ValueError,'stopped corrective'):self.run_flow(allow_repair=True)
+        with patch.object(self,'reviewer',return_value={'passed':False}):self.run_flow()
+        with self.assertRaisesRegex(ValueError,'retry-review'):self.run_flow(allow_repair=True)
+        self.codes=[20];self.run_flow(retry_review=True)
+        checkpoint=read(self.folder/'recovery-state.json');packet_path=Path(checkpoint['current_run'])/'replan-request.json'
+        packet=read(packet_path);packet['failed_todo']['id']='different';save(packet_path,packet)
+        with self.assertRaisesRegex(ValueError,'differs'):self.run_flow(allow_repair=True)
+        packet['failed_todo']['id']=checkpoint['repairs'][-1]['todo'];save(packet_path,packet)
+        (self.root/'one.py').write_text('changed=1\n')
+        with self.assertRaisesRegex(ValueError,'stale'):self.run_flow(allow_repair=True)
+        self.assertEqual(len(self.runs),2)
 
     def test_explicit_review_retry_preserves_allowance_and_does_not_repeat_failed_execution(self):
         with patch.object(self,'reviewer',return_value={'passed':False,'exit_code':124}):

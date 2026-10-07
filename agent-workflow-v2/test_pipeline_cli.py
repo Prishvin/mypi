@@ -12,6 +12,15 @@ pi_local=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(pi_local
 
 
 class CliTests(unittest.TestCase):
+    def test_explicit_allow_repair_is_forwarded_and_cannot_combine_with_retry_review(self):
+        with tempfile.TemporaryDirectory() as folder:
+            argv=['resume',folder,folder+'-plan.json','--run-dir',folder+'-run','--allow-repair']
+            with (patch.object(pi_local,'initialize'),patch.object(pi_local,'start'),
+                  patch('recovery_runner.execute',return_value={'code':20}) as execute):
+                self.assertEqual(pi_local.main(argv),20)
+                self.assertTrue(execute.call_args.kwargs['allow_repair'])
+                self.assertFalse(execute.call_args.kwargs['retry_review'])
+                with self.assertRaises(SystemExit):pi_local.main(argv+['--retry-review'])
     def test_explicit_retry_review_reaches_coordinator_and_does_not_claim_execution_success(self):
         with tempfile.TemporaryDirectory() as folder:
             with (patch.object(pi_local,'initialize'),patch.object(pi_local,'start'),

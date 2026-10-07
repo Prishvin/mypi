@@ -52,3 +52,12 @@ them to source and plan hashes and assembles the remaining queue in Python.
 Unchanged contracts, frozen tests and completed regression lineage remain local.
 `recovery_retry.py` accepts an explicit retry of failed review generation without
 resetting the one corrective-execution allowance or rerunning accepted work.
+It separately records an explicit `--allow-repair` after corrective execution
+fails; the new review/attempt retains history and cannot grant itself another retry.
+
+`task_progress.py` derives file inventory and test freshness from frozen state
+and current hashes. Deterministic compaction preserves that progress and selects
+an evidence-based next action. `pi-progress-guard.mjs` limits repeated mutations
+while declared new files are absent, using a session journal that compaction
+cannot erase. `execution_audit.py` streams Pi events into bounded recovery counts
+and diagnostics without implementation bodies or reasoning.

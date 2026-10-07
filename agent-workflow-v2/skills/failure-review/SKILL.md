@@ -12,6 +12,13 @@ Distinguish observed facts from hypotheses: implementation bug, contradictory AP
 missing prerequisite, invalid test assumption, tool/schema failure, scope/size,
 context, timeout or provider failure. More time/thinking is not itself a diagnosis.
 
+Use execution_audit when supplied: it contains actual mutation/compaction counts
+and recent tool errors, without implementation bodies. Repeated source rewrites
+with no test execution are a workflow failure, not evidence of failing behavior.
+Make creating the declared tests and collecting executable evidence an early
+checkpoint before further speculative source revisions. Keep scratch diagnostics
+inside declared files; dependency changes require a scoped replan.
+
 Save failure_analysis: concise observed cause/evidence, uncertainty, the smallest
 corrective approach and the tests that will demonstrate the fix. Use plan_store
 with flat changes to the failed todo only: steps, test_strategy, assumptions,

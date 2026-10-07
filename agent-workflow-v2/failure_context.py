@@ -12,6 +12,8 @@ def build(root,packet,provider):
     data=scan(root,['.'])
     if data['snapshot']!=packet['current_snapshot']:raise ValueError('Failure evidence is stale; source changed')
     budget=limits(provider,'recovery');brief=distill(packet,focused=True)
+    from execution_audit import summarize
+    brief['execution_audit'] = summarize(packet.get('local_log'), packet['failed_todo']['files'])
     original=json.loads(Path(packet['plan']).read_text())
     brief['original_plan_overview']=[{k:t[k] for k in ('id','goal','depends_on','files') if k in t} for t in original['tasks']]
     brief.pop('remaining_overview',None)

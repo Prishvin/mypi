@@ -535,3 +535,34 @@ symlinks and directories, concurrent writers, direct-editor races, read-only
 preparation, shadow consistency, finalization and model-visible hook feedback.
 The live worker retains its immutable runtime; later task sessions capture the
 updated tooling. No model restart or game implementation edits were needed.
+
+### Missing-file rewrite loop and explicit continuation — 2026-10-07
+
+T03 exhausted its initial 900-second attempt and a 1,800-second corrective
+attempt. The latter performed seven successful writes to one source file, the
+last identical to its predecessor, with six compactions. Its declared test file
+was still absent and tests never ran. An attempted dependency edit was correctly
+blocked by scope. The old recovery packet lacked these tool-history counts.
+
+Python now distills the execution log into bounded mutation/compaction/error
+evidence for the reviewer. The native gate exposes exact declared-file states
+and hashes, missing files and test freshness; the compaction handoff retains
+these facts and prioritizes collecting runnable evidence. Pi pauses repeated
+rewrites after two successful mutations while declared new files remain absent;
+creating those files unlocks edits. Three ignored blocks stop for review. The
+private journal survives compaction, and rejected tool calls do not count as
+successful mutations. Scope errors identify the allowed files and test workflow.
+
+`resume --allow-repair` records one explicit authorization after an executed
+repair failed. It verifies fresh failure/source/plan binding, preserves spent
+allowances and old artifacts, reviews before execution, and escalates again on
+another failure. It is separate from retrying an unpublished review generation.
+
+**58 Python and 38 JavaScript tests passed.** Coverage includes progress freshness,
+zero-test evidence, bounded audit extraction without source/reasoning, the actual
+Pi hook lifecycle, rejected edits, persisted rewrite counts, missing-file
+creation, compaction contract preservation, stale/mismatched continuation,
+one-attempt limits, CLI exclusivity, finalization, resume and task scheduling.
+The real failed T03 contract plus fresh progress fits an 8,162-byte handoff.
+Qwen review session `a246673f8db7` received the recorded audit; its outcome is
+still pending. Codex did not edit game source, tests or task-specific repair prose.
