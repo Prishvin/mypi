@@ -9,6 +9,7 @@ import {validateToolArguments} from '@earendil-works/pi-ai';
 import {installRefreshHooks,installPromptHooks} from './pi-hooks.mjs';
 import extension from './pi-extension.mjs';
 import {runToolCall} from '../node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-agent-core/dist/agent-loop.js';
+import {planFailure} from './pi-plan-feedback.mjs';
 
 function environment(folder){
  const values={QWEN_WORKFLOW_ROLE:'architect',QWEN_WORKFLOW_SESSION:folder,
@@ -35,6 +36,22 @@ test('plan validation error keeps full original evidence locally and bounds mode
   assert.equal(await handlers.tool_result(event,{...ctx,model:{provider:'unrelated'}}),undefined);
   assert.equal(await handlers.tool_result({...event,toolName:'project_map'},ctx),undefined);
   assert.equal(existsSync(join(folder,'planning-stop.json')),false);
+ }finally{restore();rmSync(folder,{recursive:true,force:true});}
+});
+
+test('native sparse parse feedback keeps exact evidence and gives the final error plus retry semantics',()=>{
+ const folder=mkdtempSync(join(tmpdir(),'sparse-error-')),restore=environment(folder);
+ try{
+  process.env.QWEN_WORKFLOW_PLAN_DRAFT=join(folder,'bound.json');
+  const input={task_updates:'[{"id":"A","steps":["one","two"}]'};
+  const error='Traceback (most recent call last):\n'+'  File "runtime.py", line 40\n'.repeat(50)+
+    'ValueError: task_updates contains malformed JSON at character 33. Container needs closing array.';
+  const result=planFailure({toolName:'plan_store',input,isError:true,content:[{type:'text',text:error}]});
+  const text=result.content[0].text;
+  assert.match(text,/^ValueError: task_updates contains malformed JSON at character 33/);
+  assert.doesNotMatch(text,/Traceback|runtime.py/);
+  assert.match(text,/ALL intended edits/);assert.match(text,/not the previous rejected patch/);
+  assert.deepEqual(JSON.parse(readFileSync(result.details.rejectedProposal,'utf8')),{arguments:input,error});
  }finally{restore();rmSync(folder,{recursive:true,force:true});}
 });
 

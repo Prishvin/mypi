@@ -10,10 +10,17 @@ export function planFailure(event){
   const original=JSON.stringify({arguments:event.input,error});
   const artifact=join(session,'rejected-plan-'+createHash('sha256').update(original).digest('hex').slice(0,24)+'.json');
   try{writeFileSync(artifact,original,{flag:'wx'});}catch(e){if(e.code!=='EEXIST')throw e;}
-  const diagnostic=error.split('Received arguments:')[0].trim();
+  let diagnostic=error.split('Received arguments:')[0].trim();
+  if(diagnostic.includes('Traceback (most recent call last):')){
+    const exceptions=[...diagnostic.matchAll(/^[\w.]*(?:Error|Exception|Interrupt|Exit):[^\n]*/gm)];
+    if(exceptions.length)diagnostic=diagnostic.slice(exceptions.at(-1).index);
+  }
   const bounded=diagnostic.length<=3000?diagnostic:diagnostic.slice(0,1200)+'\n…\n'+diagnostic.slice(-1800);
+  const retry=process.env.QWEN_WORKFLOW_PLAN_DRAFT ?
+    ' Resubmit one complete corrected sparse patch containing ALL intended edits; each save starts from the pinned draft, not the previous rejected patch. Do not resend untouched draft tasks.' :
+    ' Correct the rejected call, preserve unchanged contracts, and do not repeat the whole proposal in explanations.';
   return {content:[{type:'text',text:bounded+'\n\nOriginal rejected proposal and error retained: '+artifact+
-    '\nNo plan was accepted. Do not repeat the whole proposal in explanations; preserve unchanged contracts for a focused repair.'}],
+    '\nNo plan was accepted.'+retry}],
     details:{...event.details,rejectedProposal:artifact},isError:true};
 }
 

@@ -286,3 +286,23 @@ and sparse context schema now state the exact 25% margin formula used by native
 validation. No model-authored values were filled in or adjusted by Codex.
 Supervision decisions and periodic metrics are retained in the pilot's
 `supervision.jsonl` alongside the original attempt evidence.
+
+### Sparse split JSON diagnostics — 2026-10-07
+
+T12 review submitted three malformed serialized task_updates calls. Sparse
+decoding incorrectly tried its legacy joined-parameter wrapper after every JSON
+error, shifting reported offsets by the wrapper length and emitting two Python
+tracebacks. The decoder now tries joining only after a complete value followed by
+extra data. Errors name the field, original character/line/column and a bounded
+excerpt, with a lexical hint for mismatched brackets or parentheses. It rejects
+duplicates, nonfinite constants, excessive nesting and invalid array shapes.
+It never repairs values or guesses plan content.
+
+Pi retains the full rejected arguments and error locally, while returning the
+final diagnostic to the model. Retry guidance explicitly requires all intended
+sparse edits because unsuccessful calls do not modify the pinned base. The
+refinement skill clarifies nested array/object syntax. **46 Python tests and
+10 JavaScript tests pass**, including native save rejection without publication
+and unchanged preserved proposal data. All three actual rejected payloads were
+replayed read-only and now report their original error positions. Eleven accepted
+reviews and the source snapshot were preserved when stopping the failed T12 loop.

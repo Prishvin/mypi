@@ -4,42 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 from project_map import scan
-
-
-def unique_pairs(pairs):
-    """Reject duplicate JSON keys rather than choosing a hidden conflicting value."""
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError('Duplicate serialized patch key: ' + key)
-        result[key] = value
-    return result
-
-
-def decode(patch):
-    """Decode exact JSON data from legacy parameter serialization, without inventing fields."""
-    result = copy.deepcopy(patch)
-    notes = []
-    for field in ('task_updates', 'architecture_replacements'):
-        value = result.get(field)
-        if not isinstance(value, str):
-            continue
-        if len(value.encode()) > 1048576:
-            raise ValueError('Serialized patch exceeds 1 MiB')
-        try:
-            parsed = json.loads(value, object_pairs_hook=unique_pairs)
-        except json.JSONDecodeError:
-            # Some XML adapters join later JSON parameters into the first parameter string.
-            parsed = json.loads('{"' + field + '":' + value + '}', object_pairs_hook=unique_pairs)
-            if not isinstance(parsed, dict) or set(parsed) - {field, 'architecture_replacements'}:
-                raise ValueError('Ambiguous serialized patch parameters')
-            if (set(parsed) - {field}).intersection(result):
-                raise ValueError('Conflicting serialized and outer patch fields')
-            result.update(parsed)
-        else:
-            result[field] = parsed
-        notes.append('Decoded literal JSON ' + field + '; no contract data changed')
-    return result, notes
+from plan_patch_transport import decode
 
 
 def split_data(update):

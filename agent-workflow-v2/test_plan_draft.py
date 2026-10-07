@@ -78,6 +78,13 @@ class DraftTests(unittest.TestCase):
             with (patch('workflow.arguments',return_value=args),
                   patch('shadow_navigation.planning_context',return_value=None),
                   patch.dict('os.environ',{'QWEN_WORKFLOW_PLAN_DRAFT':str(bound),'QWEN_WORKFLOW_ROLE':'architect'})):
+                malformed={'task_updates':'[{"id":"T1","steps":["first","second"}]}]'}
+                valid=incoming.read_text();incoming.write_text(json.dumps(malformed))
+                with self.assertRaisesRegex(ValueError,'task_updates contains malformed JSON at character'):
+                    workflow.main()
+                self.assertFalse(output.exists())
+                self.assertEqual(json.loads(incoming.read_text()),malformed)
+                incoming.write_text(valid)
                 workflow.main()
             stored=json.loads(output.read_text())
             self.assertEqual(stored['tasks'][0]['estimated_changed_lines'],40)

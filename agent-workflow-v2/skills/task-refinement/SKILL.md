@@ -36,6 +36,12 @@ files or acceptance). Omit unchanged values. For example:
 Replace the example IDs and values with this task's actual requirements; do not
 copy example budgets. Split children go in replace_with inside that one object;
 each child is a full V3 contract and therefore uses context, not context_overlay.
+Send real JSON arrays and objects, not JSON embedded in a quoted string. Close
+each nested array before its enclosing object, e.g. "steps":["First","Second"]}.
+The replace_with array stays inside the single selected update object; finish
+each complete child object before starting the next one.
+After a rejected save, resubmit the complete corrected sparse patch with all
+intended changes. Rejected patches are not merged into the pinned base.
 Read coverage_plan: incorporate every gap assigned to this task with the exact
 case, test argv and matching coverage; add fixture files to scope as needed.
 Python rejects a refinement that leaves any assigned gap unaddressed. Preserve

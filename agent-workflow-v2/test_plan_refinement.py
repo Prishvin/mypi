@@ -21,7 +21,7 @@ class RefinementTests(unittest.TestCase):
             self.assertIn("Received 2 entries with IDs ['T1', 'T1']",message)
             self.assertIn('Combine all changes into ONE',message)
         for value in (None,{},42,[None],['T1']):
-            with self.assertRaisesRegex(ValueError,'array containing one object'):
+            with self.assertRaisesRegex(ValueError,'array containing objects'):
                 guard(draft(),{'task_updates':value},'T1')
 
     def test_target_scope_and_split_dependency_gate(self):
