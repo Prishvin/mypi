@@ -768,3 +768,28 @@ Python and seven JavaScript checks passed**, including that observed 239-second
 case; timeout enforcement and acceptance remain unchanged. The failed assertions
 were present in bounded feedback with expected/actual values, so no missing
 diagnostic or game-test correction by the supervisor was involved.
+
+## Bounded constant retrieval (2026-10-08 local time)
+
+T06 requested two real dependency constants through `source_query symbol`. The
+old implementation searched only callable symbols, returned two missing-symbol
+errors and still marked the batch successful. The worker eventually timed out at
+eight of ten checks; this retrieval defect is confirmed, but it does not explain
+every unresolved game assertion.
+
+Named variable/constant definitions now support exact, bounded byte spans in
+Python, JavaScript, TypeScript and inline HTML scripts. Qualified names and
+ambiguity checks are retained; callable variables keep their original function
+spans. Metadata and shadow outlines still omit initializer values. Entirely failed
+batches return a failing tool result, while partial successes retain useful source.
+The scoped-retrieval skill and tool description explain these distinctions.
+
+**65 Python and 29 JavaScript checks passed on macOS**, including the real Python
+CLI through Pi's registered source tool, Unicode byte offsets, adjacent same-line
+declarations, class fields, repeated declarations, pagination and source budgets,
+architecture maintenance and immutable runtime capture. The updated Pi subset was
+rerun after adding whitespace-separated batch routing checks. No Linux test claimed.
+
+Read-only replay of the pilot's exact request returns both definitions in 116
+bytes, with the source hash and mtime unchanged. No game code or tests were authored
+by the supervisor. Live recovery with this new runtime remains to be demonstrated.

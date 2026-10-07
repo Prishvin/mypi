@@ -22,16 +22,29 @@ def source_path(root: Path, relative: str) -> Path:
     return target
 
 
+def symbol_matches(record: dict, name: str) -> list[dict]:
+    """Resolve callable or variable spans without guessing ambiguous declarations."""
+    symbols = record['symbols']
+    callable_names = {s['name'] for s in symbols}
+    declarations = []
+    for variable in record.get('variables', []):
+        qualified = '.'.join(filter(None, [variable['scope'], variable['name']]))
+        if qualified not in callable_names:
+            declarations.append({**variable, 'name': qualified, 'kind': 'variable',
+                                 'lines': variable['end'] - variable['line'] + 1})
+    candidates = symbols + declarations
+    exact = [s for s in candidates if s['name'] == name]
+    return exact or [s for s in candidates if s['name'].split('.')[-1].split('#')[0] == name]
+
+
 def read_symbol(root: Path, relative: str, name: str, offset=0, limit=100) -> dict:
-    """Return an exact or uniquely scoped function/class in bounded pages."""
+    """Return an exact callable or variable definition in bounded source pages."""
     path = source_path(root, relative)
     record = inspect_file(path, root.resolve() if path.is_relative_to(root.resolve()) else path.parent)
-    matches = [s for s in record['symbols'] if s['name'] == name]
-    if not matches:
-        matches = [s for s in record['symbols'] if s['name'].split('.')[-1].split('#')[0] == name]
+    matches = symbol_matches(record, name)
     if len(matches) != 1:
         candidates = [s['name'] for s in matches][:8]
-        raise ValueError('Use an exact qualified symbol name. Candidates: ' + json.dumps(candidates))
+        raise ValueError('Use an exact qualified symbol name, or search/file for repeated declarations. Candidates: ' + json.dumps(candidates))
     symbol = matches[0]
     if 'start_byte' in symbol:
         rows = path.read_bytes()[symbol['start_byte']:symbol['end_byte']].decode().splitlines()
@@ -98,6 +111,7 @@ def read_symbols(root: Path, relative: str, names: list[str]) -> dict:
             result['symbols'].append(read_symbol(root, relative, name))
         except ValueError as error:
             result['errors'].append({'symbol': name, 'error': str(error)})
+    result['passed'] = bool(result['symbols'])
     if len(json.dumps(result).encode()) > 12000:
         raise ValueError('Source budget exceeded; select fewer symbols')
     return result

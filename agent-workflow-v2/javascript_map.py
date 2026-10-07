@@ -66,7 +66,8 @@ def parse_javascript(text: str, suffix='.js', offset=0) -> dict:
                 variables.append({'name': variable.text.decode(), 'scope': '.'.join(parents),
                                   'type': annotation.text.decode() if annotation else None,
                                   'line': node.start_point.row + 1 + offset,
-                                  'end': node.end_point.row + 1 + offset})
+                                  'end': node.end_point.row + 1 + offset,
+                                  'start_byte': node.start_byte, 'end_byte': node.end_byte})
         if node.type in FUNCTIONS | CLASSES:
             name = node_name(node)
             key = (parents, name)
@@ -142,7 +143,7 @@ def parse_html(text: str) -> dict:
               'symbols': [], 'imports': scripts.external, 'calls': [], 'variables': []}
     for offset, code, byte_start in scripts.inline:
         parsed = parse_javascript(code, offset=offset)
-        for symbol in parsed['symbols']:
+        for symbol in parsed['symbols'] + parsed['variables']:
             symbol['start_byte'] += byte_start
             symbol['end_byte'] += byte_start
         result['symbols'].extend(parsed['symbols'])

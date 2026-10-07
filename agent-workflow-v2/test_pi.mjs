@@ -22,6 +22,14 @@ test('source file reads accept the observed fixture call without query and prese
   const response=await tool.execute('',{action:'fixture',paths:['levels.mjs']},null,null,ctx);
   const data=JSON.parse(response.content[0].text);assert.equal(data.mode,'project-file');assert.match(data.source,/LEVELS/);
   assert.match(data.note,/action=file/);
+  writeFileSync(join(folder,'constants.mjs'),'const FIRST=1, SECOND=2, SECRET="exclude";');
+  const lookup=query=>tool.execute('',{action:'symbol',paths:['constants.mjs'],query},null,null,ctx);
+  const batch=JSON.parse((await lookup(' FIRST\tSECOND\n')).content[0].text);
+  assert.equal(batch.passed,true);assert.equal(batch.symbols.length,2);
+  assert.equal(JSON.stringify(batch).includes('exclude'),false);
+  assert.equal(JSON.parse((await lookup(' FIRST ')).content[0].text).symbol,'FIRST');
+  assert.equal(JSON.parse((await lookup('FIRST absent')).content[0].text).passed,true);
+  await assert.rejects(lookup('missing absent'),/"passed": false/);
   await assert.rejects(tool.execute('',{action:'search',paths:['levels.mjs']},null,null,ctx),/requires a nonempty query/);
   await assert.rejects(tool.execute('',{action:'file',paths:['levels.mjs','other.mjs']},null,null,ctx),/exactly one file/);
  }finally{rmSync(folder,{recursive:true,force:true});for(const k of keys)if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];}

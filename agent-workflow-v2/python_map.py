@@ -52,7 +52,9 @@ def parse_python(text: str) -> dict:
                     if isinstance(item, (ast.Name, ast.Attribute)) and isinstance(item.ctx, ast.Store):
                         variables.append({'name': ast.unparse(item), 'scope': '.'.join(parents),
                                           'type': ast.unparse(node.annotation) if isinstance(node, ast.AnnAssign) else None,
-                                          'line': node.lineno, 'end': node.end_lineno})
+                                          'line': node.lineno, 'end': node.end_lineno,
+                                          'start_byte': byte_lines[node.lineno - 1] + node.col_offset,
+                                          'end_byte': byte_lines[node.end_lineno - 1] + node.end_col_offset})
         for child in ast.iter_child_nodes(node):
             visit(child, scope)
 
