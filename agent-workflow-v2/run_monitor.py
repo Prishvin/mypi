@@ -105,6 +105,24 @@ def planning_limits(metadata):
     return context,execution
 
 
+def implementation_preview(state, root):
+    """Show the latest saved task contracts without granting implementation acceptance."""
+    if state.get('workflow_phase')!='planning' or not state.get('current_plan'):return []
+    draft=read(Path(state['current_plan']))
+    if not draft or not isinstance(draft.get('tasks'),list):return []
+    from plan_draft import digest
+    if state.get('current_plan_sha256') and digest(draft)!=state['current_plan_sha256']:return []
+    rows=[]
+    for task in draft['tasks']:
+        if not isinstance(task,dict) or not isinstance(task.get('id'),str):return []
+        row={k:task.get(k) for k in ('id','goal','depends_on','steps','acceptance','coverage',
+                                    'tests','context','execution','estimated_changed_lines')}
+        row.update(preview=True,status='Awaiting planning',attempts=[],tools=[],test_results=[],
+                   files=file_status(root,task.get('files',[]),{}))
+        rows.append(row)
+    return rows
+
+
 class RunMonitor:
     """Bind one run or an evidence folder that follows subsequent replanned runs."""
     def __init__(self,folder,backend=None):
@@ -171,12 +189,15 @@ class RunMonitor:
                 fresh=e.get('snapshot')==identity and e.get('finished_snapshot')==identity
             except (OSError,ValueError,KeyError):fresh=False
         tasks=[]
+        from run_planning_results import results as planning_results, archived
+        saved_results=planning_results(run,state,read)
         current_ids={t['id'] for t in plan.get('tasks',[])}
         for task in [t for t in completed if t['id'] not in current_ids]+plan.get('tasks',[]):
             active=task['id']==state.get('current_todo');attempts=[a for a in state.get('attempts',[]) if a['todo']==task['id']]
             row={key:task.get(key) for key in ('id','goal','depends_on','steps','acceptance','coverage','tests','context','execution','estimated_changed_lines')}
             row.update(status=task_status(task,state,accepted),files=file_status(root,task['files'],frozen if active else {}),
                 attempts=[{k:a.get(k) for k in ('wall_seconds','exit_code','gate','metrics','interrupted')} for a in attempts])
+            if task['id'] in saved_results:row['planning_result']=saved_results[task['id']]
             if attempts and attempts[-1].get('session'):
                 prior=read(Path(attempts[-1]['session'])/'task-state.json')
                 row['test_results']=prior.get('evidence',{}).get('results',[])
@@ -201,6 +222,8 @@ class RunMonitor:
             'status':state.get('status','planning'),'current_todo':state.get('current_todo'),
             'workflow_phase':state.get('workflow_phase','execution'),
             'accepted':len([t for t in tasks if t['status']=='Accepted']),'total':len(tasks),'tasks':tasks,
+            'implementation_tasks':implementation_preview(state,root),
+            'planning_tasks':archived(plan,root,read) if state.get('workflow_phase')!='planning' else [],
             'reason':state.get('reason'),'started_epoch':state.get('started_epoch'),'ended_epoch':state.get('ended_epoch'),
             'elapsed_until_epoch':until if stopped else state.get('ended_epoch'),
             'thinking':{**self.thinking.snapshot(current/'pi.log',state.get('status')=='running'),

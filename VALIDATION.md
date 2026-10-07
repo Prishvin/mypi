@@ -199,3 +199,21 @@ available. Thirteen monitor unit checks and a live Chrome check passed, includin
 increasing token counts, the corrected thinking label and mobile width. No model
 request was restarted. This is a display correction, not a coverage acceptance
 or a reduction in the large response's generation time.
+
+### Implementation preview and saved planning results — 2026-10-07
+
+The monitor now offers separate Planning and Implementation queues. During
+planning, the implementation preview follows the latest hash-bound saved plan,
+including task splits, and always remains Awaiting planning. Preview rows never
+increase execution acceptance or claim tests have run. Completed planning rows
+show their own saved draft, coverage matrix/gaps, or refinement contracts and
+before/after changes. Once execution starts, the completed planning pipeline is
+retained only when its project and draft hash match the execution plan.
+
+Focused checks pass: **31 Python monitor/results/thinking tests and 14 JavaScript
+monitor tests** on macOS. Chrome exercised the actual 20-task draft, completed
+draft/coverage/refinement results, expanded-section persistence, implementation
+share-link reload, current-step navigation and mobile width, with no script
+errors. A browser response fixture verified the transition to implementation
+while retaining completed planning results. No model work was restarted, and no
+game implementation acceptance is implied by these UI checks.

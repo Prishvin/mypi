@@ -76,6 +76,21 @@ class Artifacts(unittest.TestCase):
         self.assertEqual(row['accepted'],1);self.assertEqual(row['tasks'][1]['status'],'Running')
         self.write('run-3/state.json',{'status':'running'})
         self.assertEqual(monitor.snapshot()['workflow_phase'],'execution')
+    def test_implementation_preview_is_separate_from_planning_acceptance_and_keeps_latest_contracts(self):
+        from plan_draft import digest
+        draft={'tasks':[self.task('CODE',status='done')],'architecture':'Pure function'}
+        saved=self.write('draft.json',draft)
+        monitor=self.setup_run(tasks=[self.task('DRAFT',status='done')],state={
+            'workflow_phase':'planning','current_plan':str(saved),'current_plan_sha256':digest(draft)})
+        row=monitor.snapshot();self.assertEqual(row['accepted'],1);self.assertEqual(row['total'],1)
+        preview=row['implementation_tasks'][0];self.assertTrue(preview['preview'])
+        self.assertEqual(preview['status'],'Awaiting planning');self.assertEqual(preview['test_results'],[])
+        self.assertEqual(preview['steps'],draft['tasks'][0]['steps']);self.assertEqual(preview['tests'],draft['tasks'][0]['tests'])
+        self.assertNotIn('planning_result',preview)
+        self.write('draft.json',{'tasks':[self.task('CHANGED')]})
+        self.assertEqual(monitor.snapshot()['implementation_tasks'],[])
+        state=read(self.root/'run-1/state.json');state['workflow_phase']='execution';self.write('run-1/state.json',state)
+        self.assertEqual(monitor.snapshot()['implementation_tasks'],[])
     def test_files_show_hash_changes_deletion_and_reject_outside_symlinks(self):
         raw=b'answer=42\n';(self.root/'code.py').write_bytes(raw)
         frozen={'before':{'files':[{'path':'code.py','sha256':hashlib.sha256(raw).hexdigest()}]}}

@@ -155,6 +155,14 @@ mypi monitor /path/outside/project/evidence --listen 0.0.0.0 --allow-address UI_
 
 Open **http://localhost:8137/**, or **http://UI_MACHINE_LAN_IP:8137/**. The monitor is part of mypi, works on macOS/Linux and runs independently of the conversation UI. It reads run artifacts and polls the configured model's native metrics endpoint; it starts no model and generates no inference requests. Other compatible backends still show todos and evidence when native metrics are unavailable.
 
+Use the **Planning** and **Implementation** queue buttons to inspect both phases.
+During planning, implementation tasks are labeled **Awaiting planning**; their
+steps, budgets and tests are draft contracts. Click a completed planning step to
+see its **Saved planning result**: architecture and draft todos, coverage strategy
+and gaps, or the refined task and recorded changes. These historical outputs
+remain available after implementation starts. Planning acceptance does not count
+as implemented or tested code.
+
 The light-themed viewer refreshes every three seconds. A sticky **Current step** line shows the actual task and current tool/model activity, queue state or stopping reason, with a button to jump to that task. Browsing another todo does not change this status. The viewer shows accepted/running/blocked/failed/interrupted todos, dependencies, planned atomic steps, file changes, acceptance criteria mapped to frozen test commands, passing/failing/stale test results, recent tool calls with timings/errors, attempt history, task deadlines and context/output/thinking budgets. It retains accepted lineage after replanning. Select a todo to add its ID to the URL for sharing. Elapsed clocks stop while an interrupted run awaits replanning.
 
 Live native telemetry shows actual prompt processing, cached/new prompt tokens, reasoning/tool/answer phase, generation speed and separate allocation/footprint/RSS measurements when available. Capacity is a limit; missing measurements appear as **—**. Process RSS requires a recorded sampler; the viewer does not inspect a remote PID. Planned steps are displayed as instructions, not invented completion checkmarks. Task acceptance reflects the runner's frozen test and scope gates, rather than a model's claim of success.

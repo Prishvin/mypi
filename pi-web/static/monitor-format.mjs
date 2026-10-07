@@ -6,6 +6,22 @@ export function phase(value){return ({chunk:'Reading prompt',reasoning:'Thinking
 export function completion(done,total){return typeof done==='number'&&total>0?Math.max(0,Math.min(100,done/total*100)):0;}
 export function testState(result,fresh){if(!result)return 'Not run';if(fresh===false)return 'Stale';return result.exit_code===0?'Passed':'Failed';}
 
+/** Keep planning acceptance separate from the future implementation contracts. */
+export const taskKey=task=>task.preview?'implementation:'+task.id:task.planning?'planning:'+task.id:task.id;
+export function queueGroups(run){
+ return run.workflow_phase==='planning'?
+  [{id:'planning',label:'Planning',tasks:run.tasks||[]},
+   {id:'implementation',label:'Implementation',preview:true,tasks:run.implementation_tasks||[]}]:
+  [...(run.planning_tasks?.length?[{id:'planning',label:'Planning',tasks:run.planning_tasks}]:[]),
+   {id:'implementation',label:'Implementation',tasks:run.tasks||[]}];
+}
+export function selectedTask(run,key){
+ const all=queueGroups(run).flatMap(g=>g.tasks);
+ return all.find(t=>taskKey(t)===key)||
+  (run.workflow_phase!=='planning'&&key?.startsWith('implementation:')?all.find(t=>t.id===key.slice(15)):null)||
+  all.find(t=>t.id===key)||all.find(t=>t.id===run.current_todo&&!t.preview&&!t.planning)||all[0];
+}
+
 /** Label actual external-model reasoning, retaining clear empty and stopped states. */
 export function thinkingView(run){
  const t=run.thinking||{},text=typeof t.text==='string'?t.text:'';

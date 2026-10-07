@@ -68,6 +68,11 @@ p { margin: 8px 0; overflow-wrap: anywhere; }
 .workspace { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 20px; }
 aside #filter { width: 100%; margin: 15px 0; font-size: 12px; }
 #tasks { display: flex; flex-direction: column; gap: 7px; }
+.queue-phases { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.queue-phases button { flex: 1; font-size: 12px; padding: 9px 7px; }
+.queue-phases button[aria-pressed='true'] { background: #e8f0ff; border-color: #bfd3fb; color: var(--blue); }
+.planning-output { border-top: 1px solid var(--border); margin: 20px 0; padding-top: 16px; }
+.planning-output h3 { margin-bottom: 8px; }
 .todo { display: block; text-align: left; width: 100%; background: #fff; border-color: transparent; padding: 12px; border-radius: 8px; }
 .todo.selected { border-color: #bfd3fb; background: #f0f5ff; }
 .todo strong { font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }

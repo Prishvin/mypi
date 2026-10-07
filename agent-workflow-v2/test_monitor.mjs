@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {number,gib,duration,phase,completion,testState,currentStep,thinkingView} from '../pi-web/static/monitor-format.mjs';
+import {number,gib,duration,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask} from '../pi-web/static/monitor-format.mjs';
 test('Unavailable measurements remain unavailable, zero stays zero',()=>{for(const x of [undefined,null,NaN,'3']){assert.equal(number(x),'—');assert.equal(gib(x),'—');assert.equal(duration(x),'—');}assert.equal(number(0),'0');assert.equal(gib(1024**3),'1.00 GiB');});
 test('Thinking labels distinguish live, previous and stopped output without manufacturing text',()=>{
  const r={status:'running',thinking:{text:'Recorded thought',streaming:true,todo:'T2',truncated:true}};
@@ -25,6 +25,20 @@ test('Elapsed durations and completion limits do not fabricate progress',()=>{as
 test('Test success becomes stale after source changes',()=>{assert.equal(testState(undefined),'Not run');assert.equal(testState({exit_code:0},false),'Stale');assert.equal(testState({exit_code:1},true),'Failed');assert.equal(testState({exit_code:0},true),'Passed');assert.equal(phase('reasoning'),'Thinking');});
 
 const run=()=>({status:'running',current_todo:'T1',tasks:[{id:'T1',goal:'Implement number extraction',steps:['Implement','Test'],tools:[]},{id:'T2',goal:'Unrelated task'}]});
+test('Planning and implementation groups keep selection, acceptance and shared links distinct',()=>{
+ const r={workflow_phase:'planning',current_todo:'DRAFT',accepted:1,total:2,
+  tasks:[{id:'DRAFT',status:'Accepted'}],implementation_tasks:[{id:'DRAFT',preview:true,status:'Awaiting planning'},{id:'T1',preview:true}]};
+ assert.equal(queueGroups(r).length,2);assert.equal(selectedTask(r,'DRAFT').preview,undefined);
+ assert.equal(selectedTask(r,'implementation:DRAFT').preview,true);assert.equal(taskKey(r.implementation_tasks[1]),'implementation:T1');
+ assert.equal(r.accepted,1);assert.equal(r.total,2);
+ const execution={workflow_phase:'execution',tasks:[{id:'T1',status:'Pending'}]};
+ assert.equal(queueGroups(execution).length,1);assert.equal(selectedTask(execution,'implementation:T1').id,'T1');
+ execution.planning_tasks=[{id:'DRAFT',planning:true,planning_result:{available:true}}];
+ assert.equal(queueGroups(execution).length,2);assert.equal(selectedTask(execution,'DRAFT').planning,true);
+ assert.equal(taskKey(selectedTask(execution,'DRAFT')),'planning:DRAFT');
+ assert.equal(selectedTask(execution,'planning:DRAFT').planning_result.available,true);
+ assert.equal(selectedTask(r,'missing').id,'DRAFT');assert.equal(selectedTask({},''),undefined);
+});
 test('Current activity uses recorded model phase and actual tokens, never guesses planned step numbers',()=>{
  const r=run();r.native={requests:[{phase:'chunk',prefill_done:100,prompt_tokens:200}]};
  const activity=currentStep(r);assert.equal(activity.todo,'T1');assert.match(activity.title,/Reading prompt/);
