@@ -6,6 +6,7 @@ import {domainInstructions} from './pi-domain-skills.mjs';
 import {failedEditEvidence} from './pi-edit-recovery.mjs';
 import {requireThinkingCaps} from './pi-thinking-cap.mjs';
 import {admit} from './pi-admission.mjs';
+import {planFailure,planFailureContext} from './pi-plan-feedback.mjs';
 
 export function applies(model) { return model?.provider === 'local-qwen-workflow'; }
 
@@ -17,6 +18,9 @@ export function active(model) {
 
 export function installPromptHooks(pi, home) {
   const runtime = process.env.QWEN_WORKFLOW_RUNTIME || home;
+  pi.on('context', (event, ctx) => {
+    if(active(ctx.model))return {messages:planFailureContext(event.messages)};
+  });
   pi.on('before_provider_request', async (event, ctx) => {
     if (active(ctx.model) && ctx.model.provider === 'openai') {
       const payload={...event.payload, max_output_tokens: Number(process.env.QWEN_WORKFLOW_OUTPUT_BUDGET || 32768)};
@@ -229,6 +233,8 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
   };
   pi.on('tool_result', async (event, ctx) => {
     const role=process.env.QWEN_WORKFLOW_ROLE;
+    const rejected=active(ctx.model)?planFailure(event):undefined;
+    if(rejected)return rejected;
     if (active(ctx.model) && ['research','intake','reviewer','memory'].includes(role) && !event.isError && event.details?.phase===role &&
         event.details?.output===process.env.QWEN_WORKFLOW_PHASE_OUTPUT) {
       const output=process.env.QWEN_WORKFLOW_PHASE_OUTPUT;

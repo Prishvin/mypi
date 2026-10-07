@@ -20,6 +20,11 @@ def canonical(proposal):
             raise ValueError('Conflicting canonical and alias plan fields: '+key)
         plan[key]=value;del plan[alias]
         plan.setdefault('schema_normalization',[]).append({'from':alias,'to':key})
+    if 'tasks' in plan:
+        from plan_transport import task_list
+        plan['tasks'], decoded = task_list(plan['tasks'])
+        if decoded:
+            plan.setdefault('schema_normalization',[]).append({'field':'tasks','from':'literal JSON string','to':'task object array'})
     for index,task in enumerate(plan.get('tasks',[])):
         acceptance=task.get('acceptance')
         if isinstance(acceptance,dict) and all(k in acceptance for k in ('id','given','when','then')):

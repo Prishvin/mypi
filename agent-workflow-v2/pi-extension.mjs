@@ -182,7 +182,7 @@ function registerPlan(pi) {
     parameters: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? coverageParameters() : process.env.QWEN_WORKFLOW_PLAN_DRAFT ? repairParameters() : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
       goal: Type.String(), architecture: Type.String(),
       failure_analysis: Type.Optional(Type.String({minLength:40,description:'For evidence-bound recovery: observed failure, cause/hypothesis, corrective approach and validation.'})),
-      tasks: Type.Array(Type.Object({ id: Type.String(), goal: Type.String(),
+      tasks: Type.Union([Type.Array(Type.Object({ id: Type.String(), goal: Type.String(),
         steps: Type.Optional(Type.Array(Type.String(), {minItems:2,maxItems:6})),
         assumptions: Type.Optional(Type.Array(Type.String())),
         test_strategy: Type.Optional(Type.String()),
@@ -212,7 +212,8 @@ function registerPlan(pi) {
           margin_tokens: Type.Optional(Type.Integer({minimum:1024})),
           max_input_tokens: Type.Integer({minimum:512,maximum:57344}),
           max_output_tokens: Type.Integer({minimum:512,maximum:32768}) }),
-        depends_on: Type.Optional(Type.Array(Type.String())) })) }),
+        depends_on: Type.Optional(Type.Array(Type.String())) })),
+        Type.String({maxLength:1048576,description:'Compatibility for a literal JSON array serialized by a tool adapter. Prefer an array of task objects. Python parses strictly and validates every contract.'})]) }),
     async execute(_id, params, signal, _update, ctx) {
       if (!active(ctx.model) || !['architect','reviewer'].includes(process.env.QWEN_WORKFLOW_ROLE)) throw new Error('Planning or final review only');
       if (params.plan_version !== undefined && params.plan_version !== 3) throw new Error('New executable plans require plan_version 3 with context estimates and bounded execution.');

@@ -23,6 +23,7 @@ The design remains a deterministic scheduler around small, fresh Pi workers. Qwe
 4. **Ordinary recovery required full replanning.** An explicit operational retry preserves all behavior contracts and original task baselines. It refuses changed source, altered immutable fixtures and failures that require architectural replanning.
 5. **Deadlines were rigid and cleanup incomplete.** The task ceiling is now 45 minutes, with shorter planning defaults for small work. Interrupting a fixed skill cleans up its owned child process group. The outer task deadline still limits the whole attempt.
 6. **Node test totals were unobserved.** Native accounting recognizes Node TAP/spec totals, including ANSI output and zero-test results. Passing process exit alone cannot hide observed zero-test discovery.
+7. **A malformed large plan obscured its error and exhausted the retry context.** Literal serialized task arrays now reach strict Python decoding, with bounded syntax diagnostics. Full rejected proposals stay local, including schema failures raised before tool execution. Error feedback omits the repeated argument dump; no validation gate is weakened. A live 20-task draft was recovered with a short Qwen-authored punctuation patch and reused for coverage/refinement.
 
 ## Context and task policy
 

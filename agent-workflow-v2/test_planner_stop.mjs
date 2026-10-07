@@ -17,7 +17,8 @@ test('only the selected architect stops on a successful persisted plan',async()=
     installRefreshHooks({on:(name,fn)=>{handlers[name]=fn;}},'python','workflow.py',()=>[]);
     const event={toolName:'plan_store',content:[],details:{plan}};
     const ctx={model:{provider:'local-qwen-workflow'},abort:()=>{stopped++;}};
-    assert.equal(await handlers.tool_result({...event,isError:true},ctx),undefined);
+    assert.equal((await handlers.tool_result({...event,isError:true},ctx)).isError,true);
+    assert.equal(stopped,0);
     assert.equal(await handlers.tool_result(event,{...ctx,model:{provider:'unrelated'}}),undefined);
     assert.equal(existsSync(join(dir,'planning-stop.json')),false);
     assert.equal((await handlers.tool_result(event,ctx)).details.acceptedPlanningStop,true);

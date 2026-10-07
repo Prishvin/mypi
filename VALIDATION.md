@@ -156,3 +156,33 @@ Only the monitor was restarted; the model and planning request continued unchang
 The initial draft still contains a complete V3 plan before coverage and per-task
 refinement. Its long generation time remains a planning efficiency issue, not a
 completed implementation or a measured percentage of game progress.
+
+### Rejected plan transport and recovery — 2026-10-07
+
+The live draft failed after 1,457.885 seconds. Its `tasks` parameter was a
+59,455-byte string containing malformed JSON: one `depends_on` key lacked a
+closing quote and colon. Pi's array coercion reported `tasks.0: must be object`.
+It then echoed the full proposal in the error, and the following admission check
+rejected 75,734 estimated tokens against the 57,344 input cap. This was a real
+invalid plan followed by a feedback/context failure, not a model-load timeout.
+
+The full-plan schema now allows a literal JSON task array to reach Python's
+strict decoder. Malformed JSON gets a bounded position/excerpt diagnostic;
+duplicate keys, nonfinite constants, excessive nesting, oversized encodings and
+non-object tasks are rejected. Native task, scope, budget and acceptance gates
+remain mandatory. Rejected proposals/errors stay on disk. Tool-result feedback
+is bounded, and a context hook covers Pi schema failures that bypass result
+hooks, without changing original session evidence or unrelated providers.
+
+All **332 workflow Python tests and 74 JavaScript tests pass on macOS**. New
+checks include the actual installed Pi validator and tool-call lifecycle,
+native persistence, untouched input, missing JSON punctuation, rejected
+contracts, evidence retention and repeated context preparation. These changes
+have not received a new Linux Docker run.
+
+A fresh private Pi/Qwen request repaired only the missing quote and colon:
+3,173 input tokens, 230 output tokens, 39.788 seconds including startup/prefill.
+All 20 model-authored tasks were preserved and passed native plan validation.
+The original failure, correction and metrics are retained in the pilot report.
+The same plan checkpoint resumed with the validated draft; coverage and all
+20 task refinements are still required before implementation can start.
