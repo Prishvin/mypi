@@ -122,10 +122,15 @@ def main() -> int:
         if os.environ.get('QWEN_WORKFLOW_REQUIRE_REFINEMENT')=='1':
             proposal['planning_review']={'required':True,'status':'draft'}
         if os.environ.get('QWEN_WORKFLOW_REPLAN_EVIDENCE'):
+            if os.environ.get('QWEN_WORKFLOW_ROLE') != 'architect':
+                raise ValueError('Failure recovery is architect-only')
             from planning_service import attach_lineage
             packet=json.loads(Path(os.environ['QWEN_WORKFLOW_REPLAN_EVIDENCE']).read_text())
             if packet['current_snapshot']!=scan(root,prefixes)['snapshot'] or packet['project']!=str(root):
                 raise ValueError('Failure evidence became stale')
+            if 'tasks' not in proposal:
+                from replan_patch import restore as restore_recovery
+                proposal=restore_recovery(root,prefixes,packet,proposal)
             analysis=proposal.get('failure_analysis')
             if not isinstance(analysis,str) or len(analysis.strip())<40:raise ValueError('Explain failure evidence, cause, corrective approach and validation in failure_analysis')
             if not {t['id'] for t in packet['remaining']}<={t['id'] for t in proposal['tasks']}:

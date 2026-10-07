@@ -449,3 +449,40 @@ diff checks passed. The live HTTP snapshot exposed all 20 implementation tasks
 and 22 saved planning steps during Qwen's automatic T01 failure review. Browser
 automation was unavailable, so visual rendering was not verified. Only the
 monitor was restarted; model execution and game artifacts were not changed.
+
+### Focused failure recovery — 2026-10-07
+
+The original automatic T01 review exhausted its 1,800-second deadline while
+serializing a complete remaining plan. Native telemetry recorded 28,031 output
+tokens, but Pi received no complete tool call and published no repair plan.
+That output was not accepted as a successful repair. The original 20-task plan,
+failed task baseline and all generated source remained intact.
+
+Recovery now exposes a typed flat patch for the failed todo plus failure_analysis.
+Python preserves untouched contracts and assembles the remaining V3 plan. The
+model may refine steps, retrieval, estimates, budgets and deadlines, or add tests
+and coverage within frozen scope. It cannot replace criteria, expand files or
+edit another todo. Source freshness, pinned original-plan hash, frozen fixtures,
+V3 validation and regression lineage still gate publication. Existing complete
+native recovery artifacts remain subject to the original full-plan gates.
+
+The review prompt contains the failed contract, observed errors, admission
+measurements, architecture/prototypes and one compact whole-plan overview.
+Separate recovery system rules remove contradictory whole-plan generation
+instructions. The private runtime pins those rules and schema with each session.
+
+An explicit --retry-review retries a stopped review generation without rerunning
+failed coding first or resetting the one corrective-execution allowance. It keeps
+old artifacts and records the user authorization; completed plans and stale
+source cannot use this path. A failed corrective execution still asks the user.
+
+**72 Python and 13 JavaScript tests passed.** Checks include immutable-contract
+preservation, completed lineage, original baseline handling, stale source/plan
+rejection, context validation, bounded additive coverage, actual CLI publication,
+private runtime rules, explicit retry accounting and the installed Qwen XML
+parser through the real Pi tool lifecycle into native validation.
+
+The live retry uses session 2bc8486181b9. Its evidence packet fell from **30,464 to
+7,149 estimated tokens**, and the backend prompt fell from **39,064 to 12,612
+actual tokens**. The request schema was inspected to confirm it advertises flat
+recovery fields and no tasks array. Live publication/execution evidence follows.

@@ -16,6 +16,8 @@ def capture(base: Path, session: Path) -> Path:
         files.append(base/'chat-rules.txt')
     if (base/'inspect-rules.txt').exists():
         files.append(base/'inspect-rules.txt')
+    if (base/'architect-recovery-rules.txt').exists():
+        files.append(base/'architect-recovery-rules.txt')
     if (base/'architect-review-rules.txt').exists():
         files.append(base/'architect-review-rules.txt')
     if (base/'skills.json').exists():

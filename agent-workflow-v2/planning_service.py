@@ -38,7 +38,7 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
             raise ValueError('Replanning evidence belongs to another project or is stale')
         from failure_context import build
         request,selection=build(project,packet,planner)
-        request += '\nRECOVERY OVERRIDES THE INITIAL TODO REQUEST: plan remaining work only. COPY the original acceptance objects (id/given/when/then) and test argv EXACTLY, without rewording or renumbering. Keep file scope. Change implementation steps, estimates, budgets or deadlines as evidence requires. Never repeat accepted todos. Remove already-completed todo IDs from depends_on; their behavior remains protected by separate lineage regression tests. Dependencies on remaining todos must refer to preceding todos in this replacement plan.'
+        request += '\nRECOVERY MODE: submit failure_analysis and only flat changes to the failed todo via plan_store. Python supplies its ID and preserves every untouched remaining contract, acceptance case and test command. Do not reproduce the full plan or modify other todos. If the contract cannot support a repair, explain the blocker and stop.'
         lineage = packet
     output.parent.mkdir(parents=True, exist_ok=True)
     pipeline = None

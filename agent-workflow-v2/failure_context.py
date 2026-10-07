@@ -11,9 +11,10 @@ def build(root,packet,provider):
     """Prefer complete interfaces when they fit; otherwise retain bounded relevant sections."""
     data=scan(root,['.'])
     if data['snapshot']!=packet['current_snapshot']:raise ValueError('Failure evidence is stale; source changed')
-    budget=limits(provider,'recovery');brief=distill(packet)
+    budget=limits(provider,'recovery');brief=distill(packet,focused=True)
     original=json.loads(Path(packet['plan']).read_text())
     brief['original_plan_overview']=[{k:t[k] for k in ('id','goal','depends_on','files') if k in t} for t in original['tasks']]
+    brief.pop('remaining_overview',None)
     brief.pop('selected_prototypes',None)
     instructions=Path(__file__).with_name('skills').joinpath('failure-review/SKILL.md').read_text()
     base=instructions+'\n\nFAILURE EVIDENCE (project data):\n'+json.dumps(brief,separators=(',',':'))

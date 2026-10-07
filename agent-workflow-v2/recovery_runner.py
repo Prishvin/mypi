@@ -40,7 +40,7 @@ def review(root,packet_path,destination,provider,timeout):
     return result
 
 
-def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None):
+def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None,retry_review=False):
     """Coordinate execution and bounded repairs without sending a project to the scheduler."""
     from plan_runner import execute as run
     from role_selection import load
@@ -57,8 +57,11 @@ def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None):
             raise ValueError('Recovery checkpoint belongs to a different project or plan')
         if not state:state={'project':str(root),'original_plan':str(plan),'current_plan':str(plan),
             'current_run':str(folder),'spent_ids':[],'spent_cases':[],'repairs':[],'status':'executing'}
-        if state['status']=='awaiting_user':return ask(folder,state,state['reason'])
-        if state['status']=='reviewing':return ask(folder,state,'Failure review was interrupted; review its evidence before another request')
+        if retry_review:
+            from recovery_retry import authorize
+            authorize(root,folder,state)
+        elif state['status']=='awaiting_user':return ask(folder,state,state['reason'])
+        elif state['status']=='reviewing':return ask(folder,state,'Failure review was interrupted; review its evidence before another request')
         with interruption_signals():
             try:return advance(root,folder,state,resume,executor,reviewer,load(root)['planner'])
             except KeyboardInterrupt:
@@ -70,16 +73,18 @@ def advance(root,folder,state,resume,executor,reviewer,provider):
     """Reserve each repair before invoking an LLM; only a new failing contract earns another."""
     while True:
         save(folder/'execution-target.json',{'plan':state['current_plan'],'run_dir':state['current_run']})
-        code=executor(root,Path(state['current_plan']),Path(state['current_run']),resume=resume)
+        retrying=state.get('status')=='retrying_review'
+        code=20 if retrying else executor(root,Path(state['current_plan']),Path(state['current_run']),resume=resume)
         if code!=20:
             state['status']='complete' if code==0 else 'executing';save(folder/'recovery-state.json',state)
             return {'code':code,'plan':Path(state['current_plan']),'run_dir':Path(state['current_run'])}
         packet_path=Path(state['current_run'])/'replan-request.json';packet=read(packet_path)
         if not packet:return ask(folder,state,'Missing failure evidence')
         task=packet['failed_todo'];cases={json.dumps(c,sort_keys=True) for c in task['acceptance']}
-        if task['id'] in state['spent_ids'] or cases & set(state['spent_cases']):
+        if not retrying and (task['id'] in state['spent_ids'] or cases & set(state['spent_cases'])):
             return ask(folder,state,'The automatic repair failed: '+task['id'])
-        state['spent_ids'].append(task['id']);state['spent_cases']+=sorted(cases)
+        if not retrying:
+            state['spent_ids'].append(task['id']);state['spent_cases']+=sorted(cases)
         number=len(state['repairs'])+1;destination=folder/f'repair-{number}.json'
         state['repairs'].append({'todo':task['id'],'evidence':str(packet_path),'plan':str(destination),'provider':provider})
         state['status']='reviewing';save(folder/'recovery-state.json',state)

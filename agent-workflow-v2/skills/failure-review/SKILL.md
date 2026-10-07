@@ -14,11 +14,15 @@ context, timeout or provider failure. More time/thinking is not itself a diagnos
 
 Save failure_analysis: concise observed cause/evidence, uncertainty, the smallest
 corrective approach and the tests that will demonstrate the fix. Use plan_store
-to save a complete replacement V3 plan for remaining tasks only. Keep original
-todo IDs, exact acceptance objects and test argv. Preserve completed behavior,
-immutable fixtures and authorized file scope. Do not relax tests to pass a failure.
-Remove completed prerequisite IDs from depends_on. Unchanged remaining tasks
-should stay unchanged; refine the failed task's steps/retrieval/budgets if justified.
+with flat changes to the failed todo only: steps, test_strategy, assumptions,
+estimated_changed_lines, context_overlay, execution, or additive tests/coverage/cases.
+Do not send tasks, task_updates, IDs or a complete replacement plan. Python retains
+all unchanged remaining contracts, exact acceptance objects and test argv, and
+removes completed prerequisites while preserving their regression evidence.
+Exact architecture_replacements may clarify decisions without rewriting the map.
+Preserve completed behavior, immutable fixtures and authorized file scope. Do not
+relax tests to pass a failure. Use measured admission evidence, including history
+and safety margin, when adjusting the failed task's future input budget.
 If the existing scope/contract makes a repair impossible, explain why and stop;
 the native runner will ask the user instead of silently widening scope.
 

@@ -131,7 +131,7 @@ class ProfileTests(unittest.TestCase):
             base = Path(folder)
             repo = base / 'repo'; repo.mkdir()
             subprocess.run(['git', 'init', '-q', str(repo)], check=True)
-            for name in ('qwen-rules.txt','architect-rules.txt','research-rules.txt','intake-rules.txt','reviewer-rules.txt','memory-rules.txt'):
+            for name in ('qwen-rules.txt','architect-rules.txt','architect-recovery-rules.txt','research-rules.txt','intake-rules.txt','reviewer-rules.txt','memory-rules.txt'):
                 (base/name).write_text('Private test rules')
             (repo / 'slug.py').write_text('def slugify(text):\n    """Make a slug."""\n    return text\n')
             task = base / 'task.json'; task.write_text(json.dumps(example_task()))
@@ -160,6 +160,22 @@ class ProfileTests(unittest.TestCase):
                     self.assertEqual('plan_child_store' in selected_tools,bool(mode.get('refine_task')))
                     self.assertNotIn('Save exactly one object with plan_version: 3',prompt)
                     self.assertIn('coverage_plan only' if mode.get('plan_coverage') else 'flat changed fields' if mode.get('refine_task') else 'sparse task_updates',prompt)
+                evidence=base/'failure.json'
+                from project_map import scan
+                original=json.loads(source.read_text());original['project']=str(repo.resolve())
+                source.write_text(json.dumps(original))
+                evidence.write_text(json.dumps({'project':str(repo.resolve()),'plan':str(source),
+                    'current_snapshot':scan(repo,['.'])['snapshot']}))
+                recovered=launch.prepare(options(profile='local-flash',project=repo,role='architect',
+                    replan_evidence=evidence,prompt='Measured failure packet'))
+                prompt=recovered['command'][-1]
+                self.assertIn('failure_analysis and flat changed fields',prompt)
+                self.assertNotIn('Save exactly one object with plan_version: 3',prompt)
+                pinned=json.loads(Path(recovered['replan_evidence']).read_text())
+                from plan_draft import digest
+                self.assertEqual(pinned['recovery_plan_sha256'],digest(original))
+                self.assertTrue((Path(recovered['runtime'])/'architect-recovery-rules.txt').is_file())
+
 
     def test_profile_path_traversal_rejected(self):
         """Named profiles cannot read credentials or arbitrary files."""

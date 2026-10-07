@@ -18,16 +18,20 @@ class RuntimeTests(unittest.TestCase):
             for name in ('workflow.py', 'qwen-rules.txt', 'architect-rules.txt', 'research-rules.txt', 'intake-rules.txt','reviewer-rules.txt','memory-rules.txt'):
                 (base / name).write_text('first version')
             (base/'architect-review-rules.txt').write_text('Pinned review rules')
+            (base/'architect-recovery-rules.txt').write_text('Pinned recovery rules')
             (base / 'test_unrelated.py').write_text('do not package tests')
             runtime = capture(base, session)
             (base / 'workflow.py').write_text('second version')
             (base / 'qwen-rules.txt').write_text('new rules')
             (base/'architect-review-rules.txt').write_text('Updated review rules')
+            (base/'architect-recovery-rules.txt').write_text('Updated recovery rules')
             self.assertEqual((runtime / 'workflow.py').read_text(), 'first version')
             self.assertEqual((runtime / 'qwen-rules.txt').read_text(), 'first version')
             self.assertFalse((runtime / 'test_unrelated.py').exists())
             self.assertEqual((runtime/'architect-review-rules.txt').read_text(),'Pinned review rules')
             self.assertIn('architect-review-rules.txt',json.loads((runtime/'manifest.json').read_text()))
+            self.assertEqual((runtime/'architect-recovery-rules.txt').read_text(),'Pinned recovery rules')
+            self.assertIn('architect-recovery-rules.txt',json.loads((runtime/'manifest.json').read_text()))
 
     def test_todo_budget_keeps_real_context_and_response_space(self):
         """Navigation limits trigger compaction without shrinking the real model context."""

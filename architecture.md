@@ -41,3 +41,12 @@ recovery. Planning acceptance and implementation acceptance stay separate.
 `pi-web/static/monitor-format.mjs` handles queue selection: planning-to-execution
 handoffs follow the active todo once, while ordinary polls preserve manual
 history selections. The monitor never infers completed edits from model prose.
+
+## Focused failure recovery
+
+`failure_context.py` sends the failed contract and compact plan overview to the
+planner. `pi-replan-patch.mjs` exposes typed flat changes; `replan_patch.py` binds
+them to source and plan hashes and assembles the remaining queue in Python.
+Unchanged contracts, frozen tests and completed regression lineage remain local.
+`recovery_retry.py` accepts an explicit retry of failed review generation without
+resetting the one corrective-execution allowance or rerunning accepted work.

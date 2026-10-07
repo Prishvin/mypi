@@ -23,6 +23,7 @@ import {registerServer} from './pi-server.mjs';
 import {registerPlanChildren} from './pi-plan-children.mjs';
 import {repairParameters} from './pi-plan-draft.mjs';
 import {coverageParameters} from './pi-coverage-plan.mjs';
+import {recoveryParameters} from './pi-replan-patch.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -180,12 +181,13 @@ export function failureFeedback(failures) {
 function registerPlan(pi) {
   /** Persist structured todos outside the project; planning cannot execute them. */
   const draft=process.env.QWEN_WORKFLOW_PLAN_DRAFT;
+  const recovery=process.env.QWEN_WORKFLOW_REPLAN_EVIDENCE;
   const target=draft && process.env.QWEN_WORKFLOW_PLAN_COVERAGE!=='1' ? JSON.parse(readFileSync(draft,'utf8')).refine_task : undefined;
   const refinement=target ? 'Refine only '+target+': pass changed fields DIRECTLY (steps, context_overlay, add_tests, add_coverage, etc). Python supplies the target ID. Do not send task_updates, id, tasks or replace_with. For a split, stage each full child with plan_child_store and submit its ordered child_refs here. Use unchanged:true only if no changes are needed. Every save starts from the pinned draft; rejected saves do not accumulate edits.' : '';
   pi.registerTool({
     name: 'plan_store', label: 'Save architecture and todos',
-    description: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? 'Attach coverage_plan to the unchanged pinned draft. Map every acceptance case and request requirement to observable checks, and assign missing cases to tasks. Does not implement tests.' : target ? refinement : draft ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.'+refinement : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
-    parameters: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? coverageParameters() : draft ? repairParameters(target) : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
+    description: recovery ? 'Repair only the failed todo: provide failure_analysis and flat changed fields such as steps or context_overlay. Python preserves all unchanged tasks, exact acceptance, tests and dependency order. Do not send tasks, task_updates, goal, IDs or a whole replacement plan. Source edits belong to the executor.' : process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? 'Attach coverage_plan to the unchanged pinned draft. Map every acceptance case and request requirement to observable checks, and assign missing cases to tasks. Does not implement tests.' : target ? refinement : draft ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.'+refinement : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
+    parameters: recovery ? recoveryParameters() : process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? coverageParameters() : draft ? repairParameters(target) : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
       goal: Type.String(), architecture: Type.String(),
       failure_analysis: Type.Optional(Type.String({minLength:40,description:'For evidence-bound recovery: observed failure, cause/hypothesis, corrective approach and validation.'})),
       tasks: Type.Union([Type.Array(Type.Object({ id: Type.String(), goal: Type.String(),
@@ -214,7 +216,7 @@ function registerPlan(pi) {
           selected_symbols_only: Type.Optional(Type.Boolean()),
           fixture_test_patterns: Type.Optional(Type.Array(Type.String(),{maxItems:8})),
           estimate: Type.Optional(Type.Object(Object.fromEntries(['framework','shadow','source','tests','history']
-            .map(key=>[key,Type.Integer({minimum:0})])))),
+            .map(key=>[key,Type.Integer({minimum:key==='framework'?6144:0})])))),
           margin_tokens: Type.Optional(Type.Integer({minimum:1024})),
           max_input_tokens: Type.Integer({minimum:512,maximum:57344}),
           max_output_tokens: Type.Integer({minimum:512,maximum:32768}) }),
@@ -226,7 +228,7 @@ function registerPlan(pi) {
       const output = process.env.QWEN_WORKFLOW_PLAN;
       if (!output) throw new Error('Plan destination missing');
       const input = output + '.draft.json';
-      writeFileSync(input, JSON.stringify(process.env.QWEN_WORKFLOW_PLAN_DRAFT ? params : {...params,plan_version:params.plan_version || 3}));
+      writeFileSync(input, JSON.stringify((draft || recovery) ? params : {...params,plan_version:params.plan_version || 3}));
       const result = await pi.exec(python, [cli, ...scopeArgs(process.env.QWEN_WORKFLOW_PROJECT),
         'save-plan', '--input', input, '--output', output], { signal, timeout: 30000 });
       if (result.code) throw new Error(result.stdout + result.stderr);

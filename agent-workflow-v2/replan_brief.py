@@ -2,7 +2,7 @@
 import copy
 
 
-def distill(packet):
+def distill(packet, focused=False):
     """Keep pending contracts and observed failures; omit duplicated telemetry."""
     brief = copy.deepcopy(packet)
     failed = brief.pop('failed_todo', {})
@@ -32,4 +32,13 @@ def distill(packet):
         'This is a deterministic context brief. The full packet remains local and '
         'validates scope, frozen acceptance, tests and accepted regressions. '
         'Pending contracts below retain their exact acceptance objects and test argv.')
+    if focused:
+        remaining = brief.pop('remaining', [])
+        brief['failed_contract'] = next((task for task in remaining if task['id'] == failed.get('id')), failed)
+        brief['remaining_overview'] = [{key: task[key] for key in ('id', 'goal', 'depends_on', 'files')
+                                      if key in task} for task in remaining]
+        brief['evidence_note'] = ('Only the failed contract is editable. All other pending contracts remain local; '
+            'Python preserves them exactly. Submit failure_analysis and flat changed fields, not the whole plan.')
+        if metric.get('admission_estimate'):
+            brief['metrics']['admission_estimate'] = copy.deepcopy(metric['admission_estimate'])
     return brief

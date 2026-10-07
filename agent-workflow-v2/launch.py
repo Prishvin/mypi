@@ -118,6 +118,8 @@ def prepare(args) -> dict:
         evidence=json.loads(args.replan_evidence.read_text())
         if args.role!='architect' or evidence['project']!=str(root) or evidence['current_snapshot']!=summary['snapshot']:
             raise ValueError('Replan evidence does not match this architect and source snapshot')
+        from plan_draft import digest
+        evidence['recovery_plan_sha256']=digest(json.loads(Path(evidence['plan']).read_text()))
         evidence_path=str(session/'replan-evidence.json');Path(evidence_path).write_text(json.dumps(evidence))
     if getattr(args, 'plan_draft', None):
         if args.role != 'architect' or getattr(args, 'interactive', False):
@@ -170,9 +172,11 @@ def prepare(args) -> dict:
         command.append('--offline')
     prompt = args.prompt or 'Plan the architecture for the requested change using project interfaces only.'
     if args.role == 'architect':
-        mode='coverage' if getattr(args,'plan_coverage',False) else 'refine' if getattr(args,'refine_task',None) else 'repair' if draft_path else 'draft'
+        mode='recovery' if evidence_path else 'coverage' if getattr(args,'plan_coverage',False) else 'refine' if getattr(args,'refine_task',None) else 'repair' if draft_path else 'draft'
         prompt = task_prompts.planning(prompt, effective, mode)
-        if getattr(args,'plan_coverage',False):
+        if evidence_path:
+            prompt += '\n\nFOCUSED FAILURE REVIEW: plan_store accepts failure_analysis plus flat failed-task changes. Python preserves the remaining plan. Do not send tasks, IDs, goal or the entire architecture. Current review limits apply to this call only; choose future executor budgets from measured failure evidence.'
+        elif getattr(args,'plan_coverage',False):
             prompt += '\n\nCOVERAGE REVIEW MODE: plan_store accepts only coverage_plan. Review the draft and map requirements to observable checks; record missing cases as gaps. Do not rewrite the plan or implement tests. Python attaches your coverage plan to the unchanged draft.'
         elif draft_path and getattr(args,'refine_task',None):
             prompt += '\n\nSELECTED TASK REVIEW: plan_store accepts flat changed fields; Python supplies the selected ID. Stage split children individually with plan_child_store, then commit ordered child_refs. Do not send task_updates or replace_with. Unchanged review uses unchanged:true. All native preservation, dependency, coverage and V3 gates remain mandatory.'

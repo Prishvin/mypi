@@ -16,7 +16,7 @@ from test_coverage_plan import draft
 class RecoveryTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.base=Path(self.tmp.name);self.root=self.base/'project';self.root.mkdir()
+        self.base=Path(self.tmp.name).resolve();self.root=self.base/'project';self.root.mkdir()
         (self.root/'one.py').write_text('def normalize(text):\n    """Normalize an input."""\n    return "PRIVATE_BODY_SENTINEL"\n')
         (self.root/'architecture.md').write_text('# Normalization\n`one.py` owns normalize(text).\n')
         self.path=self.base/'plan.json';plans.save(self.root,['.'],draft(),self.path)
@@ -43,9 +43,36 @@ class RecoveryTests(unittest.TestCase):
         attach_lineage(data,packet);plans.save(root,['.'],data,output)
         return {'passed':True,'plan':str(output)}
 
-    def run_flow(self,resume=False):
+    def run_flow(self,resume=False,retry_review=False):
         with patch('role_selection.load',return_value={'planner':'qwen'}):
-            return execute(self.root,self.path,self.folder,resume=resume,executor=self.runner,reviewer=self.reviewer)
+            return execute(self.root,self.path,self.folder,resume=resume,executor=self.runner,reviewer=self.reviewer,retry_review=retry_review)
+
+    def test_explicit_review_retry_preserves_allowance_and_does_not_repeat_failed_execution(self):
+        with patch.object(self,'reviewer',return_value={'passed':False,'exit_code':124}):
+            self.assertEqual(self.run_flow()['code'],20)
+        before=read(self.folder/'recovery-state.json')
+        result=self.run_flow(retry_review=True)
+        self.assertEqual(result['code'],0);self.assertEqual(len(self.runs),2)
+        state=read(self.folder/'recovery-state.json')
+        self.assertEqual(state['spent_ids'],before['spent_ids']);self.assertEqual(state['spent_cases'],before['spent_cases'])
+        self.assertEqual(result['plan'].name,'repair-2.json')
+        self.assertEqual(len(state['review_retry_authorizations']),1)
+        self.assertEqual(state['repairs'][0]['review_result']['exit_code'],124)
+
+    def test_review_retry_does_not_grant_another_repair_after_corrective_execution_fails(self):
+        self.codes=[20,20]
+        with patch.object(self,'reviewer',return_value={'passed':False,'exit_code':124}):self.run_flow()
+        self.assertEqual(self.run_flow(retry_review=True)['code'],20)
+        self.assertEqual(len(self.reviews),1)
+        with self.assertRaisesRegex(ValueError,'generated plan'):self.run_flow(retry_review=True)
+        self.assertEqual(len(self.runs),2)
+
+    def test_review_retry_rejects_stale_source_and_normal_execution(self):
+        with self.assertRaisesRegex(ValueError,'stopped failure review'):self.run_flow(retry_review=True)
+        with patch.object(self,'reviewer',return_value={'passed':False,'exit_code':124}):self.run_flow()
+        (self.root/'one.py').write_text('x=2\n')
+        with self.assertRaisesRegex(ValueError,'stale'):self.run_flow(retry_review=True)
+        self.assertEqual(len(self.runs),1)
 
     def test_one_review_then_one_repair_success_returns_actual_final_target(self):
         result=self.run_flow();self.assertEqual(result['code'],0)

@@ -291,9 +291,18 @@ Frozen external fixtures protect acceptance across retries. Known completed beha
 
 A failed test, unexpected scope change, stale fixture, deadline or budget overflow stops the run with an evidence packet. The packet contains the task, changed files, bounded failure details, measurements and the reason to replan. Failure does not authorize an unbounded repair loop.
 
-The CLI/web coordinator now sends a failed todo to the selected **planner** for a fresh failure review. It supplies measured architecture/shadow, original plan overview, exact remaining contracts and observed errors. Complete architecture and prototypes are included when both the provider's selection threshold and available packet space permit (32k Qwen, 128k cloud); otherwise Python selects the compact map, relevant sections and up to five interfaces. Implementation bodies remain local. The model explains the diagnosis and corrective approach, then saves a plan that must preserve completed behavior, exact acceptance/tests and authorized scope.
+The CLI/web coordinator sends a failed todo to the selected **planner** for a fresh failure review. It supplies measured architecture/shadow, a compact original-plan overview, the failed contract and observed errors (including request-admission measurements). Complete architecture and prototypes are included when both the provider’s selection threshold and available packet space permit (32k Qwen, 128k cloud); otherwise Python selects the compact map, relevant sections and up to five interfaces. Implementation bodies remain local. The model submits **failure_analysis plus flat changes to the failed todo only**. Python assembles the complete remaining plan, preserving untouched tasks, exact acceptance/tests, authorized scope and completed regression lineage. Source and original-plan hashes must still match. A repair requiring changes to other contracts stops for user-directed replanning.
 
 Python applies **one automatic repair attempt per failed contract**. If that repair fails, or the review cannot produce a valid plan, execution stops with an inline/CLI question and `user-question.json`. Repeating resume does not silently reset the allowance. An interrupted repair resumes the same contract. A separate later todo may receive its own one attempt. Evidence and results live under the original run directory; `execution-target.json` identifies the actual repair plan/run for final review. Explicit user-directed replanning can authorize further work.
+
+If review generation itself failed or timed out before publishing a plan, explicitly authorize a new focused review with:
+
+```bash
+./mypi resume /path/to/project /path/to/original-plan.json \
+  --run-dir /path/to/original-run --retry-review --reviewer qwen
+```
+
+This retains the failed review logs, uses a new repair artifact, checks evidence freshness, and preserves the one execution-repair allowance. It does not rerun the failed coding attempt before reviewing it. A completed generated plan or a failed corrective execution cannot use this option to bypass acceptance.
 
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 

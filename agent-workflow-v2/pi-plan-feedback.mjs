@@ -16,7 +16,8 @@ export function planFailure(event){
     if(exceptions.length)diagnostic=diagnostic.slice(exceptions.at(-1).index);
   }
   const bounded=diagnostic.length<=3000?diagnostic:diagnostic.slice(0,1200)+'\n…\n'+diagnostic.slice(-1800);
-  const retry=process.env.QWEN_WORKFLOW_PLAN_DRAFT ?
+  const retry=process.env.QWEN_WORKFLOW_REPLAN_EVIDENCE ?
+    ' Resubmit failure_analysis and the complete corrected flat changes for the failed todo only. Do not resend tasks, IDs or the whole plan. Python preserves unchanged contracts; rejected patches do not accumulate.' : process.env.QWEN_WORKFLOW_PLAN_DRAFT ?
     ' Follow the current tool schema. For selected-task review, send flat changed fields or child_refs; do not send task_updates. Correct a failed plan_child_store by resending only that full child; other receipts remain usable. For plan_store, resubmit the complete corrected change containing ALL intended edits; each save starts from the pinned draft, not the previous rejected patch. Do not resend untouched draft tasks.' :
     ' Correct the rejected call, preserve unchanged contracts, and do not repeat the whole proposal in explanations.';
   return {content:[{type:'text',text:bounded+'\n\nOriginal rejected proposal and error retained: '+artifact+

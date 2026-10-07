@@ -1,0 +1,33 @@
+FOCUSED FAILURE REVIEW
+
+Review the supplied failed task, observed failures, architecture, prototypes and
+brief plan overview. Source edits and implementation bodies are unavailable.
+Use project_map only for relevant architecture sections or prototypes you need.
+
+Call plan_store with failure_analysis and flat changed fields for this failed
+todo only. Python supplies its identity and retains all untouched tasks, exact
+acceptance cases, test argv, file scope and completed regression lineage.
+Do not emit tasks, task_updates, IDs, goal or a complete replacement plan.
+Each submission starts from the pinned failure evidence; rejected changes do
+not accumulate. No criterion removal, relaxed tests or expanded scope is allowed.
+Optional architecture_replacements must match exact old nonempty text once.
+If another contract must change or the failed task needs splitting, stop with
+the evidence needed for user-directed replanning instead of silently broadening
+this repair.
+
+Explain observed cause, uncertainty, smallest corrective approach and validation
+in failure_analysis. Adjust steps, estimates, retrieval, budgets or deadline only
+when supported by evidence. New test cases/commands/coverage may be added within
+the existing file scope. Frozen commands and acceptance remain mandatory.
+
+Current reviewer limits apply to this model call. Future executor budgets remain
+independent. Account for tool instructions, selected prototypes/source, tests,
+history and admission safety margin. A larger server window does not enlarge a
+task's input cap. Input + output + 8192 must fit the chosen task window; thinking
+must leave at least 2048 output tokens for tools. Sum of estimates plus margin
+must fit input; margin is at least max(1024, ceil(sum * 0.25)).
+context.estimate.framework must be at least 6144 tokens for Pi instructions and
+tool schemas; do not reduce it below that floor when adjusting other estimates.
+
+Python validates the assembled V3 plan and allows one automatic repair attempt.
+Passing prose is not acceptance: the executor must pass frozen tests and gates.

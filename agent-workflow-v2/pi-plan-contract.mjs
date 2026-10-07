@@ -20,7 +20,7 @@ export function contextSchema(){
     knowledge_topics:Type.Optional(Type.Array(Type.String(),{maxItems:4})),
     selected_symbols_only:Type.Optional(Type.Boolean()),
     fixture_test_patterns:Type.Optional(Type.Array(Type.String(),{maxItems:8})),
-    estimate:Type.Object(Object.fromEntries(['framework','shadow','source','tests','history'].map(k=>[k,Type.Integer({minimum:0})])),{additionalProperties:false}),
+    estimate:Type.Object(Object.fromEntries(['framework','shadow','source','tests','history'].map(k=>[k,Type.Integer({minimum:k==='framework'?6144:0})])),{additionalProperties:false}),
     margin_tokens:Type.Integer({minimum:1024}),max_input_tokens:Type.Integer({minimum:512,maximum:57344}),
     max_output_tokens:Type.Integer({minimum:512,maximum:32768})},{additionalProperties:false});
 }

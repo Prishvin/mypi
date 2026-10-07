@@ -12,6 +12,14 @@ pi_local=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(pi_local
 
 
 class CliTests(unittest.TestCase):
+    def test_explicit_retry_review_reaches_coordinator_and_does_not_claim_execution_success(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with (patch.object(pi_local,'initialize'),patch.object(pi_local,'start'),
+                  patch('recovery_runner.execute',return_value={'code':20}) as execute,
+                  patch('review_service.review') as review):
+                code=pi_local.main(['resume',folder,folder+'-plan.json','--run-dir',folder+'-run','--retry-review'])
+            self.assertEqual(code,20);self.assertTrue(execute.call_args.kwargs['retry_review'])
+            self.assertTrue(execute.call_args.kwargs['resume']);review.assert_not_called()
     def test_monitor_routes_without_initialization_or_model_start(self):
         with (patch('monitor_server.main',return_value=0) as monitor,
               patch.object(pi_local,'initialize') as initialize,patch.object(pi_local,'start') as start):

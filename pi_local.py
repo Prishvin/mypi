@@ -136,6 +136,7 @@ def main(argv=None):
     resuming.add_argument('--run-dir', type=Path, required=True)
     for runner_parser in (executing,resuming):
         runner_parser.add_argument('--reviewer',choices=['chatgpt','qwen','local'])
+        runner_parser.add_argument('--retry-review',action='store_true',help='Explicitly retry a failed review generation; preserves the one execution-repair allowance')
     reviewing=sub.add_parser('review',help='Review a completed run and save granular follow-up tests/fixes')
     reviewing.add_argument('project',type=Path)
     reviewing.add_argument('plan',type=Path)
@@ -203,7 +204,7 @@ def main(argv=None):
             if args.action!='review':
                 from recovery_runner import execute
                 start()
-                outcome=execute(args.project,args.plan,args.run_dir,resume=args.action=='resume')
+                outcome=execute(args.project,args.plan,args.run_dir,resume=args.action=='resume',retry_review=args.retry_review)
                 if outcome['code']:return outcome['code']
                 args.plan,args.run_dir=outcome['plan'],outcome['run_dir']
             if selected=='qwen':start()
