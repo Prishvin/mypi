@@ -51,6 +51,10 @@ test('tool journal excludes source/reasoning and retains relevant selectors/erro
   const journal=readFileSync(join(session,'execution-events.jsonl'),'utf8');
   assert.doesNotMatch(journal,/PRIVATE_/);assert.match(journal,/ValueError: mismatch/);
   assert.deepEqual(JSON.parse(journal).selector,{path:'source.py'});
+  h.tool_execution_end({toolCallId:'b',toolName:'edit',isError:true,result:{content:[
+    {type:'text',text:'Validation failed for tool "edit":\n  - path: must be present\nReceived arguments: PRIVATE_ARGS'}]}},ctx);
+  assert.match(readFileSync(join(session,'execution-events.jsonl'),'utf8'),/path: must be present/);
+  assert.doesNotMatch(readFileSync(join(session,'execution-events.jsonl'),'utf8'),/PRIVATE_/);
 });
 
 test('chat/reviewer/Codex sessions do not run this watchdog',async t=>{

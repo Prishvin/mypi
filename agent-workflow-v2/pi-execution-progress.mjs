@@ -46,7 +46,8 @@ export function installExecutionProgressHooks(pi,python,runtime) {
     if(event.isError) {
       const text=(event.result?.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n').split('Received arguments:')[0];
       const lines=text.split('\n'),causes=lines.filter(line=>/^\s*(?:[\w.]*Error|Exception):/.test(line));
-      error=(causes.at(-1)||lines[0]||'Tool failed').slice(0,240);
+      const fields=lines.filter(line=>/^\s*-\s+[\w.]+:\s/.test(line)).slice(0,3);
+      error=(causes.at(-1)||[lines[0]||'Tool failed',...fields].join('\n')).slice(0,240);
     }
     save({kind:'tool',tool:event.toolName,selector,...(error?{error}:{})});
   });

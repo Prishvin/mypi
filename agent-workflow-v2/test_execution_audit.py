@@ -12,6 +12,8 @@ class AuditTests(unittest.TestCase):
         text+='ValueError: Use qualified candidates: factory.locate\nReceived arguments: PRIVATE_IMPLEMENTATION'
         self.assertEqual(error_brief(text),'ValueError: Use qualified candidates: factory.locate')
         self.assertEqual(error_brief('Text did not match\nShadow refreshed: stale-hash'),'Text did not match')
+        self.assertEqual(error_brief('Validation failed for tool "edit":\n  - path: must be present\n\nReceived arguments: PRIVATE_SOURCE'),
+                         'Validation failed for tool "edit":\n- path: must be present')
     def test_success_errors_compaction_and_repeated_content_without_bodies(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'pi.log'

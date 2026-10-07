@@ -642,3 +642,10 @@ An offline replay of the previous worker's round/mutation/compaction events
 triggers the guard; it changes no project files and is not a model benchmark.
 The separately authorized live Qwen review/rerun is recorded in the pilot's
 `stall-recovery-*` logs and results, preserving earlier failed attempts.
+
+The live retry exposed an omitted `edit.path`. Native schema validation correctly
+rejected it, but the compact diagnostic kept only the generic validation header.
+Audit/watchdog summaries now retain up to three field-error lines and still omit
+received arguments and traceback source. **17 Python and 5 JavaScript targeted
+tests passed** (overlapping the suite above). Already-running sessions retain
+their pinned runtime; this reporting change applies to later sessions/reviews.

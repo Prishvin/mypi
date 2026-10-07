@@ -10,7 +10,8 @@ def error_brief(text):
     diagnostic = text.split('Received arguments:', 1)[0]
     lines = diagnostic.splitlines()
     causes = [line.strip() for line in lines if re.match(r'^\s*(?:[\w.]*Error|Exception):', line)]
-    return (causes[-1] if causes else lines[0] if lines else '')[:240]
+    fields = [line.strip() for line in lines if re.match(r'^\s*-\s+[\w.]+:\s', line)]
+    return (causes[-1] if causes else '\n'.join(lines[:1] + fields[:3]))[:240]
 
 
 def summarize(path, files):
