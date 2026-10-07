@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {compactSummary,failingNames,installFixedCompactionHooks} from './pi-compaction-fixed.mjs';
 import {taskSummary} from './pi-compaction.mjs';
+import {SessionManager} from '../node_modules/@earendil-works/pi-coding-agent/dist/core/session-manager.js';
 
 const source=mkdtempSync(join(tmpdir(),'mypi-contract-'));
 const log='✖ deterministic arithmetic boundary test (10ms)\n'+'diagnostic '.repeat(1500);
@@ -77,13 +78,34 @@ test('hook emits a deterministic handoff for the recorded failing task',async()=
       {model:{provider:'local-qwen-workflow'},abort:()=>{throw new Error('Unexpected abort');}});
     assert.equal(result.compaction.details.modelCall,false);
     assert.equal(result.compaction.details.fullContractPreserved,true);
-    assert.equal(result.compaction.firstKeptEntryId,'entry');
+    assert.equal(result.compaction.firstKeptEntryId,undefined);
+    assert.equal(result.compaction.details.previousRecentBoundary,'entry');
+    assert.equal(result.compaction.details.retainedConversationEntries,0);
     assert.ok(result.compaction.summary.length<=12000);
     assert.match(result.compaction.summary,/exact text mismatch/);
   } finally {
     for (const key of Object.keys(process.env))if (!(key in old))delete process.env[key];
     Object.assign(process.env,old);rmSync(folder,{recursive:true,force:true});
   }
+});
+
+test('installed Pi drops complete old tool turns while retaining its journal and later messages',()=>{
+  const manager=SessionManager.inMemory(source);
+  manager.appendMessage({role:'user',content:'Original task',timestamp:1});
+  manager.appendMessage({role:'assistant',content:[{type:'toolCall',id:'call1',name:'write',arguments:{content:'OLD_IMPLEMENTATION'.repeat(1000)}}],
+    api:'openai-completions',provider:'local-qwen-workflow',model:'mtplx-quality',stopReason:'toolUse',timestamp:2,
+    usage:{input:10000,output:4000,cacheRead:0,cacheWrite:0,totalTokens:14000,cost:{input:0,output:0,cacheRead:0,cacheWrite:0,total:0}}});
+  manager.appendMessage({role:'toolResult',toolCallId:'call1',toolName:'write',content:[{type:'text',text:'OLD_RESULT'}],isError:false,timestamp:3});
+  const summary=compactSummary(state.task,{passed:false,violations:['Current failure']},[]);
+  manager.appendCompaction(summary,undefined,16000,{fullContractPreserved:true},true);
+  const messages=manager.buildSessionProjection().messages;
+  assert.equal(messages.length,1);assert.equal(messages[0].role,'compactionSummary');
+  assert.doesNotMatch(JSON.stringify(messages),/OLD_IMPLEMENTATION|OLD_RESULT/);
+  assert.match(JSON.stringify(messages),/Current failure/);
+  assert.deepEqual(JSON.parse(summary.slice(summary.indexOf('\n')+1)).task,state.task);
+  assert.match(JSON.stringify(manager.getEntries()),/OLD_IMPLEMENTATION/);
+  manager.appendMessage({role:'user',content:'Continue current task',timestamp:4});
+  assert.equal(manager.buildSessionProjection().messages.length,2);
 });
 
 test('a diagnostic-log write failure still cancels instead of model fallback',async()=>{

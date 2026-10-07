@@ -51,10 +51,17 @@ export function installFixedCompactionHooks(pi, python, cli) {
       const failures=(state.evidence?.results || []).filter(row => row.exit_code).slice(0,2)
         .map(row => ({exit_code:row.exit_code,log:row.log,
           failed_names:failingNames(readFileSync(row.log,'utf8'))}));
+      // This handoff already preserves the whole task and fresh evidence. Keeping
+      // Pi's last large write/tool-result turn alongside it can exceed a small
+      // input cap immediately after compaction. An omitted firstKeptEntryId makes
+      // SessionManager use the new compaction entry as the boundary; all old
+      // entries remain in the journal, but no partial tool turn is replayed.
       const compaction={summary:compactSummary(state.task,gate,failures,investigation),
-        firstKeptEntryId:event.preparation.firstKeptEntryId,tokensBefore:event.preparation.tokensBefore,
+        tokensBefore:event.preparation.tokensBefore,
         details:{method:'complete frozen task plus bounded fresh diagnostics',modelCall:false,
-          shadow:gate.shadow_snapshot,fullContractPreserved:true}};
+          shadow:gate.shadow_snapshot,fullContractPreserved:true,retainedConversationEntries:0,
+          previousRecentBoundary:event.preparation.firstKeptEntryId,
+          historyPolicy:'Complete deterministic handoff; retrieve current source as needed. Original journal preserved.'}};
       writeFileSync(join(session,'compaction-latest.json'),JSON.stringify(compaction,null,2));
       return {compaction};
     } catch (error) {
