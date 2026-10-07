@@ -833,3 +833,26 @@ now compacts the recorded 19,166-token case, still avoids the earlier unnecessar
 16,379-token compaction, and retains complete frozen acceptance in deterministic
 handoffs. Large journals produce small notices without losing local evidence or
 changing watchdog/deadline enforcement. This is not yet a live success claim.
+
+## Recorded test-log retrieval (2026-10-08 local time)
+
+Qwen's T06 diagnostic test printed useful observations, but compact finalization
+feedback retained failures and the log tail only. Qwen then requested the reported
+test log with `source_query file`; the old resolver correctly enforced its
+project/fixture boundary but had no capability for reading recorded test evidence.
+This missing capability blocked the intended diagnostic workflow.
+
+`source_query file` now permits bounded, read-only pages from exact test-log paths
+recorded in the current task's evidence. The state must belong to the current
+session and project; symlink escapes, unrelated session files and unrecorded logs
+remain rejected. Each page carries a hash and explicit evidence label; tests
+rerunning may change that hash. Existing file/page/encoding budgets and immutable
+fixture guards remain in force. The retrieval skill and executor rules explain
+how to inspect omitted diagnostics without adding another scratch test.
+
+**44 Python and 28 JavaScript checks passed on macOS**, including the registered
+Pi tool through the real Python CLI, paging/freshness, project/session bindings,
+escaping paths, unrelated files, original fixture restrictions, runtime capture
+and finalization regressions. Read-only replay of the pilot request returns a
+3,798-byte page containing its diagnostic output, with log bytes and mtime
+unchanged. No supervisor-authored game changes were made.
