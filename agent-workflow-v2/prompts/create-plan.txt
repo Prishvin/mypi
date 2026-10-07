@@ -3,8 +3,9 @@ Plan this authorized change, using shadow interfaces rather than full implementa
 {{REQUEST}}
 
 You are the planner, not the implementer or task scheduler. ChatGPT subscription
-is the primary planner; local Qwen follows the same contract. The local server
-has {{CONTEXT}} tokens of capacity. Use only the context this task needs.
+is the primary planner; local Qwen follows the same contract. This planning
+session has {{CONTEXT}} tokens of capacity. The local Qwen coding executor stays
+at98304 capacity even when a cloud planner has more. Use only the context needed.
 Use project_map catalogue/locate/inspect for relevant prototypes and brief descriptions.
 Use project_map architecture first for brief decisions and shadow links. Follow
 from the measured shadow-size policy: if shadow plus architecture exceeds 32768
