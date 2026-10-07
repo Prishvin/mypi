@@ -656,3 +656,21 @@ cancelled requests from that comparison and distinguishes missing telemetry from
 an uncapped setting. **22 Python tests passed** (overlapping prior recovery/runtime
 tests), including a real review-packet assembly with private launcher content
 omitted. The running worker's settings were not modified.
+
+Live Qwen retry `4b6a437b5988` exercised the watchdog: warnings were emitted,
+new scoped edits/test outcomes reset counters, and four unchanged rounds ended
+the worker with `no_progress` at **2,262.321 seconds** rather than its 2,700-second
+deadline. Pi's raw exit was zero, the workflow exit was one, and native recovery
+retained the distinct stop reason. All **eight original checks passed** by then;
+one additional temporary diagnostic test and the required architecture note
+still blocked acceptance. The last cleanup edit failed an exact-text match.
+The coordinator correctly stopped under the one-repair-then-ask rule.
+
+The worker made 19 completed requests, 26,137 output tokens (22,845 reasoning),
+four compactions and seven verified mutations. Median decode was **19.08 tokens/s**;
+maximum completed-request active allocation was **40.13 GB**, while maximum
+sampled physical process footprint was **51.88 GB**. These differ from RSS.
+The Qwen review had increased task input from 24,576 to 32,768 tokens and its
+client window to 98,304, preserving every acceptance object/test command and
+17 unrelated pending contracts. This was not an isolated watchdog benchmark.
+No game source, tests or corrective plan were authored by Codex.
