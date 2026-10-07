@@ -38,6 +38,10 @@ four unchanged rounds (or three with repeated reads/two compactions) stop for re
 Repeated tests with identical outcomes and rereading unchanged code do not count
 as progress. Use prior retrieval/error evidence; do not restart the investigation
 after compaction. Preserve the frozen acceptance and report a real scope blocker.
+Near the attempt deadline, native checkpoints show remaining wall time, including
+prompt loading, reasoning, tool execution and tests. Prefer a small scoped edit
+and verification over another long rewrite. The clock never relaxes acceptance
+or grants more time; preserve partial work and report a blocker if necessary.
 When tests pass and only an architecture note is missing, immediately call:
 workflow_test({architecture_note:"Brief actual decision or module ownership.",
                architecture_title:"Task heading requested by the plan"})

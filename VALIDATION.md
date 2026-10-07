@@ -716,3 +716,20 @@ physical footprint was **48.49 GB** (six supervision samples; not RSS). The
 preceding Qwen review took 318.831 seconds and preserved all frozen acceptance
 and unrelated pending tasks. This resumed existing partial work, so these figures
 are not a clean-start benchmark or an isolated comparison of thinking caps.
+
+## Remaining-time feedback (2026-10-08 local time)
+
+T06 reached its 900-second limit with eight of ten tests passing. Native recovery
+correctly classified the timeout and started Qwen review. Its final request had
+started with little time left, but the executor had no remaining-time feedback.
+The workflow now records bound elapsed/remaining wall time at request and
+compaction checkpoints, and injects a short notice near the deadline. This is
+advice to scope the next action, not an extension or an early-abort mechanism.
+
+**43 Python and 20 JavaScript tests passed on macOS**, including real Python
+clock feedback through Pi's context hook, threshold/expiry handling, launch and
+process binding, source/prompt privacy, unchanged stagnation policy and recovery
+allowances, compaction and exact-edit recovery regressions. These overlap earlier
+suites. No Linux run or claim that the notice eliminates timeouts is included.
+Already-running sessions keep their immutable runtime; subsequent launches
+capture the tested notice implementation.

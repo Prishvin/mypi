@@ -82,3 +82,26 @@ test('a watchdog failure aborts visibly instead of silently disabling protection
   await assert.rejects(x.handlers.context({messages:[]},x.ctx),/broken journal/);
   assert.equal(x.aborted(),1);assert.equal(existsSync(join(x.session,'progress-error.json')),true);
 });
+
+test('near deadline adds a factual notice even with fresh progress, without abort or input mutation',async t=>{
+  const x=setup(t),state=join(x.session,'task-state.json');
+  writeFileSync(join(x.session,'launch.json'),JSON.stringify({role:'code',project:x.session,state,timeout_seconds:900}));
+  writeFileSync(join(x.session,'process.json'),JSON.stringify({started_epoch:Date.now()/1000-700}));
+  const input={messages:[{role:'user',content:'original'}]};
+  const result=await x.handlers.context(input,x.ctx);
+  assert.equal(input.messages.length,1);assert.equal(result.messages.length,2);
+  assert.match(result.messages[1].content[0].text,/ATTEMPT DEADLINE: \d+ seconds remain/);
+  assert.match(result.messages[1].content[0].text,/Preserve all acceptance checks/);
+  assert.match(result.messages[1].content[0].text,/"status":"continue"/);
+  assert.equal(x.aborted(),0);assert.equal(existsSync(join(x.session,'progress-stop.json')),false);
+});
+
+test('early clock is recorded but does not add routine prompt noise',async t=>{
+  const x=setup(t);
+  writeFileSync(join(x.session,'launch.json'),JSON.stringify({role:'code',project:x.session,
+    state:join(x.session,'task-state.json'),timeout_seconds:900}));
+  writeFileSync(join(x.session,'process.json'),JSON.stringify({started_epoch:Date.now()/1000-10}));
+  assert.equal(await x.handlers.context({messages:[]},x.ctx),undefined);
+  assert.equal(JSON.parse(readFileSync(join(x.session,'execution-progress.json'))).brief.deadline.near_deadline,false);
+  assert.equal(x.aborted(),0);
+});

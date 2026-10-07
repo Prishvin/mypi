@@ -72,6 +72,9 @@ failure review receives it plus task input/compaction limits. Repair allowances
 and frozen acceptance remain unchanged. No model call implements this watchdog.
 `recovery_controls.py` selects effective profile/task limits and native thinking
 guard counts for review, excluding launch commands, prompts and source bodies.
+The observer also binds deadline feedback to the task's launch and owned process
+start time. Near expiry, the Pi context hook supplies a remaining-time notice;
+this changes neither timeout enforcement nor stagnation/acceptance decisions.
 
 `retrieval.read_symbol` prefers exact qualified locators and resolves a short name
 only when it uniquely identifies a symbol in the requested file. It returns the

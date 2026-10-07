@@ -3,8 +3,10 @@ import argparse
 import fcntl
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
+import time
 from execution_progress import advance
 from execution_audit import error_brief
 from runner_process import save
@@ -54,6 +56,28 @@ def clean(event):
     return row
 
 
+def deadline(session, identity, now=None):
+    """Expose the bound process clock without extending or enforcing its deadline."""
+    launch = read(session / 'launch.json')
+    process = read(session / 'process.json')
+    if not launch or not process or launch.get('timeout_seconds') is None:
+        return None
+    if (launch.get('role') != 'code'
+            or Path(launch.get('project', '')).resolve() != Path(identity['project']).resolve()
+            or Path(launch.get('state', '')).resolve() != (session / 'task-state.json').resolve()):
+        raise ValueError('Deadline launch differs from the frozen task')
+    timeout, started = launch['timeout_seconds'], process.get('started_epoch')
+    if any(isinstance(value, bool) or not isinstance(value, (int, float))
+           or not math.isfinite(value) or value <= 0 for value in (timeout, started)):
+        raise ValueError('Invalid bound attempt timing')
+    clock = time.time() if now is None else now
+    elapsed = max(0, clock - started)
+    remaining = max(0, math.ceil(timeout - elapsed))
+    return {'elapsed_seconds': math.floor(elapsed), 'remaining_seconds': remaining,
+            'timeout_seconds': timeout, 'near_deadline': remaining <= min(300, max(60, timeout / 3)),
+            'rule': 'Includes prompt loading, reasoning, tools and tests. This notice never extends the deadline.'}
+
+
 def check(session, *, compaction=False):
     """Consume events once under a lock; preserve counters across Pi compactions/reloads."""
     session = session.resolve()
@@ -84,6 +108,9 @@ def check(session, *, compaction=False):
         prior_stop = read(session / 'progress-stop.json')
         if prior_stop:
             result['brief'] = prior_stop['brief']
+        timing = deadline(session, identity)
+        if timing:
+            result['brief'] = {**result['brief'], 'deadline': timing}
         save(session / 'execution-progress.json', result)
         brief = result['brief']
         if brief['status'] == 'stop' and not prior_stop:

@@ -55,7 +55,11 @@ export function installExecutionProgressHooks(pi,python,runtime) {
     const brief=await executionProgress(pi,python,runtime,ctx);
     if(!brief)return;
     if(brief.status==='stop')throw new Error('Stopped for evidence-based replanning: no_progress');
-    if(brief.status==='warning')return {messages:[...event.messages,{role:'user',timestamp:Date.now(),
-      content:[{type:'text',text:'Native progress checkpoint (observed tool evidence):\n'+JSON.stringify(brief)}]}]};
+    if(brief.status==='warning'||brief.deadline?.near_deadline)return {messages:[...event.messages,{role:'user',timestamp:Date.now(),
+      content:[{type:'text',text:'Native progress checkpoint (observed tool evidence):\n'+JSON.stringify(brief)+
+        (brief.deadline?.near_deadline ? '\nATTEMPT DEADLINE: '+brief.deadline.remaining_seconds+
+          ' seconds remain, including prompt loading, reasoning, tools and verification. Prefer a small scoped edit and fresh tests; '+
+          'avoid redundant reads, long rewrites or explanations. Preserve all acceptance checks. '+
+          'If completion is infeasible, preserve partial work and report the concrete blocker. The timeout is unchanged.' : '')}]}]};
   });
 }
