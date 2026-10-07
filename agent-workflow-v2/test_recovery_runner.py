@@ -55,6 +55,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(result['code'],0);self.assertEqual(len(self.runs),2)
         state=read(self.folder/'recovery-state.json')
         self.assertEqual(state['spent_ids'],before['spent_ids']);self.assertEqual(state['spent_cases'],before['spent_cases'])
+        self.assertNotIn('reason',state)
         self.assertEqual(result['plan'].name,'repair-2.json')
         self.assertEqual(len(state['review_retry_authorizations']),1)
         self.assertEqual(state['repairs'][0]['review_result']['exit_code'],124)

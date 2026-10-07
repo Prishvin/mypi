@@ -6,7 +6,7 @@ function changes(){
   return {estimated_changed_lines:Type.Optional(Type.Integer({minimum:1,maximum:300})),
     steps:Type.Optional(Type.Array(Type.String(),{minItems:2,maxItems:6})),
     test_strategy:Type.Optional(Type.String()),assumptions:Type.Optional(Type.Array(Type.String())),
-    context_overlay:Type.Optional(Type.Partial(contextSchema(),{additionalProperties:false,description:'Merge changed context fields. Let E=sum(estimate); margin_tokens >= max(1024,ceil(E*0.25)), and E+margin <= max_input_tokens.'})),
+    context_overlay:Type.Optional(Type.Partial(contextSchema(),{additionalProperties:false,description:'Merge changed context fields into the ORIGINAL contract; omitted fields remain unchanged. Input + output + 8192 <= window_tokens: update window_tokens when raising input/output. Let E=sum(estimate); framework >= 6144, margin_tokens >= max(1024,ceil(E*0.25)), and E+margin <= max_input_tokens.'})),
     execution:Type.Optional(executionSchema()),
     criterion_replacements:Type.Optional(Type.Array(Type.Object({old:caseSchema(),new:caseSchema(),reason:Type.String({minLength:16})},{additionalProperties:false}))),
     add_files:Type.Optional(Type.Array(Type.String())),add_tests:Type.Optional(Type.Array(Type.Array(Type.String()))),

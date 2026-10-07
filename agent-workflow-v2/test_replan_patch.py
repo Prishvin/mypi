@@ -59,6 +59,11 @@ class RecoveryPatchTests(unittest.TestCase):
         for key, value in fields['context_overlay'].items():self.assertEqual(result['tasks'][0]['context'][key], value)
         self.assertEqual(result['tasks'][1], self.plan['tasks'][1])
 
+    def test_window_diagnostic_names_merged_values_and_required_total(self):
+        with self.assertRaisesRegex(ValueError, r'input 24576 \+ output 8192 \+ reserve 8192 = 40960, but window_tokens is 32768'):
+            self.save({'failure_analysis': ANALYSIS, 'context_overlay': {'max_input_tokens': 24576}})
+        self.assertFalse(self.output.exists())
+
     def test_completed_dependency_is_removed_but_lineage_and_pending_contracts_survive(self):
         self.plan['tasks'][0]['status'] = 'done'; self.path.write_text(json.dumps(self.plan))
         self.packet.update(completed=[self.plan['tasks'][0]], remaining=[self.plan['tasks'][1]], failed_todo=self.plan['tasks'][1])

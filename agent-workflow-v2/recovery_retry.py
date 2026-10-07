@@ -24,4 +24,5 @@ def authorize(root, folder, state):
         'epoch': time.time(), 'prior_plan': last['plan'], 'evidence': str(evidence),
         'reason': 'Explicit --retry-review after failed generation; execution allowance preserved'})
     state['status'] = 'retrying_review'
+    state.pop('reason', None)
     save(folder / 'recovery-state.json', state)

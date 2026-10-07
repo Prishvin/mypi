@@ -486,3 +486,27 @@ The live retry uses session 2bc8486181b9. Its evidence packet fell from **30,464
 7,149 estimated tokens**, and the backend prompt fell from **39,064 to 12,612
 actual tokens**. The request schema was inspected to confirm it advertises flat
 recovery fields and no tasks array. Live publication/execution evidence follows.
+
+Live result: Qwen's focused repair **passed and was published** as
+`run-3/repair-2.json` in **506.724 seconds**. It corrected two rejected metadata
+proposals (instruction/tool estimate below the 6,144-token floor, then task
+input/output/reserve larger than its selected window) without changing source.
+The schema now exposes the same estimate floor as the native validator, and
+window errors report exact merged values and the required total.
+
+Only T01's steps, assumptions, test strategy and context changed. All **19 other
+contracts** and every task's frozen cases, test commands, files and coverage were
+compared and preserved. The accepted T01 recipe uses a **24,576 input / 8,192
+output / 65,536 window / 2,048 thinking** budget at medium effort. The shared
+server remains at 98,304 capacity. The coordinator started Qwen implementation
+from this plan; plan acceptance does not claim implementation tests have passed.
+
+The review used three requests, **8,358 output tokens** total, at **19.84, 21.45
+and 24.11 tokens/s**. First-token delay was 111.45 seconds for the initial
+12,612-token prompt, then 1.71 and 1.46 seconds for cached correction turns.
+Backend active allocation was 37.38–40.98 GB; shared peak was 46.98 GB, which is
+not per-request process RSS. Measurements, unchanged-contract comparison and
+both old/new review outcomes are retained in `focused-recovery-result.json` and
+`supervision.jsonl` in the pilot evidence directory. The additional window-error
+and retry-state regressions passed. No game implementation or task-specific
+repair content was authored by Codex.

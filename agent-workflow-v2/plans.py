@@ -41,7 +41,11 @@ def validate_context(root: Path, task: dict) -> None:
         if context['window_tokens'] not in WINDOWS:
             raise ValueError('Invalid per-task context window')
         if context['max_input_tokens'] + context['max_output_tokens'] + 8192 > context['window_tokens']:
-            raise ValueError('Task budgets exceed its context window')
+            required = context['max_input_tokens'] + context['max_output_tokens'] + 8192
+            raise ValueError(f"Task budgets exceed its context window: input {context['max_input_tokens']} + "
+                f"output {context['max_output_tokens']} + reserve 8192 = {required}, "
+                f"but window_tokens is {context['window_tokens']}. Set a supported window covering the sum "
+                'or revise the budgets. Omitted context fields retain their original contract values.')
     if context.get('thinking', 'on') not in ['on', 'off']:
         raise ValueError('Invalid task thinking setting: use literal "on" or "off"; reasoning_effort is a separate field')
     if context.get('reasoning_effort', 'medium') not in ['low', 'medium', 'xhigh']:
