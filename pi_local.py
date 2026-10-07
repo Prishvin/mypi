@@ -7,7 +7,7 @@ import sys
 
 from quality_service import ENDPOINT, ROOT, WORKFLOW, start, status, stop
 
-COMMANDS = {'start', 'stop', 'status', 'web', 'chat', 'plan', 'run', 'execute', 'resume', 'replan', 'research', 'skills','review','settings', 'web-raw', 'server', 'serve', 'login', 'setup-qwen', 'qwen','monitor','retry'}
+COMMANDS = {'start', 'stop', 'status', 'web', 'chat', 'plan', 'run', 'execute', 'resume', 'replan', 'research', 'skills','review','settings', 'web-raw', 'server', 'serve', 'login', 'setup-qwen', 'qwen','monitor','retry','revision'}
 
 
 def client_command(args, extra):
@@ -36,6 +36,10 @@ def initialize(project):
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0]=='revision':
+        sys.path.insert(0,str(WORKFLOW))
+        from revision_cli import main as revision
+        return revision(argv[1:])
     if argv and argv[0]=='retry':
         sys.path.insert(0,str(WORKFLOW))
         from retry_plan import create
@@ -92,6 +96,7 @@ def main(argv=None):
     sub.add_parser('status', help='Show actual server controls')
     sub.add_parser('monitor', help='Read-only live todo/tool/test/model dashboard; see mypi monitor --help')
     sub.add_parser('retry',help='Prepare a preserved-contract operational retry; see mypi retry --help')
+    sub.add_parser('revision',help='Propose and explicitly approve an unfinished contract correction; see mypi revision --help')
     sub.add_parser('web', help='Open the combined Pi / raw Qwen web workspace')
     sub.add_parser('web-raw', help='Open the mypi web UI; select raw Qwen')
     chatting = sub.add_parser('chat', help='Open architecture chat; create granular todos from shadow interfaces')

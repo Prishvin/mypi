@@ -164,6 +164,8 @@ def select(path: Path, identifier: str) -> dict:
 
 def require_review(plan):
     """Intermediate drafts cannot execute before the mandatory refinement pass completes."""
+    if plan.get('contract_revision', {}).get('status') not in (None, 'approved'):
+        raise ValueError('Contract revision proposal requires explicit approval before execution')
     review=plan.get('planning_review',{})
     if review.get('required') and review.get('status')!='passed':
         raise ValueError('This draft requires task refinement before execution; use the published final plan')
