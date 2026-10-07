@@ -32,11 +32,15 @@ test('map adapter preserves section IDs, source hash and independent offsets',()
 
 test('each successful or partial failed source edit refreshes with frozen state',async t=>{
   const {ctx}=setup(t);const handlers={},calls=[];
-  const pi={on:(name,fn)=>{handlers[name]=fn;},exec:async(_python,args)=>{calls.push(args);return {code:0,stdout:'{"snapshot":"current","architecture_sections":3}'};}};
+  const hash='a'.repeat(64);
+  const pi={on:(name,fn)=>{handlers[name]=fn;},exec:async(_python,args)=>{calls.push(args);return {code:0,stdout:JSON.stringify({snapshot:'current',architecture_sections:3,architecture_sha256:hash})};}};
   installRefreshHooks(pi,'python','workflow.py',()=>[]);
   for(const [toolName,isError] of [['write',false],['edit',true]]){
     const result=await handlers.tool_result({toolName,isError,input:{path:'logic.py'},content:[]},ctx);
     assert.equal(result.details.shadow.snapshot,'current');
+    const text=result.content.map(block=>block.text||'').join('\n');
+    assert.ok(text.includes('architecture.md expected_sha256="'+hash+'"'));
+    assert.match(text,/Prepare architecture-update after intervening edits/);
     assert.deepEqual(calls.at(-1).slice(-2),['--state',process.env.QWEN_WORKFLOW_STATE]);
   }
 });
@@ -67,7 +71,7 @@ test('required decision evidence prevents premature automatic completion',async 
   const {ctx}=setup(t);process.env.QWEN_WORKFLOW_STOP_AFTER_PASS='1';const handlers={};let aborts=0;
   const context={...ctx,abort:()=>aborts++};
   const pi={on:(n,h)=>{handlers[n]=h;},exec:async(_python,args)=>{
-    if(args.includes('refresh'))return {code:0,stdout:'{"snapshot":"current"}'};
+    if(args.includes('refresh'))return {code:0,stdout:JSON.stringify({snapshot:'current',architecture_sha256:'b'.repeat(64)})};
     if(args.includes('test'))return {code:0,stdout:'{"results":[{"exit_code":0}]}'};
     return {code:1,stdout:'{"passed":false,"violations":["Required scoped architecture insertion is missing or stale"]}'};
   }};
@@ -75,6 +79,20 @@ test('required decision evidence prevents premature automatic completion',async 
   const result=await handlers.tool_result({toolName:'edit',input:{path:'logic.py'},content:[]},context);
   assert.equal(result.details.acceptedCompletion,false);assert.equal(aborts,0);
   assert.match(result.content[0].text,/Required scoped architecture insertion/);
+  assert.ok(result.content[0].text.includes('architecture.md expected_sha256="'+'b'.repeat(64)+'"'));
+});
+
+test('pending edit batch exposes revision but requires preparation after intervening edits',async t=>{
+  const {ctx}=setup(t);process.env.QWEN_WORKFLOW_STOP_AFTER_PASS='1';const handlers={};
+  const mutations=new Map([['one','1'],['two','2']]);let calls=0;
+  installRefreshHooks({on:(n,h)=>{handlers[n]=h;},exec:async()=>{
+    calls++;return {code:0,stdout:JSON.stringify({snapshot:'current',architecture_sha256:'c'.repeat(64)})};
+  }},'python','workflow.py',()=>[],mutations);
+  const result=await handlers.tool_result({toolName:'edit',input:{path:'logic.py'},content:[]},ctx);
+  assert.equal(calls,1);
+  assert.match(result.content[0].text,/Other edits are finishing/);
+  assert.ok(result.content[0].text.includes('architecture.md expected_sha256="'+'c'.repeat(64)+'"'));
+  assert.match(result.content[0].text,/Prepare architecture-update after intervening edits/);
 });
 
 test('/rebuild executes the fixed native skill with no model request',async t=>{

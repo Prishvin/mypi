@@ -101,10 +101,47 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(verify({'shadow':str(self.out)},scan(self.root,['.'])),[])
 
     def test_fixed_native_skill_pipeline_writes_bound_document(self):
-        prepare(self.session,'architecture-update','code')
-        result=run(self.session,'architecture-update',self.request(),'code')
+        prepared=prepare(self.session,'architecture-update','code')
+        request=self.request()
+        request['expected_sha256']=prepared['architecture_revision']['expected_sha256']
+        result=run(self.session,'architecture-update',request,'code')
         self.assertEqual(result['data']['after_sha256'],hashlib.sha256(self.doc.read_bytes()).hexdigest())
         with self.assertRaises(ValueError):prepare(self.session,'architecture-update','inspect')
+
+    def test_preparation_exposes_only_bound_revision_without_rewriting_project_or_shadow(self):
+        paths=[self.doc,*[p for p in self.out.rglob('*') if p.is_file()]]
+        before={str(p):(p.read_bytes(),p.stat().st_mtime_ns) for p in paths}
+        prepared=prepare(self.session,'architecture-update','code')
+        revision=prepared['architecture_revision']
+        self.assertEqual(revision,{'path':'architecture.md','exists':True,
+                                  'expected_sha256':hashlib.sha256(self.doc.read_bytes()).hexdigest()})
+        self.assertNotEqual(prepared['sha256'],revision['expected_sha256'])
+        self.assertNotIn('Existing prose',json.dumps(prepared))
+        self.assertEqual(before,{str(p):(p.read_bytes(),p.stat().st_mtime_ns) for p in paths})
+
+    def test_preparation_distinguishes_missing_and_empty_documents(self):
+        self.doc.unlink()
+        missing=prepare(self.session,'architecture-update','code')['architecture_revision']
+        self.assertEqual(missing,{'path':'architecture.md','exists':False,'expected_sha256':''})
+        self.doc.write_bytes(b'')
+        empty=prepare(self.session,'architecture-update','code')['architecture_revision']
+        self.assertEqual(empty,{'path':'architecture.md','exists':True,'expected_sha256':hashlib.sha256(b'').hexdigest()})
+
+    def test_preparation_rejects_scope_role_root_and_nonregular_documents(self):
+        for modification in ['scope','role','root']:
+            with self.subTest(modification=modification):
+                contract=json.loads(json.dumps(self.contract));launch=dict(self.launch)
+                if modification=='scope':contract['task']['files']=[]
+                if modification=='role':launch['role']='architect'
+                if modification=='root':contract['before']['root']=str(self.session)
+                self.state.write_text(json.dumps(contract));(self.session/'launch.json').write_text(json.dumps(launch))
+                with self.assertRaises(ValueError):prepare(self.session,'architecture-update','code')
+                self.assertFalse((self.session/'skill-prepared/architecture-update.json').exists())
+        self.state.write_text(json.dumps(self.contract));(self.session/'launch.json').write_text(json.dumps(self.launch))
+        self.doc.unlink();self.doc.symlink_to(self.state)
+        with self.assertRaisesRegex(ValueError,'regular'):prepare(self.session,'architecture-update','code')
+        self.doc.unlink();self.doc.mkdir()
+        with self.assertRaisesRegex(ValueError,'regular'):prepare(self.session,'architecture-update','code')
 
     def test_direct_editor_race_is_detected_before_replace(self):
         original_chmod=updater.os.chmod

@@ -14,9 +14,13 @@ def prepare(session, name, role, base=BASE):
     if role not in skill['roles']:
         raise ValueError('This skill is unavailable in the selected workflow role')
     binaries(skill)
+    output = {k: skill[k] for k in ['name', 'purpose', 'sha256', 'input_schema', 'pre_prompt', 'post_prompt']}
+    if name == 'architecture-update':
+        from architecture_update import revision
+        output['architecture_revision'] = revision(session)
     folder = session / 'skill-prepared'; folder.mkdir(parents=True, exist_ok=True)
     (folder / (name + '.json')).write_text(json.dumps({'sha256': skill['sha256'], 'role': role}))
-    return {k: skill[k] for k in ['name', 'purpose', 'sha256', 'input_schema', 'pre_prompt', 'post_prompt']}
+    return output
 
 
 def run(session, name, inputs, role, base=BASE):

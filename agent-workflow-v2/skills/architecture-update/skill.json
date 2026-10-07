@@ -6,8 +6,8 @@
     "code"
   ],
   "side_effects": "scoped-architecture",
-  "pre_prompt": "Read the current architecture index and section. Declare architecture.md in the frozen task. Supply current source SHA256; use concrete file links and brief prose. Never replace the whole document.",
-  "post_prompt": "Verify the fresh receipt and updated section IDs. The edit invalidates prior tests; run frozen tests and the completion gate. If stale or out of scope, reload evidence and replan.",
+  "pre_prompt": "Read the current architecture index and target section. Declare architecture.md in the frozen task. Supply architecture_revision.expected_sha256 from this preparation, NOT the top-level skill sha256. Source edits can refresh architecture metadata: prepare again after intervening edits. Use concrete file links and brief prose; never replace the whole document.",
+  "post_prompt": "Verify the fresh receipt and updated section IDs. The edit invalidates prior tests; run frozen tests and the completion gate. A stale revision requires fresh preparation, reviewing the target section and retrying the insertion. An out-of-scope edit requires a scoped replan.",
   "input_schema": {
     "type": "object",
     "additionalProperties": false,
@@ -25,6 +25,7 @@
       },
       "expected_sha256": {
         "type": "string",
+        "description": "Current architecture document hash from architecture_revision.expected_sha256 in prepare. Empty only for a missing document. Prepare again after source edits; do not use the top-level skill sha256.",
         "pattern": "^([a-f0-9]{64})?$"
       },
       "text": {

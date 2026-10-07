@@ -12,6 +12,14 @@ import {planFailure,planFailureContext} from './pi-plan-feedback.mjs';
 
 export function applies(model) { return model?.provider === 'local-qwen-workflow'; }
 
+function architectureRevisionNotice(summary) {
+  const hash=summary.architecture_sha256;
+  if (typeof hash!=='string') return '';
+  return '\narchitecture.md expected_sha256='+JSON.stringify(hash)+
+    '. Source edits can change this document through automatic metadata maintenance. '+
+    'Prepare architecture-update after intervening edits; its top-level sha256 identifies the skill, not the document.';
+}
+
 export function active(model) {
   return applies(model) || (model?.provider === 'openai' &&
     ((process.env.QWEN_WORKFLOW_PLANNER === 'chatgpt' && ['architect','research','intake','reviewer','memory'].includes(process.env.QWEN_WORKFLOW_ROLE)) ||
@@ -280,10 +288,11 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
     if (!active(ctx.model) || (!['edit', 'write'].includes(event.toolName) && !architectureEdit)) return;
     try {
       const summary = await refresh(ctx);
+      const revisionNotice = architectureRevisionNotice(summary);
       if (applies(ctx.model) && process.env.QWEN_WORKFLOW_ROLE === 'code' &&
           process.env.QWEN_WORKFLOW_STOP_AFTER_PASS === '1' && !event.isError && process.env.QWEN_WORKFLOW_STATE) {
         const state = process.env.QWEN_WORKFLOW_STATE;
-        if(mutations.size>1)return {content:[...event.content,{type:'text',text:'Navigation refreshed. Other edits are finishing; verify after the batch.'}],details:{...(event.details||{}),shadow:summary}};
+        if(mutations.size>1)return {content:[...event.content,{type:'text',text:'Navigation refreshed. Other edits are finishing; verify after the batch.'+revisionNotice}],details:{...(event.details||{}),shadow:summary}};
         const checked=await pi.exec(python,[cli,'finalize','--state',state,'--automatic'],{timeout:2705000});
         const gate=JSON.parse(checked.stdout);
         const accepted=checked.code===0 && gate.passed===true;
@@ -295,12 +304,12 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
           },null,2));
           ctx.abort();
         }
-        return {content:[...event.content,{type:'text',text:'Native finalization: '+checked.stdout}],
+        return {content:[...event.content,{type:'text',text:'Native finalization: '+checked.stdout+revisionNotice}],
           details:{...(event.details||{}),shadow:summary,automaticTestsPassed:gate.tests_passed===true,
             gatePassed:gate.passed===true,acceptedCompletion:accepted}};
       }
       const recovery=architectureEdit ? '' : await failedEditEvidence(pi,event,ctx,python,cli,scopeArgs);
-      return { content: [...event.content, { type: 'text', text: 'Shadow refreshed: ' + summary.snapshot + recovery }],
+      return { content: [...event.content, { type: 'text', text: 'Shadow refreshed: ' + summary.snapshot + revisionNotice + recovery }],
         details: { ...(event.details || {}), shadow: summary } };
     } catch (error) {
       return { isError: true, content: [...event.content,

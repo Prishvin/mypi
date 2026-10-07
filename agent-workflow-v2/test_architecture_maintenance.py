@@ -1,4 +1,5 @@
 """Prove change-type handling, missing-map bootstrap and zero-model native maintenance."""
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -29,6 +30,29 @@ class MaintenanceTests(unittest.TestCase):
         self.assertEqual(result['changes'],[{'path':'logic.py','type':'modified','interface_changed':False}])
         self.assertTrue(result['architecture_updated']);self.assertTrue(result['map_rebuilt']);self.assertTrue(result['in_sync'])
         self.assertEqual(result['implementation'],'Python; no model request')
+        self.assertEqual(result['architecture_sha256'],hashlib.sha256((self.root/'architecture.md').read_bytes()).hexdigest())
+
+    def test_source_edit_invalidates_old_preparation_and_fresh_preparation_allows_insertion(self):
+        prepared=prepare(self.session,'architecture-update','code')
+        previous=prepared['architecture_revision']['expected_sha256']
+        self.source.write_text(self.source.read_text().replace('x+1','x+2'))
+        maintained=maintain(self.root,['.'],self.out,self.state)
+        current=(self.root/'architecture.md').read_bytes()
+        request={'action':'append_section','title':'Decisions','text':'logic.py uses deterministic increments.',
+                 'expected_sha256':previous}
+        with self.assertRaisesRegex(ValueError,'Prepare architecture-update again'):
+            run(self.session,'architecture-update',request,'code')
+        self.assertEqual((self.root/'architecture.md').read_bytes(),current)
+        self.assertFalse((self.session/'architecture-update.json').exists())
+        refreshed=prepare(self.session,'architecture-update','code')
+        latest=refreshed['architecture_revision']['expected_sha256']
+        self.assertNotEqual(latest,previous)
+        self.assertEqual(latest,maintained['architecture_sha256'])
+        request['expected_sha256']=latest
+        receipt=run(self.session,'architecture-update',request,'code')['data']
+        self.assertEqual(receipt['before_sha256'],latest)
+        self.assertTrue((self.root/'architecture.md').read_bytes().startswith(current))
+        self.assertEqual((self.root/'architecture.md').read_text().count('## Decisions'),1)
 
     def test_interface_change_new_file_deletion_and_same_content_rename(self):
         before=scan(self.root,['.'])

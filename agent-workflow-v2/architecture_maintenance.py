@@ -67,4 +67,5 @@ def maintain(root, prefixes, output, state):
     if errors:
         raise ValueError('Maintenance is not current: '+'; '.join(errors))
     return {**summary, 'changes':change_types, 'architecture_updated':architecture_changed,
+            'architecture_sha256':current.get('architecture', {}).get('sha256', ''),
             'map_rebuilt':bool(stale), 'in_sync':True, 'implementation':'Python; no model request'}

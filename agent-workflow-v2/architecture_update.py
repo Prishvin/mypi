@@ -56,6 +56,18 @@ def binding(session):
     return launch, state, contract, root
 
 
+def revision(session):
+    """Expose the bound document's current byte hash without loading prose into context."""
+    _, _, _, root = binding(session)
+    path = root / 'architecture.md'
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise ValueError('architecture.md must be a regular project file')
+    existed = path.exists()
+    raw = path.read_bytes() if existed else b''
+    return dict(path='architecture.md', exists=existed,
+                expected_sha256=hashlib.sha256(raw).hexdigest() if existed else '')
+
+
 def update(session, request):
     """Serialize document updates, reject stale writers, refresh maps and save a receipt."""
     launch, state, contract, root = binding(session)
@@ -71,7 +83,9 @@ def update(session, request):
         raw = path.read_bytes() if existed else b''
         current_hash = hashlib.sha256(raw).hexdigest() if existed else ''
         if request.get('expected_sha256') != current_hash:
-            raise ValueError('Architecture changed; reload its index and replan the insertion')
+            raise ValueError('Architecture changed since the supplied revision; source edits can refresh its '
+                             'owned interface block. Prepare architecture-update again or reload project_map '
+                             'architecture, review the target section, then retry with the current document SHA256.')
         changed = insertion(raw, request)
         handle, temporary = tempfile.mkstemp(prefix='.mypi-architecture-', dir=root)
         try:

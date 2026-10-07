@@ -32,6 +32,8 @@ Model hosting is separate: the gateway forwards a compatible server and can expl
 
 `architecture_update.py` provides hash-checked, locked append/insert decisions. `architecture_consistency.py` and architecture-sync-check detect stale artifacts and implement user-approved rebuilds with final verification. `/rebuild` invokes the skill, and the web route bypasses classification/inference. Skill failures and stale selected contracts block completion.
 
+`skill_runner.prepare` exposes the bound architecture document revision separately from the skill version. Native maintenance returns the refreshed document hash, and `pi-hooks.mjs` includes it in model-visible edit feedback. Source edits can change owned architecture metadata; stale insertions require fresh preparation and section review, while compare-and-swap continues to protect newer content.
+
 ## Run monitoring
 
 `run_monitor.py` reads task contracts, attempts and gates without executing work.

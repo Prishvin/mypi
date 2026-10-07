@@ -510,3 +510,28 @@ both old/new review outcomes are retained in `focused-recovery-result.json` and
 `supervision.jsonl` in the pilot evidence directory. The additional window-error
 and retry-state regressions passed. No game implementation or task-specific
 repair content was authored by Codex.
+
+### Architecture revision feedback — 2026-10-07
+
+In pilot session `e316369a202b`, Qwen read the architecture index, changed source,
+then submitted an insertion using the old document hash. Automatic maintenance
+had already refreshed the owned interface metadata. The stale-write check
+correctly rejected the insertion. Qwen reloaded the index, retried successfully,
+and T01 passed all six tests and its acceptance gate. T02 subsequently passed;
+T03 is running. No accepted task was replayed for this fix.
+
+The avoidable feedback gap was in preparation: it returned the skill version
+hash but no current document revision. Preparation now reads the scoped bound
+document and returns `architecture_revision.expected_sha256`, without prose or
+source bodies. Edit feedback exposes the native maintenance revision, including
+automatic-finalization and pending-batch paths. Instructions distinguish skill
+and document hashes and require fresh preparation after intervening edits.
+Stale errors direct a focused reload/retry, not whole-plan regeneration.
+
+**55 Python and 11 JavaScript tests passed.** These cover the real native skill
+pipeline after source maintenance, nonmutating stale rejection, fresh insertion,
+empty versus missing documents, original CRLF bytes, scope/role/root binding,
+symlinks and directories, concurrent writers, direct-editor races, read-only
+preparation, shadow consistency, finalization and model-visible hook feedback.
+The live worker retains its immutable runtime; later task sessions capture the
+updated tooling. No model restart or game implementation edits were needed.
