@@ -354,3 +354,17 @@ locate/inspect/gate hint. Its diagnostic now names the required section ID and
 source_sha256 and distinguishes supplied draft architecture from indexed source
 sections. Ten architecture/navigation JavaScript tests passed. The active review
 was allowed to recover by itself; no game-specific guidance was injected.
+
+Live result: T15 `review-15-attempt-18`, session `56e3bf172cdf`, passed its first
+plan_store call with **zero rejected plan calls**, in **514.011 seconds**. It made
+one failed architecture lookup before recovering without intervention. Native
+requests generated 3,669 total tokens at 17.23 and 16.11 tokens/s. Cold input was
+30,589 tokens with 287.88 seconds to first token; the follow-up reused 31,758 of
+31,786 prompt tokens and reached first token in 0.635 seconds. Native active
+allocation was 35.66/38.32 GB; shared backend peak allocation was 46.98 GB (not a
+per-request RSS measurement). The prior 14 accepted reviews and project snapshot
+were unchanged. Mypi advanced to T16 with 15 of 20 original task reviews accepted.
+The live retry used flat updates; staged split behavior was verified by the real
+parser/Pi/native integration test, not by this particular model response.
+Details: `t15-typed-validation.json`, `t15-typed-rerun-result.json`, and
+`t15-typed-summary.json` in the pilot report directory.
