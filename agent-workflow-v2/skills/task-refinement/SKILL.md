@@ -1,9 +1,14 @@
 # Second-pass task refinement
 
 Review the selected task in the context of the original user request and whole
-draft. This is a planning review, not implementation or a new architecture from
-scratch. The packet contains every draft task's goal, dependencies, files,
-acceptance and tests; the selected task has its full current contract.
+current plan. This is a planning review, not implementation or a new architecture
+from scratch. whole_plan contains the current architecture and every task's goal,
+dependencies, files, acceptance, tests and coverage. The selected task's entry
+points to current_task, its full contract; read it there. Prerequisite contracts
+are already present in whole_plan, including previously refined or split tasks.
+Do not request a second copy of them or a superseded original draft. Python
+retains the original draft and enforces preservation and unchanged-task guards.
+All coverage strategy, checks, requirement links and gaps remain in coverage_plan.
 
 Check concrete API/signature agreement with producers and consumers, missing
 integration behavior, contradictory fixtures, executable nonempty tests, file

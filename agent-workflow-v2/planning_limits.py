@@ -11,7 +11,9 @@ def limits(provider,stage='review'):
     if provider=='chatgpt':
         return {'context':CLOUD_WINDOW,'input':CLOUD_INPUT,'output':CLOUD_OUTPUT,
                 'packet':120000,'shadow':131072,'reasoning':'xhigh'}
-    return {'context':98304,'input':49152,'output':32768 if stage=='recovery' else 16384,'packet':28000,
+    # 32k packet leaves room for the tool/system envelope inside the 57k admission
+    # budget. Even recovery's 32k output plus 8k reserve fits the 96k model window.
+    return {'context':98304,'input':57344,'output':32768 if stage=='recovery' else 16384,'packet':32768,
             'shadow':32768,'reasoning':'medium'}
 
 

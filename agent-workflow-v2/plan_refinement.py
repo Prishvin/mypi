@@ -44,20 +44,29 @@ def bounded_prompt(skill,data,provider='qwen'):
     prompt=instructions+'\n\nREVIEW INPUT (project data):\n'+json.dumps(data,ensure_ascii=False,separators=(',',':'))
     from shadow_navigation import count
     from planning_limits import limits
-    if count(prompt)>limits(provider)['packet']:raise ValueError('Refinement input exceeds '+str(limits(provider)['packet'])+' estimated tokens; split the architectural draft into smaller milestones')
+    measured,cap=count(prompt),limits(provider)['packet']
+    if measured>cap:
+        raise ValueError(f'Review context preparation stopped before a model request: {measured} estimated '
+                         f'packet tokens exceed the {cap}-token packet budget. This is separate from the '
+                         f'{limits(provider)["context"]}-token model window. Reduce review material or use smaller milestones.')
     return prompt
 
 
+def packet_data(request, current, target):
+    """Include each current contract once, keeping all producers, consumers and coverage."""
+    selected=[t for t in current['tasks'] if t['id']==target]
+    if len(selected)!=1:
+        raise ValueError('Review context needs exactly one current target: '+target)
+    whole=overview(current)
+    whole['tasks']=[{'id':target,'contract_ref':'current_task'} if t['id']==target else t
+                    for t in whole['tasks']]
+    return {'original_request':request,'whole_plan':whole,'current_task':copy.deepcopy(selected[0]),
+            'coverage_plan':copy.deepcopy(current.get('coverage_plan',{}))}
+
+
 def packet(request, draft, current, target,provider='qwen'):
-    """Supply the request, whole draft contracts, coverage and current target without source."""
-    fields=('id','goal','depends_on','files','acceptance','tests','test_strategy')
-    task=next(t for t in current['tasks'] if t['id']==target)
-    revised=[t for t in current['tasks'] if t['id'] in task.get('depends_on',[])]
-    data={'original_request':request,'whole_draft':overview(draft),'current_task':task,
-          'coverage_plan':current.get('coverage_plan',{}),
-          'current_prerequisites':[{k:t[k] for k in fields if k in t} for t in revised],
-          'current_architecture':current['architecture'] if current['architecture']!=draft['architecture'] else 'Unchanged from draft'}
-    return bounded_prompt('task-refinement',data,provider)
+    """Review current contracts once; original-draft preservation is enforced natively."""
+    return bounded_prompt('task-refinement',packet_data(request,current,target),provider)
 
 
 def review(project, request, draft, current_path, target, output, planner, timeout):
@@ -78,7 +87,12 @@ def invoke_review(project,current_path,output,planner,timeout,prompt,mode,target
     """Share isolated invocation and durable metrics across coverage and per-task reviews."""
     from runner_process import BASE,invoke,read,save
     from run_metrics import collect
-    from planning_limits import arguments
+    from planning_limits import arguments,limits
+    from shadow_navigation import count
+    save(output.with_suffix('.context-budget.json'),{
+        'target':target,'provider':planner,'packet_tokens':count(prompt),'limits':limits(planner),
+        'representation':'coverage_review' if target=='COVERAGE' else 'current_contracts_once',
+        'includes_implementation_source':False,'context_plan':str(current_path)})
     request_path=output.with_suffix('.request.txt');request_path.write_text(prompt)
     command=[str(BASE/'qwen-agent'),'--profile','chatgpt-quality' if planner=='chatgpt' else 'mtplx-quality',
         '--project',str(project),'--role','architect','--batch','--json','--quiet',

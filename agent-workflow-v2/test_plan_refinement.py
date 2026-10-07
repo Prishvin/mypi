@@ -64,11 +64,11 @@ class RefinementTests(unittest.TestCase):
             (root/'new.py').write_text('x=1')
             with self.assertRaisesRegex(ValueError,'stale'):restore(root,['.'],bound,{'task_updates':[{'id':'T1'}]})
 
-    def test_packet_has_whole_draft_target_and_coverage_but_is_bounded(self):
+    def test_packet_has_whole_current_plan_target_and_coverage_but_is_bounded(self):
         plan=draft();current=annotate(plan,{'coverage_plan':coverage(plan)})
         text=packet('Original request',plan,current,'T2')
-        for value in ('Original request','whole_draft','current_task','coverage_plan','T1-A','T2-A'):self.assertIn(value,text)
-        with patch('shadow_navigation.count',return_value=28001),self.assertRaisesRegex(ValueError,'28000'):
+        for value in ('Original request','whole_plan','current_task','coverage_plan','T1-A','T2-A'):self.assertIn(value,text)
+        with patch('shadow_navigation.count',return_value=32769),self.assertRaisesRegex(ValueError,'32768'):
             packet('Request',plan,current,'T1')
 
     def test_fresh_invocations_select_provider_mode_budgets_and_record_metrics(self):

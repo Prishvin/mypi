@@ -368,3 +368,33 @@ The live retry used flat updates; staged split behavior was verified by the real
 parser/Pi/native integration test, not by this particular model response.
 Details: `t15-typed-validation.json`, `t15-typed-rerun-result.json`, and
 `t15-typed-summary.json` in the pilot report directory.
+
+### T20 context preflight recovery — 2026-10-07
+
+Nineteen original task reviews passed, but T20 stopped before any model request:
+its 29,083-token packet exceeded the old 28,000-token packet budget. This was a
+client preparation limit, not model context exhaustion or a game-test failure.
+The packet repeated the original whole-plan contracts, 19 current prerequisite
+contracts, and old/new architecture text.
+
+Task review now includes the current whole-plan contracts exactly once, points
+the selected entry to its full current_task contract, and retains the complete
+coverage plan and request. It removes superseded copies without truncating
+acceptance cases, tests, producers, consumers or split children. Native original
+contract preservation and all final-plan gates remain unchanged. T20's packet
+is now **21,343 tokens**. Every invoked review writes a context-budget sidecar.
+Errors report both measured packet size and the separate model window.
+
+At the user's request, local planning packet/input limits increased to
+**32,768 / 57,344 tokens**. The physical model window stays **98,304**, ordinary
+review output stays **16,384**, and medium effort with a **1,024-token thinking
+cap** remains unchanged. Recovery can still reserve 32,768 output tokens plus
+8,192 additional tokens inside the same window. The actual serialized-request
+admission check (including tools, 25% margin and template reserve) remains active.
+
+**66 Python tests passed**, including current-contract retention, split and
+consumer visibility, non-mutation, both provider boundaries, real-tokenizer
+packet reduction, context sidecars, failure before a model invocation, and
+resume of only the unreviewed task after a context-preparation failure. The
+saved T19 plan digest and source snapshot were checked before resuming T20
+through mypi. No game contract or implementation was authored by Codex.

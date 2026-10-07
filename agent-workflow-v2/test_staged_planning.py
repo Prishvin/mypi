@@ -111,6 +111,26 @@ class StagedTests(unittest.TestCase):
         self.assertEqual(self.calls,['DRAFT','COVERAGE','T1','T2','T2'])
         self.assertEqual(read(self.folder/'state.json')['review_attempts'],3)
 
+    def test_context_preflight_stop_resumes_only_unreviewed_task(self):
+        from plan_refinement import packet
+        from plan_draft import digest
+        def limited_review(project,request,original,current,target,output,planner,timeout):
+            if target=='T2':
+                with patch('shadow_navigation.count',return_value=32769):
+                    packet(request,original,read(current),target,planner)
+            return self.review(project,request,original,current,target,output,planner,timeout)
+        with patch('plan_refinement.review',side_effect=limited_review):
+            failed=self.run_plan()
+        self.assertFalse(failed['passed']);self.assertFalse(self.output.exists())
+        self.assertIn('before a model request',failed['validation_error'])
+        state=read(self.folder/'state.json');accepted=Path(state['current_plan'])
+        saved=digest(read(accepted));self.assertEqual(state['reviewed'],['T1'])
+        self.assertEqual(self.calls,['DRAFT','COVERAGE','T1'])
+        self.assertTrue(self.run_plan()['passed'])
+        self.assertEqual(self.calls,['DRAFT','COVERAGE','T1','T2'])
+        self.assertEqual(digest(read(accepted)),saved)
+        self.assertEqual(scan(self.root,['.'])['snapshot'],state['source_snapshot'])
+
     def test_interrupt_resumes_with_new_attempt_destination(self):
         self.failure='interrupt-T1';self.assertEqual(self.run_plan()['stage'],'interrupted')
         self.assertEqual(read(self.folder/'state.json')['review_attempts'],1)
