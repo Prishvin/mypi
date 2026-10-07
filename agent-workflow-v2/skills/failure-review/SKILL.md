@@ -23,6 +23,11 @@ test is permissible only when concrete evidence shows it contradicts the frozen
 behavior, with equivalent or stronger coverage preserved. External acceptance
 fixtures and frozen test commands remain immutable. If the required correction
 cannot fit these constraints, report the contradiction and stop for user review.
+The frozen tests field fixes command argv; it does not promote every fixture
+value in an editable, never-accepted test file into a user requirement. A prior
+repair calling a test "frozen" does not change this distinction. Names and shadow
+descriptions are not proof of numeric boundary behavior. If referenced test setup
+is absent, request an executable observation rather than assuming it is correct.
 
 Use execution_audit when supplied: it contains actual mutation/compaction counts
 and recent tool errors, without implementation bodies. Repeated source rewrites

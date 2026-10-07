@@ -882,3 +882,30 @@ selector tests were rerun after tightening path matching. The pilot replay adds
 only two test spans and one relevant primitive literal: 1,419 bytes. Its full
 review packet estimates 14,973 tokens against a 32,768 packet limit. No game
 implementation, tests or corrective plan was authored by the supervisor.
+
+## Recovery fixture completeness and thinking cap (2026-10-08 local time)
+
+Review 77df5b79af5f explicitly acknowledged that the test's referenced ROWS setup
+was absent, then retained the same unverified implementation diagnosis. The
+selector now follows a small number of referenced declarations/helpers in that
+same test file, up to two dependency passes and 2,400 extra source bytes. It never
+loads imported application implementation or evaluates test code. Missing/large
+setup is marked omitted. The pilot evidence grows only from 1,419 to 1,957 bytes
+and now includes the two referenced setup definitions.
+
+The failure-review skill now makes the distinction explicit: frozen test argv
+does not promote every never-accepted self-authored fixture value into a user
+requirement. Existing acceptance and immutable external fixtures remain fixed.
+Qwen must supply concrete evidence before proposing test corrections.
+
+Recent recovery reviews repeatedly hit their 1,024-token thinking limit. Local
+recovery now gets a phase-specific 4,096-token cap at medium effort; regular task
+refinement stays at 1,024 and ChatGPT keeps its existing settings. Executor limits
+remain independently selected by the plan. This is a measured troubleshooting
+choice, not a claim that larger caps always improve results.
+
+**26 focused Python checks passed on macOS**, including referenced arrays/helpers,
+transitive fixture setup, explicit omission of oversized definitions, no unrelated
+implementation leakage, real review-packet construction, phase-local limits and
+unchanged staged planning behavior. No supervisor game edits or corrective game
+plan were supplied.

@@ -53,6 +53,26 @@ class FailingTestContextTests(unittest.TestCase):
         self.assertIn('LIMIT = 7', str(data))
         self.assertNotIn('UNRELATED_TEST_BODY', str(data))
 
+    def test_referenced_fixture_array_and_test_helper_are_available_without_other_code(self):
+        self.test.write_text('const BASE = ["AB", "CD"];\nconst ROWS = BASE;\n'
+                             'function gridFor(rows) { return fakeGrid(rows); }\n'
+                             'function unrelated() { return "UNRELATED_TEST_BODY"; }\n'
+                             'test("boundary", () => {\n  const grid = gridFor(ROWS);\n  assert.equal(grid.at(0,0), "A");\n});\n')
+        self.log.write_text(f'  at TestContext.<anonymous> (file://{self.test}:7:10)\n')
+        data = collect(self.root, self.packet)
+        setup = data['files'][0]['referenced_test_setup']
+        self.assertEqual({d['name'] for d in setup['definitions']}, {'BASE', 'ROWS', 'gridFor'})
+        self.assertIn('"AB", "CD"', str(setup))
+        self.assertNotIn('UNRELATED_TEST_BODY', str(data))
+        self.assertNotIn('PRIVATE_APPLICATION_BODY', str(data))
+
+    def test_oversized_fixture_is_explicitly_omitted_instead_of_partially_copied(self):
+        self.test.write_text('const ROWS = [\n' + '"abc",\n'*50 + '];\n'
+                             'test("boundary", () => { assert.ok(ROWS); });\n')
+        self.log.write_text('test at test/units.test.mjs:53:1\n')
+        setup = collect(self.root, self.packet)['files'][0]['referenced_test_setup']
+        self.assertFalse(setup['definitions']); self.assertIn('ROWS', setup['omitted'])
+
     def test_mismatched_root_or_task_binding_yields_no_source(self):
         self.state['before']['root'] = str(self.base / 'wrong'); self.save()
         data = collect(self.root, self.packet)

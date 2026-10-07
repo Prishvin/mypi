@@ -14,7 +14,8 @@ def limits(provider,stage='review'):
     # 32k packet leaves room for the tool/system envelope inside the 57k admission
     # budget. Even recovery's 32k output plus 8k reserve fits the 96k model window.
     return {'context':98304,'input':57344,'output':32768 if stage=='recovery' else 16384,'packet':32768,
-            'shadow':32768,'reasoning':'medium'}
+            'shadow':32768,'reasoning':'medium',
+            'reasoning_budget':4096 if stage=='recovery' else 1024}
 
 
 def arguments(provider,stage='review'):
@@ -22,4 +23,4 @@ def arguments(provider,stage='review'):
     budget=limits(provider,stage)
     result=['--context',str(budget['context']),'--input-tokens',str(budget['input']),
             '--output-tokens',str(budget['output']),'--reasoning',budget['reasoning']]
-    return result+(['--reasoning-budget','1024'] if provider=='qwen' else [])
+    return result+(['--reasoning-budget',str(budget['reasoning_budget'])] if provider=='qwen' else [])

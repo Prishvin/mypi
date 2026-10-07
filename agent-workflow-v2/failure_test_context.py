@@ -29,6 +29,33 @@ def locations(text: str, root: Path, name: str) -> list[int]:
     return sorted(found)
 
 
+def referenced_setup(root: Path, name: str, record: dict, used: str, already: list[str]) -> dict:
+    """Follow bounded, same-test-file fixture declarations without evaluating them."""
+    from retrieval import read_symbol
+    candidates = {v['name'] for v in record.get('variables', [])
+                  if not v['scope'] and v['name'].isidentifier()}
+    candidates.update(s['name'] for s in record.get('symbols', []) if s['name'].isidentifier())
+    seen = set(already); found, omitted = [], []
+    used_bytes = 0
+    for _depth in range(2):
+        for symbol in sorted(candidates - seen):
+            if not re.search(r'\b' + re.escape(symbol) + r'\b', used):
+                continue
+            seen.add(symbol)
+            try:
+                definition = read_symbol(root, name, symbol, limit=40)
+            except ValueError:
+                omitted.append(symbol); continue
+            size = len(definition['source'].encode())
+            if definition['more'] or len(found) >= 4 or used_bytes + size > 2400:
+                omitted.append(symbol); continue
+            found.append({'name': symbol, 'source': definition['source']})
+            used_bytes += size
+            used += '\n' + definition['source']
+    return {'definitions': found, 'omitted': omitted,
+            'note': 'Same-test-file setup only, not evaluated values. Imported application functions remain unavailable.'}
+
+
 def excerpt(root: Path, name: str, lines: list[int]) -> dict:
     """Keep only named failing test scopes plus their referenced primitive literals."""
     path = root / name
@@ -61,13 +88,16 @@ def excerpt(root: Path, name: str, lines: list[int]) -> dict:
             break
     from prefetch import module_literals
     used = '\n'.join(span['source'] for span in spans)
-    constants = []
+    constants, constant_names = [], []
     for declaration in module_literals(root, name):
         match = re.match(r'(?:(?:const|let|var)\s+)?([A-Za-z_]\w*)(?::[^=]+)?\s*=', declaration)
         if match and re.search(r'\b' + re.escape(match[1]) + r'\b', used):
             constants.append(declaration)
+            constant_names.append(match[1])
     return {'path': name, 'sha256': hashlib.sha256(raw).hexdigest(),
             'spans': spans, 'referenced_primitive_literals': constants[:8],
+            'referenced_test_setup': referenced_setup(root, name, record, used, constant_names[:8] +
+                [s['name'] for s in record.get('symbols', []) if (s['line'], s['end']) in ranges]),
             'note': 'Selected test code only. Helpers and other cases may be omitted; do not infer their behavior.'}
 
 
