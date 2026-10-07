@@ -23,6 +23,36 @@ def proposal():
 
 
 class DraftTests(unittest.TestCase):
+    def test_serialized_array_and_joined_parameters_keep_exact_data(self):
+        plain={'task_updates':[{'id':'A','estimated_changed_lines':240}],
+               'architecture_replacements':[{'old':'Muzzle t=0.','new':'Muzzle t=0.08.'}]}
+        encoded={'task_updates':json.dumps(plain['task_updates']),
+                 'architecture_replacements':plain['architecture_replacements']}
+        joined={'task_updates':json.dumps(plain)[len('{"task_updates": '):-1]}
+        expected=apply(proposal(),plain)
+        for candidate in (encoded,joined):
+            result=apply(proposal(),candidate)
+            self.assertEqual(result['tasks'],expected['tasks'])
+            self.assertEqual(result['architecture'],expected['architecture'])
+            self.assertTrue(result['draft_repair']['transport_normalization'])
+        for bad in ('not JSON','[], "goal": "hidden replacement"','[], "task_updates": []'):
+            with self.assertRaises(ValueError):apply(proposal(),{'task_updates':bad})
+
+    def test_split_accepts_only_identical_redundant_aggregate_metadata(self):
+        parts=self.split()
+        for item in parts:
+            item.update(estimated_changed_lines=100,execution={'timeout_seconds':1200},
+                        context_overlay={'architecture_update_required':True})
+        update={'id':'A','replace_with':parts,'estimated_changed_lines':200,
+                'execution':{'timeout_seconds':1200},'context_overlay':{'architecture_update_required':True}}
+        result=apply(proposal(),{'task_updates':[update]})
+        for item in result['tasks'][:2]:
+            self.assertTrue(item['context']['architecture_update_required'])
+            self.assertNotIn('context_overlay',item)
+        for key,value in [('estimated_changed_lines',201),('execution',{'timeout_seconds':600}),
+                          ('context_overlay',{'architecture_update_required':False})]:
+            with self.assertRaisesRegex(ValueError,'conflict'):
+                apply(proposal(),{'task_updates':[{**update,key:value}]})
     def test_native_store_uses_full_validation_and_role_guard(self):
         import workflow
         from test_plans import example_task

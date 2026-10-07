@@ -2,10 +2,27 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 from plan_architecture import sectioned, bootstrap
 
 
 class ArchitectureSeedTests(unittest.TestCase):
+    def test_failed_publish_leaves_no_partial_architecture_or_temporary_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);plan={'architecture':'Full planned API.','tasks':[{'files':['architecture.md']}]}
+            with patch('plan_architecture.os.link',side_effect=OSError('Filesystem unavailable')):
+                with self.assertRaises(OSError):bootstrap(root,plan)
+            self.assertEqual(list(root.iterdir()),[])
+
+    def test_concurrent_publish_creates_exactly_one_complete_document(self):
+        from concurrent.futures import ThreadPoolExecutor
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);plans=[{'architecture':label*1000,'tasks':[{'files':['architecture.md']}]} for label in ['First.','Second.']]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results=list(pool.map(lambda plan:bootstrap(root,plan),plans))
+            self.assertEqual(sum(r['created'] for r in results),1)
+            self.assertIn((root/'architecture.md').read_text(),[sectioned(p['architecture']) for p in plans])
+            self.assertEqual([p.name for p in root.iterdir()],['architecture.md'])
     def test_plain_api_contracts_gain_sections_without_losing_lines(self):
         original='WORLD: grid.\n- src/engine/rng.mjs: seeded(rng).\n- src/ui/main.mjs: initGame(canvas).\nINVARIANTS: no DOM in engine.'
         result=sectioned(original)

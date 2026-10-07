@@ -8,8 +8,9 @@ test('repair schema omits full-plan resend and exposes explicit corrections',()=
   const schema=repairParameters();
   assert.deepEqual(schema.required,['task_updates']);
   assert.equal(schema.properties.tasks,undefined);
-  assert.ok(schema.properties.task_updates.items.properties.criterion_replacements);
-  assert.equal(schema.properties.task_updates.items.properties.estimated_changed_lines.maximum,300);
+  assert.ok(schema.properties.task_updates.anyOf[0].items.properties.criterion_replacements);
+  assert.equal(schema.properties.task_updates.anyOf[0].items.properties.estimated_changed_lines.maximum,300);
+  assert.equal(schema.properties.task_updates.anyOf[1].maxLength,1048576);
 });
 
 test('full plan schema requires estimated_changed_lines; pinned draft selects sparse schema',()=>{

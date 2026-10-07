@@ -6,6 +6,62 @@ from pathlib import Path
 from project_map import scan
 
 
+def unique_pairs(pairs):
+    """Reject duplicate JSON keys rather than choosing a hidden conflicting value."""
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('Duplicate serialized patch key: ' + key)
+        result[key] = value
+    return result
+
+
+def decode(patch):
+    """Decode exact JSON data from legacy parameter serialization, without inventing fields."""
+    result = copy.deepcopy(patch)
+    notes = []
+    for field in ('task_updates', 'architecture_replacements'):
+        value = result.get(field)
+        if not isinstance(value, str):
+            continue
+        if len(value.encode()) > 1048576:
+            raise ValueError('Serialized patch exceeds 1 MiB')
+        try:
+            parsed = json.loads(value, object_pairs_hook=unique_pairs)
+        except json.JSONDecodeError:
+            # Some XML adapters join later JSON parameters into the first parameter string.
+            parsed = json.loads('{"' + field + '":' + value + '}', object_pairs_hook=unique_pairs)
+            if not isinstance(parsed, dict) or set(parsed) - {field, 'architecture_replacements'}:
+                raise ValueError('Ambiguous serialized patch parameters')
+            if (set(parsed) - {field}).intersection(result):
+                raise ValueError('Conflicting serialized and outer patch fields')
+            result.update(parsed)
+        else:
+            result[field] = parsed
+        notes.append('Decoded literal JSON ' + field + '; no contract data changed')
+    return result, notes
+
+
+def split_data(update):
+    """Normalize explicit overlays and reject conflicting aggregate split metadata."""
+    allowed = {'id', 'replace_with', 'estimated_changed_lines', 'execution', 'context_overlay'}
+    if set(update) - allowed or not update['replace_with']:
+        raise ValueError('A split needs nonempty replace_with and only unambiguous metadata')
+    replacements = copy.deepcopy(update['replace_with'])
+    if 'estimated_changed_lines' in update and update['estimated_changed_lines'] != sum(
+            item.get('estimated_changed_lines', 0) for item in replacements):
+        raise ValueError('Aggregate split estimate conflicts with child estimates')
+    for item in replacements:
+        overlay = item.pop('context_overlay', {})
+        item['context'] = {**item.get('context', {}), **overlay}
+        if 'execution' in update and item.get('execution') != update['execution']:
+            raise ValueError('Aggregate split execution conflicts with child policies')
+        for key, value in update.get('context_overlay', {}).items():
+            if item['context'].get(key) != value:
+                raise ValueError('Aggregate split context conflicts with child context')
+    return replacements
+
+
 def digest(value):
     """Hash canonical draft data independently of pretty-printing."""
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
@@ -51,9 +107,7 @@ def update_task(task, update):
     if set(update) - allowed:
         raise ValueError('Unknown draft task patch fields')
     if 'replace_with' in update:
-        if set(update) != {'id','replace_with'} or not update['replace_with']:
-            raise ValueError('A split must contain only id and nonempty replace_with')
-        replacement = copy.deepcopy(update['replace_with'])
+        replacement = split_data(update)
         preserved(task, replacement)
         return replacement
     result = copy.deepcopy(task)
@@ -81,6 +135,7 @@ def update_task(task, update):
 
 def apply(proposal, patch):
     """Merge sparse model-authored corrections; ordinary V3 validation still decides acceptance."""
+    patch, transport_notes = decode(patch)
     if set(patch) - {'task_updates','architecture_replacements'}:
         raise ValueError('Draft mode accepts only task_updates and architecture_replacements')
     updates = patch.get('task_updates', [])
@@ -102,6 +157,7 @@ def apply(proposal, patch):
             raise ValueError('Architecture replacement must match one exact nonempty passage')
         result['architecture'] = result['architecture'].replace(edit['old'], edit['new'], 1)
     result['draft_repair'] = {'proposal_sha256':digest(proposal), 'patched_todos':keys,
+                            'transport_normalization':transport_notes,
                             'criterion_corrections':[{'todo':u['id'], **edit} for u in updates
                                 for edit in u.get('criterion_replacements', [])],
                             'method':'Sparse model corrections; Python preserves unchanged contracts'}

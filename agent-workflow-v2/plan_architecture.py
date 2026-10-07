@@ -3,6 +3,7 @@ import hashlib
 from pathlib import Path
 import re
 import os
+import tempfile
 
 
 def sectioned(text):
@@ -33,13 +34,18 @@ def bootstrap(root, plan):
     if 'architecture.md' not in plan['tasks'][0]['files']:
         return {'created': False}
     content = sectioned(plan['architecture']).encode()
+    descriptor, temporary = tempfile.mkstemp(prefix='.mypi-planned-', dir=root)
     try:
-        descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
-    except FileExistsError:
-        return {'created': False}
-    with os.fdopen(descriptor, 'wb') as output:
-        output.write(content)
-        output.flush()
-        os.fsync(output.fileno())
+        with os.fdopen(descriptor, 'wb') as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary, 0o644)
+        try:
+            os.link(temporary, destination)  # Atomically publish complete bytes without replacement.
+        except FileExistsError:
+            return {'created': False}
+    finally:
+        Path(temporary).unlink(missing_ok=True)
     return {'created': True, 'sha256': hashlib.sha256(content).hexdigest(),
             'origin': 'Accepted planner architecture; Python navigation headings only'}
