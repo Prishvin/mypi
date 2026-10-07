@@ -1,5 +1,5 @@
 /** Granular evidence dashboard shared by CLI monitor and conversation UI. */
-import {number,duration,gib,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask} from './monitor-format.mjs';
+import {number,duration,gib,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask,queueSelection,queueNote} from './monitor-format.mjs';
 const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=String(text);if(cls)node.className=cls;return node;};
 const badge=value=>el('span',value,'badge '+value.toLowerCase());
@@ -54,8 +54,7 @@ function renderQueue(){
  for(const g of groups){const b=el('button',g.label+' ('+g.tasks.length+')');b.dataset.phase=g.id;b.setAttribute('aria-pressed',String(g.id===group.id));
   b.onclick=()=>{queuePhase=g.id;selected=g.tasks[0]?taskKey(g.tasks[0]):'';$('filter').value='All';history.replaceState(null,'','#'+encodeURIComponent(selected));renderQueue();renderTask();};phases.append(b);}
  $('count').textContent=group.tasks.length+' tasks';
- $('queue-note').textContent=group.preview?'Awaiting planning. These saved tasks may change during review; implementation has not started.':
-  group.id==='planning'?'Completed steps contain saved planning results.':'Implementation status follows actual test and acceptance evidence.';
+ $('queue-note').textContent=queueNote(data,group);
  for(const task of group.tasks.filter(t=>filter==='All'||t.status===filter)){
   const key=taskKey(task),b=el('button',undefined,'todo'+(key===selected?' selected':''));b.dataset.task=task.id;
   b.append(el('strong',task.id),el('p',task.goal),badge(task.status));
@@ -120,17 +119,20 @@ function renderTask(){
  if(prior===selected)for(const node of area.querySelectorAll('details'))node.open=open.has(node.dataset.key);
 }
 function render(d){
+ const navigation=queueSelection(data,d,selected,$('filter').value);
+ if(navigation.selected!==selected)history.replaceState(null,'','#'+encodeURIComponent(navigation.selected));
+ selected=navigation.selected;queuePhase=navigation.phase;$('filter').value=navigation.filter;
  data=d;$('goal').textContent=d.goal||'Planning is in progress';$('run-name').textContent=d.name+' / '+d.run;
- const choice=selectedTask(d,selected);if(choice){selected=taskKey(choice);queuePhase=choice.preview||(d.workflow_phase!=='planning'&&!choice.planning)?'implementation':'planning';}
- $('overview-title').textContent=d.workflow_phase==='planning'?'Planning review':'Run overview';$('completion-label').textContent=d.workflow_phase==='planning'?'planning steps verified':'tasks accepted';
+ $('overview-title').textContent=d.implementation_state?'Failure review':d.workflow_phase==='planning'?'Planning review':'Run overview';$('completion-label').textContent=d.workflow_phase==='planning'?'planning steps verified':'tasks accepted';
  const step=currentStep(d);$('current-title').textContent=step.title;$('current-detail').textContent=step.detail;
  $('current-step').dataset.state=step.state;$('current-jump').hidden=!step.todo;
  $('completion').textContent=d.accepted+' / '+d.total;$('completion-bar').style.width=completion(d.accepted,d.total)+'%';
  $('run-status').textContent=d.status.replaceAll('_',' ')+' · '+(d.current_todo||'no active todo');$('count').textContent=d.total+' tasks';
  const active=d.native?.requests?.[0],elapsed=d.started_epoch?(d.elapsed_until_epoch||d.ended_epoch||Date.now()/1000)-d.started_epoch:null;
  $('stats').replaceChildren(metric('Accepted',d.accepted+' / '+d.total),metric('Elapsed',duration(elapsed)),metric('Current task',d.current_todo||'—'),metric('Live decode tok/s',number(active?.decode_tok_s)),metric('Live prompt tokens',number(active?.prompt_tokens)));
+ if(d.implementation_state)$('stats').append(metric('Implementation accepted',d.implementation_state.accepted+' / '+d.implementation_state.total));
  $('failure').hidden=!d.reason;$('failure').textContent=d.reason?'Stopped for evidence-based replanning: '+d.reason:'';
- renderThinking(d);renderNative(d);renderQueue();renderTask();const history=$('phases');history.replaceChildren();for(const p of d.phases||[]){const row=el('div',undefined,'phase-row');row.append(el('span',p.name),badge(p.passed?'Passed':'Failed'),el('span',duration(p.seconds)));history.append(row);}
+ renderThinking(d);renderNative(d);renderQueue();renderTask();const phaseHistory=$('phases');phaseHistory.replaceChildren();for(const p of d.phases||[]){const row=el('div',undefined,'phase-row');row.append(el('span',p.name),badge(p.passed?'Passed':'Failed'),el('span',duration(p.seconds)));phaseHistory.append(row);}
  $('updated').textContent='Evidence refreshed '+new Date(d.updated_epoch*1000).toLocaleTimeString();
 }
 async function refresh(){if(pending)return;pending=true;try{const r=await fetch(endpoint,{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Snapshot unavailable');if(!d.total&&data?.total){$('connection').textContent='Evidence being updated · retaining last snapshot';return;}render(d);$('connection').textContent='● Live · refresh every 3s';}catch(e){$('connection').textContent='Disconnected · '+e.message;}finally{pending=false;}}

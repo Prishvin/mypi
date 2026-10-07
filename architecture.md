@@ -31,3 +31,13 @@ Model hosting is separate: the gateway forwards a compatible server and can expl
 `architecture_maintenance.py` classifies changes and coordinates `architecture_sync.py`, `shadow.py` and compact-map generation. The private after-edit hook runs the reviewed architecture-maintenance skill directly in Python, without another model call. Frozen task scope reserves architecture.md. Only the owned interface record is mechanically updated; authored prose is preserved.
 
 `architecture_update.py` provides hash-checked, locked append/insert decisions. `architecture_consistency.py` and architecture-sync-check detect stale artifacts and implement user-approved rebuilds with final verification. `/rebuild` invokes the skill, and the web route bypasses classification/inference. Skill failures and stale selected contracts block completion.
+
+## Run monitoring
+
+`run_monitor.py` reads task contracts, attempts and gates without executing work.
+`run_monitor_recovery.py` binds a failure review to its coordinator's execution
+run so implementation tasks and saved planning results remain visible during
+recovery. Planning acceptance and implementation acceptance stay separate.
+`pi-web/static/monitor-format.mjs` handles queue selection: planning-to-execution
+handoffs follow the active todo once, while ordinary polls preserve manual
+history selections. The monitor never infers completed edits from model prose.

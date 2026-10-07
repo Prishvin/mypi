@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {number,gib,duration,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask} from '../pi-web/static/monitor-format.mjs';
+import {number,gib,duration,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask,queueSelection,queueNote} from '../pi-web/static/monitor-format.mjs';
 test('Unavailable measurements remain unavailable, zero stays zero',()=>{for(const x of [undefined,null,NaN,'3']){assert.equal(number(x),'—');assert.equal(gib(x),'—');assert.equal(duration(x),'—');}assert.equal(number(0),'0');assert.equal(gib(1024**3),'1.00 GiB');});
 test('Thinking labels distinguish live, previous and stopped output without manufacturing text',()=>{
  const r={status:'running',thinking:{text:'Recorded thought',streaming:true,todo:'T2',truncated:true}};
@@ -38,6 +38,83 @@ test('Planning and implementation groups keep selection, acceptance and shared l
  assert.equal(taskKey(selectedTask(execution,'DRAFT')),'planning:DRAFT');
  assert.equal(selectedTask(execution,'planning:DRAFT').planning_result.available,true);
  assert.equal(selectedTask(r,'missing').id,'DRAFT');assert.equal(selectedTask({},''),undefined);
+});
+const planningRun=()=>({workflow_phase:'planning',current_todo:'REVIEW-20-T20',
+ tasks:[{id:'REVIEW-20-T20',status:'Running'}],implementation_tasks:[{id:'T1',preview:true},{id:'T2',preview:true}]});
+const executionRun=()=>({workflow_phase:'execution',status:'running',current_todo:'T1',
+ tasks:[{id:'T1',status:'Running'},{id:'T2',status:'Blocked'}],
+ planning_tasks:[{id:'REVIEW-20-T20',planning:true,status:'Accepted'}]});
+test('live handoff selects the current implementation task and clears every stale status filter',()=>{
+ for(const filter of ['All','Accepted','Failed','Awaiting planning']){
+  const result=queueSelection(planningRun(),executionRun(),'REVIEW-20-T20',filter);
+  assert.deepEqual(result,{selected:'T1',phase:'implementation',filter:'All',handoff:true});
+ }
+ const previous=planningRun();previous.status='complete';previous.current_todo=null;
+ assert.equal(queueSelection(previous,executionRun(),'implementation:T2').selected,'T1');
+});
+test('old unscoped review hash opens execution after reload; explicit history links still work',()=>{
+ const current=executionRun();
+ assert.equal(queueSelection(null,current,'REVIEW-20-T20','Accepted').selected,'T1');
+ assert.equal(queueSelection(null,current,'REVIEW-20-T20','Accepted').filter,'All');
+ const explicit=queueSelection(null,current,'planning:REVIEW-20-T20','Accepted');
+ assert.equal(explicit.phase,'planning');assert.equal(explicit.filter,'Accepted');
+ assert.equal(explicit.selected,'planning:REVIEW-20-T20');
+ assert.equal(queueSelection(null,current,'implementation:T2').selected,'T2');
+});
+test('ordinary polling preserves chosen historical review, implementation task and filter',()=>{
+ const current=executionRun();
+ for(const [key,phase] of [['planning:REVIEW-20-T20','planning'],['T2','implementation']]){
+  const result=queueSelection(current,current,key,'Accepted');
+  assert.equal(result.selected,key);assert.equal(result.phase,phase);assert.equal(result.filter,'Accepted');
+  assert.equal(result.handoff,false);
+ }
+ assert.equal(queueSelection(planningRun(),planningRun(),'REVIEW-20-T20').phase,'planning');
+});
+test('execution defaults to implementation even between tasks or after completion',()=>{
+ const current=executionRun();current.current_todo=null;current.status='complete';
+ assert.equal(queueGroups(current)[0].id,'implementation');
+ assert.equal(queueGroups(current)[1].label,'Planning history');
+ assert.equal(queueSelection(null,current,'').selected,'T1');
+ assert.equal(queueSelection(planningRun(),current,'REVIEW-20-T20').phase,'implementation');
+ assert.equal(queueSelection(null,{},'').selected,'');
+});
+const repairRun=()=>({workflow_phase:'planning',status:'running',current_todo:'FAILURE-REVIEW',
+ tasks:[{id:'FAILURE-REVIEW',status:'Running',goal:'Review failure'}],
+ implementation_state:{status:'needs_replan',current_todo:'T1',reason:'context_budget_exceeded',accepted:0,total:2},
+ implementation_tasks:[{id:'T1',implementation:true,status:'Failed'},
+  {id:'T2',implementation:true,status:'Blocked'}]});
+test('failure review retains implementation selection, real statuses and scoped links',()=>{
+ const repair=repairRun(),groups=queueGroups(repair);
+ assert.equal(groups[1].preview,false);
+ assert.deepEqual(groups[1].tasks.map(t=>t.status),['Failed','Blocked']);
+ assert.deepEqual(queueSelection(executionRun(),repair,'T1'),
+  {selected:'implementation:T1',phase:'implementation',filter:'All',handoff:false});
+ assert.equal(queueSelection(repair,repair,'implementation:T2').phase,'implementation');
+ assert.equal(queueSelection(null,repair,'implementation:T2').selected,'implementation:T2');
+ assert.equal(queueSelection(null,repair,'').phase,'planning');
+ assert.equal(queueSelection(repair,repair,'FAILURE-REVIEW').phase,'planning');
+ repair.planning_tasks=executionRun().planning_tasks;
+ assert.equal(queueGroups(repair)[0].tasks.length,2);
+ assert.equal(queueSelection(repair,repair,'planning:REVIEW-20-T20').selected,'planning:REVIEW-20-T20');
+ assert.deepEqual(queueSelection(repair,executionRun(),'FAILURE-REVIEW','Accepted'),
+  {selected:'T1',phase:'implementation',filter:'All',handoff:true});
+});
+test('failure review notes and live activity never claim implementation has not started',()=>{
+ const repair=repairRun();
+ for(const group of queueGroups(repair)){
+  assert.match(queueNote(repair,group),/failure review|implementation failure/i);
+  assert.doesNotMatch(queueNote(repair,group),/has not started|Awaiting planning/);
+ }
+ for(const phase of ['tool_call','reasoning','chunk']){
+  repair.native={requests:[{phase,output_tokens:400,decode_tok_s:20}]};
+  const view=currentStep(repair);
+  assert.match(view.detail,/paused for a corrective plan/);
+  assert.doesNotMatch(view.detail,/has not started|all required planning reviews/);
+  assert.match(view.title,phase==='chunk'?/Reading prompt/:/Reviewing implementation failure/);
+ }
+ const initial=planningRun();
+ assert.match(queueNote(initial,queueGroups(initial)[1]),/has not started/);
+ assert.match(queueNote(executionRun(),queueGroups(executionRun())[1]),/Planning is complete/);
 });
 test('Current activity uses recorded model phase and actual tokens, never guesses planned step numbers',()=>{
  const r=run();r.native={requests:[{phase:'chunk',prefill_done:100,prompt_tokens:200}]};

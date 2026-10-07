@@ -133,6 +133,47 @@ def implementation_preview(state, root):
     return rows
 
 
+def task_rows(run, state, plan, root):
+    """Read one queue's actual attempts and gates, including a paused implementation."""
+    stopped=state.get('status') in ('needs_replan','interrupted')
+    until=(state.get('updated_epoch') or time.time()) if stopped else time.time()
+    completed=plan.get('replan_lineage',{}).get('completed',[])
+    accepted={t['id'] for t in plan.get('tasks',[]) if t.get('status')=='done'}
+    accepted.update(t['id'] for t in completed)
+    current=Path(state.get('attempt_folder',str(run)))
+    metadata=read(current/'session.json');session=Path(metadata['session']) if metadata.get('session') else current
+    frozen=read(session/'task-state.json');current_tools=tools(current,session)
+    fresh=None
+    if frozen.get('evidence'):
+        try:
+            from tasks import current_snapshot
+            identity=current_snapshot(frozen)[2];e=frozen['evidence']
+            fresh=e.get('snapshot')==identity and e.get('finished_snapshot')==identity
+        except (OSError,ValueError,KeyError):fresh=False
+    tasks=[]
+    from run_planning_results import results as planning_results
+    saved_results=planning_results(run,state,read)
+    current_ids={t['id'] for t in plan.get('tasks',[])}
+    for task in [t for t in completed if t['id'] not in current_ids]+plan.get('tasks',[]):
+        active=task['id']==state.get('current_todo');attempts=[a for a in state.get('attempts',[]) if a['todo']==task['id']]
+        row={key:task.get(key) for key in ('id','goal','depends_on','steps','acceptance','coverage','tests','context','execution','estimated_changed_lines')}
+        row.update(status=task_status(task,state,accepted),files=file_status(root,task['files'],frozen if active else {}),
+            attempts=[{k:a.get(k) for k in ('wall_seconds','exit_code','gate','metrics','interrupted')} for a in attempts])
+        if task['id'] in saved_results:row['planning_result']=saved_results[task['id']]
+        if attempts and attempts[-1].get('session'):
+            prior=read(Path(attempts[-1]['session'])/'task-state.json')
+            row['test_results']=prior.get('evidence',{}).get('results',[])
+            row['tools']=tools(Path(attempts[-1].get('log',str(run/'pi.log'))).parent,Path(attempts[-1]['session']))
+        if active:row.update(tools=current_tools,test_results=frozen.get('evidence',{}).get('results',[]),tests_fresh=fresh,
+            elapsed_seconds=max(0,until-state.get('attempt_started_epoch',until)))
+        if active and state.get('workflow_phase')=='planning':
+            context,execution=planning_limits(metadata)
+            row['context']={**(row.get('context') or {}),**context} or None
+            row['execution']={**(row.get('execution') or {}),**execution} or None
+        tasks.append(row)
+    return tasks
+
+
 class RunMonitor:
     """Bind one run or an evidence folder that follows subsequent replanned runs."""
     def __init__(self,folder,backend=None):
@@ -184,41 +225,13 @@ class RunMonitor:
         run=self.selected();state=read(run/'state.json');plan=read(Path(state['plan'])) if state.get('plan') else {}
         stopped=state.get('status') in ('needs_replan','interrupted')
         until=(state.get('updated_epoch') or time.time()) if stopped else time.time()
-        completed=plan.get('replan_lineage',{}).get('completed',[])
-        accepted={t['id'] for t in plan.get('tasks',[]) if t.get('status')=='done'}
-        accepted.update(t['id'] for t in completed)
         root=Path(state.get('project',plan.get('project',str(self.folder)))).resolve()
         current=Path(state.get('attempt_folder',str(run)))
         metadata=read(current/'session.json');session=Path(metadata['session']) if metadata.get('session') else current
-        frozen=read(session/'task-state.json');current_tools=tools(current,session)
-        fresh=None
-        if frozen.get('evidence'):
-            try:
-                from tasks import current_snapshot
-                identity=current_snapshot(frozen)[2];e=frozen['evidence']
-                fresh=e.get('snapshot')==identity and e.get('finished_snapshot')==identity
-            except (OSError,ValueError,KeyError):fresh=False
-        tasks=[]
-        from run_planning_results import results as planning_results, archived
-        saved_results=planning_results(run,state,read)
-        current_ids={t['id'] for t in plan.get('tasks',[])}
-        for task in [t for t in completed if t['id'] not in current_ids]+plan.get('tasks',[]):
-            active=task['id']==state.get('current_todo');attempts=[a for a in state.get('attempts',[]) if a['todo']==task['id']]
-            row={key:task.get(key) for key in ('id','goal','depends_on','steps','acceptance','coverage','tests','context','execution','estimated_changed_lines')}
-            row.update(status=task_status(task,state,accepted),files=file_status(root,task['files'],frozen if active else {}),
-                attempts=[{k:a.get(k) for k in ('wall_seconds','exit_code','gate','metrics','interrupted')} for a in attempts])
-            if task['id'] in saved_results:row['planning_result']=saved_results[task['id']]
-            if attempts and attempts[-1].get('session'):
-                prior=read(Path(attempts[-1]['session'])/'task-state.json')
-                row['test_results']=prior.get('evidence',{}).get('results',[])
-                row['tools']=tools(Path(attempts[-1].get('log',str(run/'pi.log'))).parent,Path(attempts[-1]['session']))
-            if active:row.update(tools=current_tools,test_results=frozen.get('evidence',{}).get('results',[]),tests_fresh=fresh,
-                elapsed_seconds=max(0,until-state.get('attempt_started_epoch',until)))
-            if active and state.get('workflow_phase')=='planning':
-                context,execution=planning_limits(metadata)
-                row['context']={**(row.get('context') or {}),**context} or None
-                row['execution']={**(row.get('execution') or {}),**execution} or None
-            tasks.append(row)
+        tasks=task_rows(run,state,plan,root)
+        from run_monitor_recovery import implementation as recovery_implementation
+        from run_planning_results import archived
+        recovery=recovery_implementation(run,state,root,read,task_rows)
         prefixes=[]
         for path in self.folder.rglob('session.json'):
             data=read(path)
@@ -232,8 +245,10 @@ class RunMonitor:
             'status':state.get('status','planning'),'current_todo':state.get('current_todo'),
             'workflow_phase':state.get('workflow_phase','execution'),
             'accepted':len([t for t in tasks if t['status']=='Accepted']),'total':len(tasks),'tasks':tasks,
-            'implementation_tasks':implementation_preview(state,root),
-            'planning_tasks':archived(plan,root,read) if state.get('workflow_phase')!='planning' else [],
+            'implementation_tasks':recovery['tasks'] if recovery else implementation_preview(state,root),
+            'implementation_state':recovery['state'] if recovery else None,
+            'planning_tasks':recovery['planning_tasks'] if recovery else
+                archived(plan,root,read) if state.get('workflow_phase')!='planning' else [],
             'reason':state.get('reason'),'started_epoch':state.get('started_epoch'),'ended_epoch':state.get('ended_epoch'),
             'elapsed_until_epoch':until if stopped else state.get('ended_epoch'),
             'thinking':{**self.thinking.snapshot(current/'pi.log',state.get('status')=='running'),

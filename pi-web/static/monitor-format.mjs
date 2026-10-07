@@ -7,19 +7,45 @@ export function completion(done,total){return typeof done==='number'&&total>0?Ma
 export function testState(result,fresh){if(!result)return 'Not run';if(fresh===false)return 'Stale';return result.exit_code===0?'Passed':'Failed';}
 
 /** Keep planning acceptance separate from the future implementation contracts. */
-export const taskKey=task=>task.preview?'implementation:'+task.id:task.planning?'planning:'+task.id:task.id;
+export const taskKey=task=>task.preview||task.implementation?'implementation:'+task.id:task.planning?'planning:'+task.id:task.id;
 export function queueGroups(run){
  return run.workflow_phase==='planning'?
-  [{id:'planning',label:'Planning',tasks:run.tasks||[]},
-   {id:'implementation',label:'Implementation',preview:true,tasks:run.implementation_tasks||[]}]:
-  [...(run.planning_tasks?.length?[{id:'planning',label:'Planning',tasks:run.planning_tasks}]:[]),
-   {id:'implementation',label:'Implementation',tasks:run.tasks||[]}];
+  [{id:'planning',label:'Planning',tasks:[...(run.tasks||[]),...(run.planning_tasks||[])]},
+   {id:'implementation',label:'Implementation',preview:!run.implementation_state,tasks:run.implementation_tasks||[]}]:
+  [{id:'implementation',label:'Implementation',tasks:run.tasks||[]},
+   ...(run.planning_tasks?.length?[{id:'planning',label:'Planning history',tasks:run.planning_tasks}]:[])];
 }
 export function selectedTask(run,key){
  const all=queueGroups(run).flatMap(g=>g.tasks);
  return all.find(t=>taskKey(t)===key)||
-  (run.workflow_phase!=='planning'&&key?.startsWith('implementation:')?all.find(t=>t.id===key.slice(15)):null)||
+  (key?.startsWith('implementation:')?queueGroups(run).find(g=>g.id==='implementation')?.tasks.find(t=>t.id===key.slice(15)):null)||
   all.find(t=>t.id===key)||all.find(t=>t.id===run.current_todo&&!t.preview&&!t.planning)||all[0];
+}
+
+/** Follow the planning-to-execution handoff once; later history selections stay put. */
+export function queueSelection(previous,run,key,filter='All'){
+ const execution=run.workflow_phase!=='planning';
+ const handoff=execution&&previous?.workflow_phase==='planning';
+ const legacyReview=execution&&!previous&&key&&!key.includes(':')&&
+  !run.tasks?.some(t=>t.id===key)&&run.planning_tasks?.some(t=>t.id===key);
+ const follow=handoff||legacyReview;
+ const choice=selectedTask(run,follow?(run.current_todo||run.tasks?.[0]?.id):key);
+ return {selected:choice?taskKey(choice):'',
+  phase:queueGroups(run).find(g=>g.tasks.includes(choice))?.id||'implementation',
+  filter:follow?'All':filter,handoff:Boolean(handoff)};
+}
+
+/** Explain whether implementation is still a draft or paused with real run evidence. */
+export function queueNote(run,group){
+ if(group.preview)return 'Awaiting planning. These saved tasks may change during review; implementation has not started.';
+ if(group.id==='planning')return run.implementation_state?
+  'Reviewing an implementation failure. The Implementation tab retains all task statuses and results.':
+  run.workflow_phase==='planning'?'Completed steps contain saved planning results.':
+  'Planning is complete. These are saved reviews; choose Implementation for generation tasks.';
+ const state=run.implementation_state;
+ return state?'Implementation paused for failure review'+(state.current_todo?' · '+state.current_todo:'')+
+  (state.reason?' · '+state.reason:'')+'. Task statuses and results are retained.':
+  'Implementation status follows actual test and acceptance evidence.';
 }
 
 /** Label actual external-model reasoning, retaining clear empty and stopped states. */
@@ -56,12 +82,13 @@ export function currentStep(run){
   const progress=tokens!=null?(reading?number(tokens)+' / '+number(native.prompt_tokens)+' prompt tokens':number(tokens)+' output tokens'):'';
   const speed=reading?native.prefill_tok_s:native.decode_tok_s;
   const rate=typeof speed==='number'&&Number.isFinite(speed)?number(speed)+' tok/s':'';
-  const planning=run.workflow_phase==='planning',drafting=planning&&id==='DRAFT';
+  const planning=run.workflow_phase==='planning',drafting=planning&&id==='DRAFT',repair=Boolean(run.implementation_state);
   const planningTitle=id==='DRAFT'?'Generating draft plan':id==='COVERAGE'?'Generating coverage plan':
-   id?.startsWith('REVIEW-')?'Refining task plan':'Generating planning response';
+   id?.startsWith('REVIEW-')?'Refining task plan':repair?'Reviewing implementation failure':'Generating planning response';
   const title=planning&&!reading?planningTitle:phase(native.phase);
-  const note=planning?(drafting?'Implementation has not started. ':'This planning step is not yet validated. ')+
+  const note=planning?(repair?'Implementation is paused for a corrective plan. ':drafting?'Implementation has not started. ':'This planning step is not yet validated. ')+
    (native.phase==='tool_call'?'Waiting for complete tool arguments before validation; partial arguments are not shown.':
+    repair?'The remaining implementation tasks are available in the Implementation tab.':
     'Implementation waits for all required planning reviews to pass.'):'';
   return {title:title+suffix,detail:[goal,progress,rate,note].filter(Boolean).join(' — '),state:'running',todo:id};
  }

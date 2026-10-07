@@ -426,3 +426,26 @@ session was interrupted before a plan save; all 19 prior accepted reviews, their
 current-plan digest and the source snapshot were preserved before resuming the
 same mypi pipeline. No game implementation, contract or acceptance criterion was
 authored by Codex.
+
+### Monitor handoff and recovery queues — 2026-10-07
+
+After all 20 task reviews passed, execution started but the browser retained its
+last planning selection. The monitor now switches to the active implementation
+todo at a planning-to-execution handoff and clears stale status filters. Normal
+polls preserve explicit history selections; old unscoped review bookmarks open
+execution, while explicit planning-history links still work.
+
+Failure review previously replaced the visible queue with one review task and
+no implementation preview. It now retains the coordinator's actual execution
+queue, including acceptance, failures, blocked dependencies, test results, attempt
+metrics and stopped clocks. The association is checked against project, stage,
+plan and run location. Saved planning artifacts remain accessible. Recovery is
+labeled as paused implementation, not as implementation that never started.
+
+Validation: **32 Python and 20 JavaScript tests passed**, including handoffs,
+bookmark behavior, filters, recovery evidence, completed lineage, historical
+planning results and rejected mismatched recovery references. Static syntax and
+diff checks passed. The live HTTP snapshot exposed all 20 implementation tasks
+and 22 saved planning steps during Qwen's automatic T01 failure review. Browser
+automation was unavailable, so visual rendering was not verified. Only the
+monitor was restarted; model execution and game artifacts were not changed.
