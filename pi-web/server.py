@@ -22,13 +22,18 @@ class App:
     def monitor(self,ident):
         from run_monitor import RunMonitor
         row=self.store.get(ident)
-        if not row.get('run_dir'):raise ValueError('This conversation has no execution run yet')
-        folder=Path(row['run_dir']).resolve()
+        selected=row.get('planning_dir') or row.get('run_dir')
+        if not selected:raise ValueError('This conversation has no planning or execution run yet')
+        folder=Path(selected).resolve()
         item=self.monitors.get(ident)
         if item is None or item.folder!=folder:self.monitors[ident]=item=RunMonitor(folder)
         return item.snapshot()
     def view(self,ident):
         row=self.store.get(ident);project=Path(row['project'])
+        if row.get('run_dir'):
+            target=Path(row['run_dir'])/'execution-target.json'
+            if target.exists():
+                selected=json.loads(target.read_text());row['plan']=selected['plan'];row['run_dir']=selected['run_dir']
         for name in ('knowledge','architecture'):
             path=project/(name+'.md')
             row[name]=path.read_text()[:24000] if path.is_file() and not path.is_symlink() else ''

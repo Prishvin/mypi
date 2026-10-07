@@ -48,7 +48,8 @@ def conversation_turn(job,text,develop=False):
     pending=row.get('pending_plan')
     if pending and text=='/resume-planning':
         prepared=pi_session.restore(Path(pending['folder']))
-        rpc.run(job,prepared,pending['request']);finish_plan(job,prepared);return
+        if not Path(prepared['plan']).exists():rpc.run(job,prepared,pending['request'])
+        finish_plan(job,prepared);return
     command=text.split(maxsplit=1)[0]
     if command=='/remember' and text.strip()=='/remember':
         latest=next((m['text'] for m in reversed(row['messages']) if m['role']=='assistant' and m.get('mode')=='pi' and m.get('text') and m.get('stop') not in ('error','aborted')),None)
@@ -78,7 +79,7 @@ def plan(job,request,answers=None):
     folder=base/'planning'/str(time.time_ns())
     prepared=pi_session.prepare(row,folder,'architect')
     if answers:(Path(prepared['session'])/'initial-answers.json').write_text(json.dumps(['Clarification '+str(i+1)+' is incorporated in the supplied local intake goal.' for i in range(len(answers))]))
-    job.store.update(job.ident,pending_plan={'folder':str(folder),'request':request},plan=None,run_dir=None)
+    job.store.update(job.ident,pending_plan={'folder':str(folder),'request':request},plan=None,run_dir=None,planning_dir=None)
     job.note('Clarifying, researching, then planning with '+row['settings']['planner'])
     rpc.run(job,prepared,request);finish_plan(job,prepared)
 
@@ -88,8 +89,24 @@ def finish_plan(job,prepared):
     sync_preferences(job)
     if path.exists():
         from plan_runner import validate
-        validate(Path(job.store.get(job.ident)['project']),json.loads(path.read_text()))
-        job.store.update(job.ident,plan=str(path),pending_plan=None)
+        from plans import require_review
+        row=job.store.get(job.ident);data=json.loads(path.read_text())
+        validate(Path(row['project']),data)
+        if data.get('planning_review',{}).get('status')!='passed':
+            pending=row.get('pending_plan') or {}
+            if not pending.get('request'):raise ValueError('Original request is needed for coverage and task refinement')
+            folder=Path(pending['folder']);output=folder/'reviewed.json';request=folder/'review-request.txt'
+            request.write_text(pending['request'])
+            job.store.update(job.ident,planning_dir=str(output.with_suffix('.stages')))
+            job.note('Planning test coverage, then refining each task')
+            code=command(job,[str(ROOT/'mypi'),'plan',row['project'],'--request-file',str(request),
+                '--review-draft',str(path),'--out',str(output),'--planner',row['settings']['planner'],
+                '--non-interactive','--timeout','1800'],folder/'refinement.log')
+            if code or not output.exists():
+                job.note('Coverage or task refinement paused; resume planning to continue from its checkpoint');return
+            path=output;data=json.loads(path.read_text());validate(Path(row['project']),data)
+        require_review(data)
+        job.store.update(job.ident,plan=str(path),pending_plan=None,planning_dir=None)
         job.store.message(job.ident,'notice','Granular plan ready. Review the tasks and acceptance criteria, then choose Run plan.')
         job.note('Plan ready')
     else:job.note('Planning paused or incomplete. Resume planning to continue the same request.')
@@ -109,7 +126,8 @@ def command(job,argv,logfile):
                     reader.seek(max(0,logfile.stat().st_size-1600));tail=reader.read().decode(errors='replace').strip()
                 job.store.update(job.ident,run_log=tail)
             if time.monotonic()-tick>=30:
-                tick=time.monotonic();state_path=logfile.parent/'state.json'
+                tick=time.monotonic();current=job.store.get(job.ident)
+                state_path=Path(current.get('planning_dir') or logfile.parent)/'state.json'
                 state=json.loads(state_path.read_text()) if state_path.exists() else {}
                 label='Final review' if state.get('status')=='complete' else 'Task '+state['current_todo'] if state.get('current_todo') else 'Workflow'
                 job.note(f'{label} working · {int(tick-started)}s since start')
@@ -132,18 +150,24 @@ def execute_plan(job):
     job.store.update(job.ident,run_dir=str(run));job.note('Running granular tasks; fresh context and acceptance gates for each task')
     argv=[str(ROOT/'mypi'),action,row['project'],row['plan'],'--run-dir',str(run),'--reviewer',row['settings']['reviewer']]
     code=command(job,argv,run/'web-run.log')
-    review_file=run/'final-review/review.json'
+    target=run/'execution-target.json'
+    actual=Path(json.loads(target.read_text())['run_dir']) if target.exists() else run
+    review_file=actual/'final-review/review.json'
     review=json.loads(review_file.read_text()) if review_file.exists() else {}
     followup=code==0 and review.get('verdict')=='followup'
     if code==0:shadow_setup.ensure(job,Path(row['project']))
     job.store.message(job.ident,'notice', ('Execution completed; the reviewer requests follow-up. '+review.get('summary','')) if followup else 'Execution and final review completed.' if code==0 else f'Workflow stopped (exit {code}). Review the evidence; failed work is not marked complete.')
+    question=run/'user-question.json'
+    if code==20 and question.exists():job.store.message(job.ident,'assistant',json.loads(question.read_text())['question'])
     job.note('Reviewer requests follow-up' if followup else 'Completed and reviewed' if code==0 else 'Stopped with evidence · resume or replan')
 
 
 def replan(job):
     row=job.store.get(job.ident)
     if not row.get('run_dir'):raise ValueError('No run evidence to replan')
-    run=Path(row['run_dir']); evidence=run/'replan-request.json'
+    run=Path(row['run_dir']);target=run/'execution-target.json'
+    if target.exists():run=Path(json.loads(target.read_text())['run_dir'])
+    evidence=run/'replan-request.json'
     if not evidence.exists():
         candidates=list(run.rglob('replan*.json'))
         if len(candidates)!=1:raise ValueError('No unambiguous replanning packet; inspect run evidence')

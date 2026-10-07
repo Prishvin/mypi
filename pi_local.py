@@ -102,9 +102,11 @@ def main(argv=None):
     planning.add_argument('request', nargs='?')
     planning.add_argument('--request-file', type=Path)
     planning.add_argument('--planner', choices=['chatgpt', 'qwen','local'])
+    planning.add_argument('--refiner',choices=['chatgpt','qwen'],help='Second-pass task reviewer; defaults to the selected planner')
     planning.add_argument('--out', type=Path, required=True)
     planning.add_argument('--timeout', type=int, default=600)
     planning.add_argument('--draft-plan', type=Path, help='Repair an unaccepted model proposal with sparse patches')
+    planning.add_argument('--review-draft',type=Path,help='Run coverage and task refinement on an existing valid, unexecuted draft')
     researching = sub.add_parser('research', help='Clarify and research one request; write a concise knowledge.md')
     researching.add_argument('project', type=Path)
     researching.add_argument('request', nargs='?')
@@ -199,10 +201,11 @@ def main(argv=None):
             if extra:parser.error('Unrecognized arguments: '+' '.join(extra))
             selected=backend(args.reviewer) if args.reviewer else choices['reviewer']
             if args.action!='review':
-                from plan_runner import execute
+                from recovery_runner import execute
                 start()
-                code=execute(args.project,args.plan,args.run_dir,resume=args.action=='resume')
-                if code:return code
+                outcome=execute(args.project,args.plan,args.run_dir,resume=args.action=='resume')
+                if outcome['code']:return outcome['code']
+                args.plan,args.run_dir=outcome['plan'],outcome['run_dir']
             if selected=='qwen':start()
             from review_service import review
             result=review(args.project,args.plan,args.run_dir,selected,output=getattr(args,'out',None))
@@ -215,6 +218,7 @@ def main(argv=None):
             backends = [args.planner]
             if args.action in {'plan','research'}:
                 backends += [getattr(args,name) for name in ('clarifier','researcher')]
+                if args.action=='plan' and args.refiner:backends.append(args.refiner)
             if 'qwen' in backends:
                 start()
             if args.action in {'plan','research'}:
@@ -229,7 +233,7 @@ def main(argv=None):
                     interactive=sys.stdin.isatty() and not args.non_interactive,refresh=args.refresh_research)
                 if args.action == 'plan':
                     result = create(args.project, request, args.out, args.planner, args.timeout,
-                                    draft_plan=args.draft_plan, **options)
+                                    draft_plan=args.draft_plan,refiner=args.refiner,review_draft=args.review_draft, **options)
                 else:
                     if args.out.resolve().is_relative_to(args.project.resolve()):
                         parser.error('--out must be outside the project')

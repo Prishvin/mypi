@@ -104,8 +104,9 @@ class RunMonitor:
 
     def selected(self):
         """Follow the most recently updated child run after repair/restart."""
-        if (self.folder/'state.json').is_file():return self.folder
-        candidates=[p.parent for p in self.folder.glob('run-*/state.json')]
+        candidates=[self.folder] if (self.folder/'state.json').is_file() else []
+        candidates += [p.parent for pattern in ('run-*/state.json','*.stages/state.json','repair-*/state.json',
+            'run-*/*.stages/state.json','run-*/repair-*/state.json') for p in self.folder.glob(pattern)]
         return max(candidates,key=lambda p:(p/'state.json').stat().st_mtime,default=self.folder)
 
     def telemetry(self,prefixes):
@@ -184,6 +185,7 @@ class RunMonitor:
         rss=sample.get('server_rss_bytes')
         return {'updated_epoch':time.time(),'name':self.folder.name,'run':run.name,'goal':plan.get('goal'),
             'status':state.get('status','planning'),'current_todo':state.get('current_todo'),
+            'workflow_phase':state.get('workflow_phase','execution'),
             'accepted':len([t for t in tasks if t['status']=='Accepted']),'total':len(tasks),'tasks':tasks,
             'reason':state.get('reason'),'started_epoch':state.get('started_epoch'),'ended_epoch':state.get('ended_epoch'),
             'elapsed_until_epoch':until if stopped else state.get('ended_epoch'),

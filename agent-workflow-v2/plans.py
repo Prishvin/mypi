@@ -142,6 +142,7 @@ def save(root: Path, prefixes: list[str], plan: dict, output: Path) -> dict:
 def select(path: Path, identifier: str) -> dict:
     """Hand off an unfinished todo only after its declared dependencies pass."""
     plan = json.loads(path.read_text())
+    require_review(plan)
     matches = [t for t in plan['tasks'] if t['id'] == identifier]
     if len(matches) != 1 or matches[0]['status'] != 'todo':
         raise ValueError('Select one existing unfinished todo')
@@ -150,6 +151,13 @@ def select(path: Path, identifier: str) -> dict:
     if not set(task.get('depends_on', [])) <= done:
         raise ValueError('Complete dependencies before this todo')
     return {k: v for k, v in task.items() if k not in {'status', 'depends_on', 'baseline'}}
+
+
+def require_review(plan):
+    """Intermediate drafts cannot execute before the mandatory refinement pass completes."""
+    review=plan.get('planning_review',{})
+    if review.get('required') and review.get('status')!='passed':
+        raise ValueError('This draft requires task refinement before execution; use the published final plan')
 
 
 def start_attempt(path: Path, identifier: str, state: Path) -> None:

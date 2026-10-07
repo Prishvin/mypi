@@ -19,7 +19,12 @@ class Artifacts(unittest.TestCase):
     def tearDown(self):self.tmp.cleanup()
     def write(self,name,data):
         path=self.root/name;path.parent.mkdir(parents=True,exist_ok=True)
-        path.write_text(json.dumps(data));return path
+        path.write_text(json.dumps(data))
+        # Overlay filesystems can assign identical mtimes to rapid fixture writes.
+        import os
+        self.write_sequence=getattr(self,'write_sequence',0)+1
+        os.utime(path,(1700000000+self.write_sequence,1700000000+self.write_sequence))
+        return path
     def task(self,ident='A',**values):
         return {'id':ident,'files':['code.py'],'goal':'Build','steps':['Implement','Test'],
                 'acceptance':[{'id':'a','given':'Input','when':'Called','then':'Result'}],
@@ -61,6 +66,16 @@ class Artifacts(unittest.TestCase):
     def test_bound_run_does_not_follow_sibling_runs(self):
         self.setup_run();monitor=RunMonitor(self.root/'run-1');self.write('run-2/state.json',{})
         self.assertEqual(monitor.selected().name,'run-1')
+    def test_monitor_follows_planning_coverage_then_execution(self):
+        monitor=self.setup_run()
+        queue=self.write('final.stages/queue.json',{'goal':'Plan','tasks':[
+            self.task('DRAFT',status='done'),self.task('COVERAGE',depends_on=['DRAFT'])]})
+        self.write('final.stages/state.json',{'project':str(self.root),'plan':str(queue),
+            'status':'running','current_todo':'COVERAGE','workflow_phase':'planning'})
+        row=monitor.snapshot();self.assertEqual(row['workflow_phase'],'planning')
+        self.assertEqual(row['accepted'],1);self.assertEqual(row['tasks'][1]['status'],'Running')
+        self.write('run-3/state.json',{'status':'running'})
+        self.assertEqual(monitor.snapshot()['workflow_phase'],'execution')
     def test_files_show_hash_changes_deletion_and_reject_outside_symlinks(self):
         raw=b'answer=42\n';(self.root/'code.py').write_bytes(raw)
         frozen={'before':{'files':[{'path':'code.py','sha256':hashlib.sha256(raw).hexdigest()}]}}

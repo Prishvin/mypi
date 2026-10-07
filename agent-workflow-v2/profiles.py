@@ -48,7 +48,11 @@ def resolve(args, task: dict, profile: dict) -> dict:
     size = getattr(args, 'task_size', None) or recipe.get('preset') or role.get('preset')
     preset = PRESETS[size] if size else {}
     forced = getattr(args, 'task_size', None) is not None
-    context = getattr(args, 'context', None) or recipe.get('window_tokens') or profile.get('context', 65536)
+    cloud = args.planner == 'chatgpt' if args.role in ('architect','research','intake','reviewer','memory') else args.executor == 'chatgpt'
+    from planning_limits import CLOUD_WINDOW,CLOUD_INPUT
+    context = getattr(args, 'context', None) or recipe.get('window_tokens') or (CLOUD_WINDOW if cloud else profile.get('context',65536))
+    if cloud and args.role in ('architect','reviewer'):
+        role={**role,'input_tokens':CLOUD_INPUT,'output_tokens':32768}
     output_default = 8192 if context <= 32768 else 32768
 
     def value(cli, field, key, default):
@@ -97,11 +101,13 @@ def resolve(args, task: dict, profile: dict) -> dict:
 
 def validate(config: dict, model: str, cloud=False) -> None:
     """Reject impossible windows, output reserves and budgets before launching a session."""
-    if config['context'] not in WINDOWS or config['context'] > CEILINGS[model]:
+    from planning_limits import CLOUD_WINDOW,CLOUD_MODEL_OUTPUT
+    if (cloud and (type(config['context']) is not int or not 32768<=config['context']<=CLOUD_WINDOW)) or (not cloud and (config['context'] not in WINDOWS or config['context'] > CEILINGS[model])):
         raise ValueError(f'Invalid {model} workflow context; ceiling {CEILINGS[model]}')
     for key in ['input_tokens', 'output_tokens']:
         number = config[key]
-        if type(number) is not int or not 512 <= number <= (32768 if key == 'output_tokens' else 131072):
+        maximum=(CLOUD_MODEL_OUTPUT if key=='output_tokens' else CLOUD_WINDOW) if cloud else (32768 if key=='output_tokens' else 131072)
+        if type(number) is not int or not 512 <= number <= maximum:
             raise ValueError(f'Invalid {key} budget')
     if config['input_tokens'] + config['output_tokens'] + 8192 > config['context']:
         raise ValueError('Input + output + 8192 template reserve exceeds the task context; split the task')

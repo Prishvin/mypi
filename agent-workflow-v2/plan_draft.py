@@ -67,7 +67,7 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def bind(root, source, destination, snapshot):
+def bind(root, source, destination, snapshot, target=None, coverage=False):
     """Pin only an unaccepted external proposal; accepted execution uses replanning."""
     source = source.resolve()
     if source.is_relative_to(root.resolve()) or source.stat().st_size > 1048576:
@@ -82,6 +82,12 @@ def bind(root, source, destination, snapshot):
         raise ValueError('Accepted work requires evidence-bound replan, not draft repair')
     bound = {'project': str(root.resolve()), 'snapshot': snapshot, 'proposal': proposal,
              'source': str(source), 'proposal_sha256': digest(proposal)}
+    if coverage:
+        if target:raise ValueError('Coverage review and task refinement are separate calls')
+        bound['coverage_review']=True
+    if target is not None:
+        if target not in {t['id'] for t in proposal['tasks']}:raise ValueError('Unknown refinement target')
+        bound['refine_task']=target
     destination.write_text(json.dumps(bound, indent=2))
     return str(destination)
 
@@ -103,7 +109,7 @@ def preserved(original, replacement):
 def update_task(task, update):
     """Apply explicit metadata or additive test changes without weakening acceptance."""
     allowed = {'id','estimated_changed_lines','steps','test_strategy','assumptions','context_overlay',
-               'execution','add_files','add_tests','add_coverage','replace_with','criterion_replacements'}
+               'execution','add_files','add_tests','add_coverage','add_acceptance','replace_with','criterion_replacements'}
     if set(update) - allowed:
         raise ValueError('Unknown draft task patch fields')
     if 'replace_with' in update:
@@ -125,7 +131,7 @@ def update_task(task, update):
             result[key] = copy.deepcopy(update[key])
     if 'context_overlay' in update:
         result['context'] = {**result.get('context', {}), **copy.deepcopy(update['context_overlay'])}
-    for patch_key, key in [('add_files','files'),('add_tests','tests'),('add_coverage','coverage')]:
+    for patch_key, key in [('add_files','files'),('add_tests','tests'),('add_coverage','coverage'),('add_acceptance','acceptance')]:
         for item in update.get(patch_key, []):
             if item not in result[key]:
                 result[key].append(copy.deepcopy(item))
@@ -171,4 +177,17 @@ def restore(root, prefixes, bound_path, patch):
         raise ValueError('Draft binding or source snapshot is stale')
     if digest(bound['proposal']) != bound['proposal_sha256']:
         raise ValueError('Pinned draft proposal hash changed')
-    return apply(bound['proposal'], patch)
+    if bound.get('coverage_review'):
+        from coverage_plan import annotate
+        return annotate(bound['proposal'],patch)
+    if bound.get('refine_task'):
+        from plan_refinement import guard
+        patch=guard(bound['proposal'],patch,bound['refine_task'])
+    result=apply(bound['proposal'], patch)
+    if bound.get('refine_task'):
+        from coverage_plan import require_gaps
+        update=patch['task_updates'][0]
+        ids={t['id'] for t in update.get('replace_with',[])} or {bound['refine_task']}
+        require_gaps([t for t in result['tasks'] if t['id'] in ids],
+                     result.get('coverage_plan',{}).get('gaps',[]),bound['refine_task'])
+    return result

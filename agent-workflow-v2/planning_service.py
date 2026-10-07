@@ -8,7 +8,21 @@ from runner_process import BASE, invoke, read, save
 
 
 def create(project, request, output, planner='chatgpt', timeout=600, handoff=None, *,
-           clarifier='auto', researcher='auto', answers=None, interactive=False, refresh=False, draft_plan=None):
+           clarifier='auto', researcher='auto', answers=None, interactive=False, refresh=False, draft_plan=None,refiner=None,review_draft=None):
+    """New plans need draft plus task refinement; executed recovery retains frozen contracts."""
+    options=dict(clarifier=clarifier,researcher=researcher,answers=answers,interactive=interactive,
+                 refresh=refresh,draft_plan=draft_plan)
+    if review_draft and (handoff or draft_plan):raise ValueError('Choose review-draft or draft repair, not both')
+    if handoff:return create_draft(project,request,output,planner,timeout,handoff,**options)
+    from staged_planning import create as staged
+    if review_draft:
+        from staged_planning import adopt
+        return staged(project,request,output,planner,timeout,adopt,{'source':review_draft},refiner)
+    return staged(project,request,output,planner,timeout,create_draft,options,refiner)
+
+
+def create_draft(project, request, output, planner='chatgpt', timeout=600, handoff=None, *,
+           clarifier='auto', researcher='auto', answers=None, interactive=False, refresh=False, draft_plan=None,require_refinement=False):
     """Generate a new external plan; planning never invokes the todo executor."""
     project, output = project.resolve(), output.resolve()
     if output.exists() or output.is_relative_to(project):
@@ -22,8 +36,8 @@ def create(project, request, output, planner='chatgpt', timeout=600, handoff=Non
         packet = json.loads(handoff.read_text())
         if Path(packet['project']).resolve() != project or packet['current_snapshot'] != scan(project, ['.'])['snapshot']:
             raise ValueError('Replanning evidence belongs to another project or is stale')
-        from replan_brief import distill
-        request += '\n\nREPLANNING EVIDENCE (no implementation bodies):\n' + json.dumps(distill(packet), ensure_ascii=False)
+        from failure_context import build
+        request,selection=build(project,packet,planner)
         request += '\nRECOVERY OVERRIDES THE INITIAL TODO REQUEST: plan remaining work only. COPY the original acceptance objects (id/given/when/then) and test argv EXACTLY, without rewording or renumbering. Keep file scope. Change implementation steps, estimates, budgets or deadlines as evidence requires. Never repeat accepted todos. Remove already-completed todo IDs from depends_on; their behavior remains protected by separate lineage regression tests. Dependencies on remaining todos must refer to preceding todos in this replacement plan.'
         lineage = packet
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -37,9 +51,14 @@ def create(project, request, output, planner='chatgpt', timeout=600, handoff=Non
         request = pipeline['refined_prompt']
     request_path = output.with_suffix('.request.txt')
     request_path.write_text(request)
+    if handoff:save(output.with_suffix('.context.json'),selection)
     command = [str(BASE / 'qwen-agent'), '--profile', 'chatgpt-quality' if planner == 'chatgpt' else 'mtplx-quality',
         '--project', str(project), '--role', 'architect', '--batch', '--json', '--quiet',
         '--plan', str(output), '--prompt-file', str(request_path)]
+    if require_refinement:command.append('--require-refinement')
+    if handoff:
+        from planning_limits import arguments
+        command+=['--replan-evidence',str(handoff.resolve()),*arguments(planner,'recovery')]
     if draft_plan:
         command += ['--plan-draft', str(draft_plan.resolve()), '--context','65536',
                     '--input-tokens','24576','--output-tokens','8192']

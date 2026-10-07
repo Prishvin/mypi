@@ -83,6 +83,7 @@ function renderTask(){
 }
 function render(d){
  data=d;$('goal').textContent=d.goal||'Planning is in progress';$('run-name').textContent=d.name+' / '+d.run;
+ $('overview-title').textContent=d.workflow_phase==='planning'?'Planning review':'Run overview';$('completion-label').textContent=d.workflow_phase==='planning'?'planning steps verified':'tasks accepted';
  const step=currentStep(d);$('current-title').textContent=step.title;$('current-detail').textContent=step.detail;
  $('current-step').dataset.state=step.state;$('current-jump').hidden=!step.todo;
  $('completion').textContent=d.accepted+' / '+d.total;$('completion-bar').style.width=completion(d.accepted,d.total)+'%';

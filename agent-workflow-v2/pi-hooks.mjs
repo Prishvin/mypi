@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import {domainInstructions} from './pi-domain-skills.mjs';
 import {failedEditEvidence} from './pi-edit-recovery.mjs';
 import {requireThinkingCaps} from './pi-thinking-cap.mjs';
+import {admit} from './pi-admission.mjs';
 
 export function applies(model) { return model?.provider === 'local-qwen-workflow'; }
 
@@ -25,6 +26,7 @@ export function installPromptHooks(pi, home) {
       if(session && existsSync(session))appendFileSync(join(session,'provider-controls.jsonl'),JSON.stringify({
         model:ctx.model.id,role:process.env.QWEN_WORKFLOW_ROLE,reasoning_effort:payload.reasoning?.effort,
         max_output_tokens:payload.max_output_tokens,epoch:Date.now()/1000})+'\n');
+      await admit(pi,home,runtime,payload,ctx);
       return payload;
     }
     if (!applies(ctx.model) || !process.env.QWEN_WORKFLOW_PROJECT) return;

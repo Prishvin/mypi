@@ -21,6 +21,8 @@ def prepare_catalog(folder: Path, local_descriptor: dict) -> None:
             'cost':{'input':2,'output':10,'cacheRead':.1,'cacheWrite':2.5}})
     for model in models:
         if model.get('id')==CLOUD_MODEL:
+            from planning_limits import CLOUD_WINDOW,CLOUD_MODEL_OUTPUT
+            model.update(contextWindow=CLOUD_WINDOW,maxTokens=CLOUD_MODEL_OUTPUT)
             model['thinkingLevelMap']={'off':None,'minimal':None,'low':'low','medium':'medium',
                                        'high':'high','xhigh':'xhigh','max':'max'}
     providers['local-qwen-workflow']=local_descriptor

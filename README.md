@@ -230,6 +230,12 @@ Each todo can pin up to five **context.architecture_sections** entries `{id, sha
 
 The selected planner sees requirements, knowledge, architecture and interfaces. It creates a validated V3 plan; it does not execute source edits.
 
+New CLI and web plans use two passes. First, generate the architectural draft. The second pass starts with a dedicated **COVERAGE** task: map request requirements to existing acceptance cases, unit/integration/e2e checks and observable pass/fail conditions; assign missing cases to their owning todos. Then a fresh model session reviews each original todo against the request, whole draft and coverage plan. It refines the task or splits it into 2–4 independently tested children. Python preserves original cases, test commands, file scope and dependency completion, and requires every coverage gap to be incorporated. The final plan becomes executable only after all reviews pass.
+
+`--refiner qwen|chatgpt` defaults to the planner. Each stage records its own model usage, elapsed time and memory observations. This deliberately spends additional planning calls to expose missing contracts before implementation; it is not yet a measured overall speed improvement. Rerun the **same plan command/output path** to resume a checkpoint; completed reviews are retained. The monitor shows drafting, coverage and individual refinements separately from coding acceptance. A valid unexecuted draft from an interactive session can enter this pipeline with `--review-draft /outside/project/draft.json`; `--draft-plan` instead repairs an invalid proposal first.
+
+Planning/review budgets depend on the provider. Qwen stays at 98,304 capacity with 49,152 input / 16,384 output for coverage and task reviews; a complete failure-repair plan can use 32,768 output. GPT-6.1 Sol uses a conservative **272,000 client window**, 196,608 input and 32,768 output at xhigh, based on the installed Pi catalog. OpenAI documents a **1,050,000 model context and 128,000 maximum output**; larger subscription requests have not been verified here. These are ceilings, not padding or token targets. Cloud admission uses the bundled tokenizer as a proxy plus margin, not an exact GPT token count. Local coding tasks retain their own smaller budgets. [Official GPT-6.1 Sol limits](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+
 Each atomic todo specifies:
 
 - A concrete goal, exact editable files, dependencies and small implementation steps.
@@ -240,6 +246,8 @@ Each atomic todo specifies:
 - Task window, maximum input, maximum total output, reasoning effort and thinking-token cap.
 
 The planner must include tool/schema overhead in the estimate. A short function can still require several thousand framework tokens. **96k capacity is not a 96k prompt**: small tasks can use a 32k worker window, 16k input limit and 8k output limit while the server stays at 96k.
+
+Source files should be comfortable to load individually: target **4,096 Qwen tokens**, ceiling **8,192 tokens**, alongside **300 lines / 32 KiB**. Shadow entries report measured source size; Python rejects new or growing files over the ceiling. Existing oversized source may shrink or remain the same size, with focused retrieval. Authored architecture documents remain exempt and are read by section. Several individually small files can still exceed a todo's input budget; planning must account for their combined context and test/tool overhead.
 
 Review the plan and acceptance before choosing **Run plan**, or explicitly run the CLI executor.
 
@@ -274,6 +282,10 @@ Frozen external fixtures protect acceptance across retries. Known completed beha
 ### 8. Stop with evidence, or resume interruption
 
 A failed test, unexpected scope change, stale fixture, deadline or budget overflow stops the run with an evidence packet. The packet contains the task, changed files, bounded failure details, measurements and the reason to replan. Failure does not authorize an unbounded repair loop.
+
+The CLI/web coordinator now sends a failed todo to the selected **planner** for a fresh failure review. It supplies measured architecture/shadow, original plan overview, exact remaining contracts and observed errors. Complete architecture and prototypes are included when both the provider's selection threshold and available packet space permit (32k Qwen, 128k cloud); otherwise Python selects the compact map, relevant sections and up to five interfaces. Implementation bodies remain local. The model explains the diagnosis and corrective approach, then saves a plan that must preserve completed behavior, exact acceptance/tests and authorized scope.
+
+Python applies **one automatic repair attempt per failed contract**. If that repair fails, or the review cannot produce a valid plan, execution stops with an inline/CLI question and `user-question.json`. Repeating resume does not silently reset the allowance. An interrupted repair resumes the same contract. A separate later todo may receive its own one attempt. Evidence and results live under the original run directory; `execution-target.json` identifies the actual repair plan/run for final review. Explicit user-directed replanning can authorize further work.
 
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 

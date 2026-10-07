@@ -14,6 +14,7 @@ def inspect_file(path: Path, root: Path) -> dict:
     """Describe a source file without loading any project dependency."""
     raw = path.read_bytes()
     text = raw.decode('utf-8')
+    from file_size import source_tokens
     parser = parse_python if path.suffix == '.py' else (
         parse_html if path.suffix == '.html' else parse_javascript)
     try:
@@ -27,7 +28,7 @@ def inspect_file(path: Path, root: Path) -> dict:
         parsed = {'description': '[parse failed]', 'symbols': [], 'imports': [],
                   'calls': [], 'error': str(exc)}
     return {'path': path.relative_to(root).as_posix(), 'sha256': hashlib.sha256(raw).hexdigest(),
-            'lines': len(text.splitlines()), 'bytes': len(raw), **parsed}
+            'lines': len(text.splitlines()), 'bytes': len(raw), 'source_tokens':source_tokens(text), **parsed}
 
 
 def scan(root: Path, prefixes: list[str]) -> dict:
@@ -50,6 +51,7 @@ def scan(root: Path, prefixes: list[str]) -> dict:
 def outline(record: dict) -> str:
     """Render interfaces and descriptions with links to current source locations."""
     lines = [f"FILE {record['path']} sha256={record['sha256']}", record['description']]
+    if 'source_tokens' in record:lines.append(f"SIZE {record['lines']} lines, {record['bytes']} bytes, {record['source_tokens']} source tokens (Qwen tokenizer)")
     if record.get('brief_origin'):
         lines.append(record['brief_origin'])
     if record['error']:

@@ -93,13 +93,13 @@ def prepare(args) -> dict:
     args.thinking = effective['thinking']
     args.reasoning_budget = effective['reasoning_budget']
     args.stop_after_pass = effective['stop_after_pass']
-    validate_model_context(args.model, args.context)
     reasoning_budget = getattr(args, 'reasoning_budget', None)
     if reasoning_budget is not None and not 0 <= reasoning_budget <= 32768:
         raise ValueError('Reasoning budget must be 0-32768 tokens')
     root = args.project.resolve()
     executor = getattr(args, 'executor', 'local')
     cloud = args.planner == 'chatgpt' if args.role in ('architect', 'research', 'intake','reviewer','memory') else executor == 'chatgpt'
+    if not cloud:validate_model_context(args.model,args.context)
     if cloud and not args.planner_model:
         raise ValueError('ChatGPT planning or execution requires --planner-model')
     if args.briefs:
@@ -113,11 +113,19 @@ def prepare(args) -> dict:
     prefixes = args.prefix or ['.']
     summary = shadow.refresh(root, prefixes, shadow_path)
     draft_path = None
+    evidence_path=None
+    if getattr(args,'replan_evidence',None):
+        evidence=json.loads(args.replan_evidence.read_text())
+        if args.role!='architect' or evidence['project']!=str(root) or evidence['current_snapshot']!=summary['snapshot']:
+            raise ValueError('Replan evidence does not match this architect and source snapshot')
+        evidence_path=str(session/'replan-evidence.json');Path(evidence_path).write_text(json.dumps(evidence))
     if getattr(args, 'plan_draft', None):
         if args.role != 'architect' or getattr(args, 'interactive', False):
             raise ValueError('Unaccepted draft repair needs a batch architect session')
         from plan_draft import bind
-        draft_path = bind(root, args.plan_draft, session/'plan-draft.json', summary['snapshot'])
+        draft_path = bind(root, args.plan_draft, session/'plan-draft.json', summary['snapshot'],getattr(args,'refine_task',None),getattr(args,'plan_coverage',False))
+    elif getattr(args,'refine_task',None) or getattr(args,'plan_coverage',False):
+        raise ValueError('Per-task refinement requires a pinned draft')
     if args.role in ('architect', 'reviewer'):
         import shadow_navigation
         summary['planning_navigation'] = shadow_navigation.initialize(
@@ -134,8 +142,8 @@ def prepare(args) -> dict:
         task = {}
     output_tokens = effective['output_tokens']
     input_tokens = effective['input_tokens']
-    configure(session / 'pi-config', args.model, args.context)
-    tune_context(session / 'pi-config', input_tokens, output_tokens)
+    configure(session / 'pi-config', args.model, min(args.context,CONTEXT_LIMITS[args.model]))
+    if not cloud:tune_context(session / 'pi-config', input_tokens, output_tokens)
     tools = {'architect':'project_map,plan_store,web_research,skill_read,skill_use',
              'research':'project_map,web_research,skill_use,knowledge_store',
              'intake':'intake_store',
@@ -161,7 +169,9 @@ def prepare(args) -> dict:
     prompt = args.prompt or 'Plan the architecture for the requested change using project interfaces only.'
     if args.role == 'architect':
         prompt = task_prompts.planning(prompt, effective)
-        if draft_path:
+        if getattr(args,'plan_coverage',False):
+            prompt += '\n\nCOVERAGE REVIEW MODE: plan_store accepts only coverage_plan. Review the draft and map requirements to observable checks; record missing cases as gaps. Do not rewrite the plan or implement tests. Python attaches your coverage plan to the unchanged draft.'
+        elif draft_path:
             prompt += '\n\nPINNED DRAFT REPAIR MODE: plan_store accepts only sparse task_updates and optional architecture_replacements. Do not send goal/architecture/tasks or replay the full proposal. Python retains unchanged contracts. Missing metadata must come from your estimates; no automatic clamping. Preserve original cases/tests/files when splitting and keep the original ID in the final replacement todo. All final V3 gates remain mandatory.'
         from knowledge import read_project
         knowledge = read_project(root)
@@ -205,7 +215,9 @@ def prepare(args) -> dict:
                   initial_stages=getattr(args,'initial_stages',True),
                   review_packet=str(args.review_packet.resolve()) if getattr(args,'review_packet',None) else None,
                   plan=str(args.plan.resolve()) if args.plan else str(session / 'plan.json'), todo=args.todo,
-                  plan_draft=draft_path)
+                  plan_draft=draft_path,require_refinement=getattr(args,'require_refinement',False),
+                  plan_coverage=getattr(args,'plan_coverage',False))
+    result['replan_evidence']=evidence_path
     (session / 'launch.json').write_text(json.dumps(result, indent=2))
     return result
 
@@ -276,11 +288,17 @@ def environment(prepared: dict) -> dict:
                QWEN_WORKFLOW_ROLE=prepared['role'], QWEN_WORKFLOW_PROJECT=prepared['project'])
     env['QWEN_WORKFLOW_PLANNER'] = prepared['planner']
     env['QWEN_WORKFLOW_EXECUTOR'] = prepared.get('executor', 'local')
+    env.pop('QWEN_WORKFLOW_REPLAN_EVIDENCE',None)
+    if prepared.get('replan_evidence'):env['QWEN_WORKFLOW_REPLAN_EVIDENCE']=prepared['replan_evidence']
     env['QWEN_WORKFLOW_SHADOW'] = prepared['shadow']
     env['QWEN_WORKFLOW_PLAN'] = prepared['plan']
+    env.pop('QWEN_WORKFLOW_REQUIRE_REFINEMENT',None)
+    if prepared.get('require_refinement'):env['QWEN_WORKFLOW_REQUIRE_REFINEMENT']='1'
     env.pop('QWEN_WORKFLOW_PLAN_DRAFT', None)
     if prepared.get('plan_draft'):
         env['QWEN_WORKFLOW_PLAN_DRAFT'] = prepared['plan_draft']
+    env.pop('QWEN_WORKFLOW_PLAN_COVERAGE',None)
+    if prepared.get('plan_coverage'):env['QWEN_WORKFLOW_PLAN_COVERAGE']='1'
     env['QWEN_WORKFLOW_SESSION'] = prepared['session']
     env['QWEN_WORKFLOW_SKILLS'] = prepared['active_skills']
     env['QWEN_WORKFLOW_RUNTIME'] = prepared['runtime']
@@ -406,7 +424,7 @@ def main() -> int:
     parser.add_argument('--reasoning-budget', type=int)
     parser.add_argument('--uncapped-thinking',action='store_true',help='Disable the separate thinking cap; the total-output cap remains enforced')
     parser.add_argument('--stop-after-pass', action=argparse.BooleanOptionalAction, default=None)
-    parser.add_argument('--context', type=int, choices=profiles.WINDOWS)
+    parser.add_argument('--context', type=int, help='Worker window; validated separately for local Qwen and subscription planning')
     parser.add_argument('--task', type=Path)
     parser.add_argument('--briefs', type=Path)
     parser.add_argument('--planner', choices=['local', 'chatgpt'])
@@ -414,6 +432,10 @@ def main() -> int:
     parser.add_argument('--planner-model')
     parser.add_argument('--plan', type=Path)
     parser.add_argument('--plan-draft', type=Path, help='Pin an unaccepted proposal for sparse model repair')
+    parser.add_argument('--refine-task', help='Restrict draft corrections to this one task, including validated splits')
+    parser.add_argument('--plan-coverage',action='store_true',help='Attach a validated coverage review to a pinned draft')
+    parser.add_argument('--replan-evidence',type=Path,help='Validate a repair against pinned failure evidence before saving')
+    parser.add_argument('--require-refinement',action='store_true',help='Mark generated drafts as non-executable until second-pass review')
     parser.add_argument('--todo')
     parser.add_argument('--login-chatgpt', action='store_true')
     parser.add_argument('--prompt')

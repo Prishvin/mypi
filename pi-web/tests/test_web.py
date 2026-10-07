@@ -15,6 +15,25 @@ from server import App,handler,ThreadingHTTPServer
 
 
 class Persistence(unittest.TestCase):
+    def test_web_draft_requires_coverage_and_refinement_before_run_plan(self):
+        from workflows import finish_plan
+        from processes import Job
+        from test_coverage_plan import draft
+        import plans
+        with tempfile.TemporaryDirectory() as tmp:
+            store=Store(Path(tmp)/'data');row=store.create();job=Job(store,row['id'])
+            path=Path(tmp)/'draft.json';plans.save(Path(row['project']),['.'],draft(),path)
+            folder=Path(tmp)/'planning';folder.mkdir()
+            store.update(row['id'],pending_plan={'folder':str(folder),'request':'Build'})
+            with patch('workflows.sync_preferences'),patch('workflows.command',return_value=1):finish_plan(job,{'plan':str(path)})
+            self.assertIsNone(store.get(row['id'])['plan']);self.assertIsNotNone(store.get(row['id'])['pending_plan'])
+            def passed(job,argv,log):
+                self.assertIn('--review-draft',argv);output=Path(argv[argv.index('--out')+1])
+                data=json.loads(path.read_text());data['planning_review']={'required':True,'status':'passed'}
+                plans.save(Path(row['project']),['.'],data,output);return 0
+            with patch('workflows.sync_preferences'),patch('workflows.command',side_effect=passed):finish_plan(job,{'plan':str(path)})
+            self.assertEqual(store.get(row['id'])['plan'],str(folder/'reviewed.json'))
+            self.assertIsNone(store.get(row['id'])['pending_plan'])
     def test_planning_status_rejects_legacy_unexecutable_plan(self):
         from workflows import finish_plan
         from processes import Job

@@ -34,15 +34,16 @@ def review(root, plan, run_dir, reviewer=None, timeout=600, output=None):
         existing=folder/'followup-plan.json'
         if existing.exists():
             prompt+='\nA follow-up plan was already saved in an interrupted review. Do not call plan_store again. Review this proposal and finish review_store; if it needs changes, stop and request a new review output.\n'+existing.read_text()
-        if len(prompt.encode())>80000:raise ValueError('Split oversized review evidence before retrying')
+        from planning_limits import limits,arguments
+        from shadow_navigation import count
+        if count(prompt)>limits(selected)['packet']:raise ValueError('Split oversized review evidence before retrying')
         request=folder/'request.txt';request.write_text(prompt)
         attempt=folder/('attempt-'+str(len(list(folder.glob('attempt-*')))+1))
         command=[str(BASE/'qwen-agent'),'--profile','chatgpt-quality' if selected=='chatgpt' else 'mtplx-quality',
             '--project',str(root),'--role','reviewer','--batch','--json','--quiet',
             '--prompt-file',str(request),'--review-packet',str(folder/'packet.json'),
             '--phase-output',str(folder/'review.json'),'--plan',str(folder/'followup-plan.json'),
-            '--input-tokens','40960','--output-tokens','32768','--context','98304',
-            '--thinking','on','--reasoning','xhigh' if selected=='chatgpt' else 'medium']
+            *arguments(selected),'--thinking','on']
         result=invoke(command,attempt,timeout)
         from run_metrics import collect
         result.update(metrics=collect(result,attempt),reviewer=selected,packet_sha256=packet['packet_sha256'],

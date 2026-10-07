@@ -53,15 +53,15 @@ export function messages(container,rows,remember,busy){
 }
 export function plan(container,row,action){
   container.hidden=!row.plan_data && !row.pending_plan && !row.pending_route;
-  const signature=JSON.stringify([row.plan_data,row.pending_plan,row.pending_route,row.busy,row.run_dir,row['state.json'],row['final-review/review.json']]);
+  const signature=JSON.stringify([row.plan_data,row.pending_plan,row.pending_route,row.busy,row.run_dir,row.planning_dir,row['state.json'],row['final-review/review.json']]);
   if(container.dataset.signature===signature)return;container.dataset.signature=signature;container.replaceChildren();
+  if(row.run_dir||row.planning_dir){const link=el('a','Open granular live todo dashboard','monitor-link');link.href='/monitor?conversation='+encodeURIComponent(row.id);link.target='_blank';link.rel='noopener';container.append(link);}
   if(row.pending_route){container.append(el('h2','Request intake'));
     if(!row.busy){const b=el('button','Resume intake','primary');b.onclick=()=>action('message',{text:'/resume-request'});container.append(b);}return;}
   if(row.pending_plan && !row.plan_data){container.append(el('h2','Planning in progress'));
     if(!row.busy){const b=el('button','Resume planning','primary');b.onclick=()=>action('message',{text:'/resume-planning'});container.append(b);}return;}
   if(!row.plan_data)return;
   container.append(el('h2',row.plan_data.title||'Development plan'));
-  if(row.run_dir){const link=el('a','Open granular live todo dashboard','monitor-link');link.href='/monitor?conversation='+encodeURIComponent(row.id);link.target='_blank';link.rel='noopener';container.append(link);}
   for(const task of row.plan_data.tasks||[]){const node=el('div',undefined,'plan-task');
     node.append(el('strong',(task.status==='done'?'✓ ':'○ ')+task.id+' · '+task.goal));
     const details=el('details');details.append(el('summary','Scope, acceptance, tests & context'),el('pre',JSON.stringify({files:task.files,acceptance:task.acceptance,tests:task.tests,context:task.context},null,2)));node.append(details);container.append(node);}

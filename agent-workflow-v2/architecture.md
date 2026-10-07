@@ -26,6 +26,10 @@
 | shadow.py | Regeneration and freshness verification |
 | plans.py and plan_contract.py | Granularity, retrieval recipes and reviewed budgets |
 | planning_service.py | Planner selection and preserved replacement contracts |
+| staged_planning.py and plan_refinement.py | Resumable draft, coverage and fresh per-todo review; atomic final publication |
+| coverage_plan.py and pi-coverage-plan.mjs | Typed coverage matrix, requirement references and mandatory gap incorporation |
+| planning_limits.py | Separate cloud planning ceilings and bounded local review packets |
+| failure_context.py and recovery_runner.py | Measured failure review, preserved corrective plans, one repair then user escalation |
 | intake_service.py and request_pipeline.py | Durable questions, consolidated prompt and phase ordering |
 | skill_registry.py and skill_runner.py | Typed purpose/pre/post contracts and fixed native pipelines |
 | research_service.py and knowledge.py | Source-backed brief, merging, caching and publication |

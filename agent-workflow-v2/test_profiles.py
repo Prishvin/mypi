@@ -54,11 +54,12 @@ class ProfileTests(unittest.TestCase):
         for name in profiles.catalog()['profiles']:
             for role in ['architect', 'code']:
                 args, setting = self.resolve(profile=name, role=role)
-                self.assertEqual(setting['context'], 98304)
+                cloud = args.planner == 'chatgpt' if role == 'architect' else args.executor == 'chatgpt'
+                self.assertEqual(setting['context'],272000 if cloud else 98304)
                 self.assertEqual(setting['output_tokens'], 32768 if role == 'architect' else 16384)
                 cloud = args.planner == 'chatgpt' if role == 'architect' else args.executor == 'chatgpt'
                 self.assertEqual(setting['reasoning_budget'], None if cloud or args.model == 'gemma' else 4096)
-                self.assertEqual(setting['input_tokens'], 57344 if role == 'architect' else 24576)
+                self.assertEqual(setting['input_tokens'], (196608 if cloud else 57344) if role == 'architect' else 24576)
                 self.assertEqual(setting['stop_after_pass'], role == 'code' and not cloud)
 
     def test_task_budget_and_cli_precedence(self):

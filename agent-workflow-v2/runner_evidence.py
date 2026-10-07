@@ -76,9 +76,10 @@ def failed_tests(session):
         row = {k: result[k] for k in ('argv', 'exit_code', 'log')}
         # Raw logs stay local. Assertion messages are bounded observations; no trace source lines.
         lines = Path(result['log']).read_text(errors='replace').splitlines() if Path(result['log']).exists() else []
-        row['observations'] = [line[:300] for line in lines if line.startswith(
+        row['observations'] = [line.strip()[:300] for line in lines if line.strip().startswith(
             ('AssertionError', 'Error:', 'TypeError:', 'ReferenceError:', 'SyntaxError:',
-             'FAILED ', 'ERROR:', 'FAIL:', 'Ran ', 'OK', 'ImportError:', 'ModuleNotFoundError:'))][-12:]
+             'FAILED ', 'ERROR:', 'FAIL:', 'Ran ', 'OK', 'ImportError:', 'ModuleNotFoundError:',
+             'not ok ', '✖ ', 'error:', 'failureType:', 'expected:', 'actual:', 'operator:'))][-16:]
         rows.append(row)
     return rows
 

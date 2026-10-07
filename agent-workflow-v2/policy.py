@@ -29,6 +29,12 @@ def validate_change(before: dict, after: dict, allowed: list[str],
             warnings.append(f'Existing large file: {path} ({record["lines"]})')
         if record.get('bytes', 0) > max(32768, previous.get('bytes', 0)):
             violations.append(f'File size grows above 32 KiB: {path}')
+        from file_size import SOURCE_TOKEN_LIMIT,SOURCE_TOKEN_TARGET
+        tokens=record.get('source_tokens',0)
+        if tokens>max(SOURCE_TOKEN_LIMIT,previous.get('source_tokens',0)):
+            violations.append(f'File grows above {SOURCE_TOKEN_LIMIT} source tokens: {path} ({tokens}); split into small modules')
+        elif tokens>SOURCE_TOKEN_TARGET:
+            warnings.append(f'Large context file: {path} ({tokens} source tokens); prefer <= {SOURCE_TOKEN_TARGET}')
         previous_symbols = {s['name']: s for s in previous.get('symbols', [])}
         for symbol in record.get('symbols', []):
             if symbol['kind'] != 'function':

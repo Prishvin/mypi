@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import extension from './pi-extension.mjs';
 import {repairParameters} from './pi-plan-draft.mjs';
+import {coverageParameters} from './pi-coverage-plan.mjs';
+
+test('coverage review schema exposes checks and gaps instead of task mutation',()=>{
+  const schema=coverageParameters();
+  assert.deepEqual(schema.required,['coverage_plan']);
+  assert.deepEqual(schema.properties.coverage_plan.required,['strategy','checks','requirements','gaps']);
+  assert.equal(schema.properties.tasks,undefined);
+  const old=process.env.QWEN_WORKFLOW_PLAN_COVERAGE;
+  try {
+    process.env.QWEN_WORKFLOW_PLAN_COVERAGE='1';
+    const tools={};extension({registerTool:t=>{tools[t.name]=t;},on:()=>{},registerCommand:()=>{},registerProvider:()=>{}});
+    assert.deepEqual(tools.plan_store.parameters.required,['coverage_plan']);
+  }finally{if(old===undefined)delete process.env.QWEN_WORKFLOW_PLAN_COVERAGE;else process.env.QWEN_WORKFLOW_PLAN_COVERAGE=old;}
+});
 
 test('repair schema omits full-plan resend and exposes explicit corrections',()=>{
   const schema=repairParameters();

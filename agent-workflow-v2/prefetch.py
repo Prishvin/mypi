@@ -66,6 +66,8 @@ def editable_files(root: Path, task: dict, add) -> set[str]:
             content = raw.decode()
         except UnicodeDecodeError:
             continue
+        from file_size import source_tokens,SOURCE_TOKEN_LIMIT
+        if source_tokens(content)>SOURCE_TOKEN_LIMIT:continue
         label = 'CURRENT EDITABLE FILE ' + relative + ' sha256=' + hashlib.sha256(raw).hexdigest()
         if add(label, content):
             complete.add(relative)

@@ -29,6 +29,12 @@ independently testable and change one behavior or architectural seam. Prefer
 300 changed lines; new files <=300 lines/32 KiB; new functions <=60 lines with
 brief descriptions and testable inputs. Include tests in that same todo. Order
 pure logic before adapters and integration. Dependencies name preceding todo ids.
+Prefer source files <=4096 Qwen tokens; hard new/growing-file ceiling is8192
+tokens in addition to line/byte limits. Existing shadow SIZE records report
+measured source tokens. Budget complete editable files plus tests, schema/tools,
+history, margin and output. Split large modules by responsibility before they
+become difficult to load. Existing large architecture.md is read by sections;
+do not rewrite it to satisfy source-file limits.
 
 Each todo needs:
 - id, precise goal, exact files, depends_on, steps: a list of 2-6 concrete

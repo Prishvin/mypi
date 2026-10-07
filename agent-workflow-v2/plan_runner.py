@@ -93,6 +93,8 @@ def execute(root, path, folder, invoke_fn=invoke, *, resume=False):
     if folder.is_relative_to(root):
         raise ValueError('Keep runner logs and state outside the source project')
     plan = json.loads(path.read_text())
+    from plans import require_review
+    require_review(plan)
     validate(root, plan)
     folder.mkdir(parents=True, exist_ok=True)
     lock_dir = BASE / 'runner-locks'

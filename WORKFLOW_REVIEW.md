@@ -46,4 +46,6 @@ Native gates verify declared evidence, not whether the plan captures every user 
 
 Long plans can still consume substantial output and prefill time. Sparse repair already avoids regenerating rejected proposals; further optimization should be based on measured planner/worker request totals and time to acceptance. Do not increase thinking caps, add models or load more context simply because capacity remains.
 
+The next pilot uses two-pass planning: architectural draft, a dedicated coverage review, then one fresh review per original task. Coverage decisions and task splitting are model work; reference validation, preservation, gap enforcement, checkpointing and publication are Python. Failed coding tasks now receive a separate measured architecture/shadow/evidence review and one automatic corrective attempt; a second failure asks the user. The Qwen→Qwen pilot runs first. These changes require live evidence before claiming better game completion or overall speed.
+
 The skill runtime bounds processes, output and declared inputs but is not an OS sandbox. Session artifacts are local and immutable task fixtures remain protected by the workflow. General semantic architecture changes still require a model-authored decision; native maintenance must not invent one.
