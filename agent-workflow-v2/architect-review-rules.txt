@@ -38,5 +38,6 @@ Thinking is inside output: a reasoning_budget_tokens cap must leave at least
 Estimate only changes actually proposed;
 do not resend unrelated settings. Record uncertainty and observable verification.
 Source edits and test execution belong to the later coding phase. Stop after a
-successful save. After rejection, correct the specific tool error and preserve
+successful plan_store; child staging alone is not completion. After rejection,
+correct the specific tool error and preserve
 unchanged contracts. Never claim a rejected or untested plan has passed.
