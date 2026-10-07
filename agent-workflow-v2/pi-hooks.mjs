@@ -3,6 +3,7 @@ import { readFileSync, appendFileSync, writeFileSync, existsSync } from 'node:fs
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import {refinementTarget} from './pi-plan-children.mjs';
+import {sessionLimits} from './pi-session-limits.mjs';
 import {domainInstructions} from './pi-domain-skills.mjs';
 import {failedEditEvidence} from './pi-edit-recovery.mjs';
 import {requireThinkingCaps} from './pi-thinking-cap.mjs';
@@ -118,10 +119,7 @@ export function installPromptHooks(pi, home) {
     const navigationPath=join(process.env.QWEN_WORKFLOW_SESSION || '.', 'plan-navigation.txt');
     const planningNavigation=['architect','reviewer'].includes(role) && existsSync(navigationPath)?
       '\n'+readFileSync(navigationPath,'utf8'):'';
-    const controls = '\nEffective task caps: input=' + process.env.QWEN_WORKFLOW_INPUT_BUDGET +
-      ', total output=' + process.env.QWEN_WORKFLOW_OUTPUT_BUDGET + ', thinking=' + process.env.QWEN_WORKFLOW_THINKING +
-      ', separate thinking cap=' + (process.env.QWEN_WORKFLOW_REASONING_BUDGET_TOKENS || 'none/native') +
-      '. The output cap includes thinking and tool arguments. Follow the selected frozen contract, not generic budget examples.';
+    const controls = sessionLimits(role);
     return { systemPrompt: event.systemPrompt + '\n\n' + readFileSync(join(runtime, roleRules), 'utf8') + '\n' + skills + workspace + state + controls + knowledge + planningNavigation + (phase && role!=='chat'?'':domainInstructions()) };
   });
 }

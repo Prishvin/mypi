@@ -398,3 +398,31 @@ packet reduction, context sidecars, failure before a model invocation, and
 resume of only the unreviewed task after a context-preparation failure. The
 saved T19 plan digest and source snapshot were checked before resuming T20
 through mypi. No game contract or implementation was authored by Codex.
+
+### Reviewer versus future executor budget scope — 2026-10-07
+
+The T20 review reasoning treated the live review's 16,384 output / 1,024 thinking
+limits as mandatory settings for a future implementation todo with a valid larger
+budget. The system prompt contributed directly: every role received the heading
+"Effective task caps" and an instruction to follow the selected frozen contract.
+Architects are still authoring/reviewing future contracts, so that wording mixed
+two different scopes.
+
+System controls now identify the current role and say "this model call only".
+Architects/reviewers explicitly choose future task input, output, effort and
+thinking budgets independently from the review session and the executor's own
+supported limits. They must not copy or clamp task settings merely to match their
+current caps. Coding sessions retain frozen-task/explicit-override semantics;
+other conversation phases do not receive execution-contract instructions.
+Refinement rules and the skill reinforce the same distinction. Backend controls,
+validation bounds and model-authored task values were not changed.
+
+**58 Python and 22 JavaScript tests passed.** Actual local/cloud prompt hooks cover
+initial planning, refinement, final review and coding roles. Native plan saving
+and worker profile resolution preserve both larger (32k output / 8k thinking /
+xhigh) and smaller task budgets under a 16k-output / 1k-thinking / medium reviewer.
+Invalid future budgets still fail the existing native gates. The affected T20
+session was interrupted before a plan save; all 19 prior accepted reviews, their
+current-plan digest and the source snapshot were preserved before resuming the
+same mypi pipeline. No game implementation, contract or acceptance criterion was
+authored by Codex.

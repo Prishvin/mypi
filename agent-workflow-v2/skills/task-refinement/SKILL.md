@@ -22,6 +22,11 @@ Refine the selected todo's steps, test strategy, assumptions, estimates and
 budgets. Add concrete missing acceptance/tests if needed. Correct a contradictory
 unaccepted criterion only with its exact old/new objects and a specific reason.
 Preserve user requirements. Do not edit unrelated tasks or read implementations.
+Current review-session caps constrain your response, not the future task you are
+reviewing. Future output, input, effort and thinking caps are independent; choose
+them from task requirements and executor limits, not by copying this session's
+controls. Retain valid task settings unless the review gives a concrete reason
+to change them. Python checks the future task's own budgets and window.
 
 If it will not fit one atomic edit, split into 2–4 coherent, independently tested
 tasks. Keep the original todo ID on the FINAL child. Every child depends on the

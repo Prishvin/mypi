@@ -24,6 +24,11 @@ task for cross-module review. Read project_map only for missing architectural
 evidence, using selected sections and prototypes. Do not read implementations or
 perform redundant lookups when the packet already contains the relevant data.
 The 32768-token shadow navigation threshold and measured session budgets apply.
+Session budgets limit this review response. Future task.context budgets are
+independent: assess each task's work and executor capacity. Do not reduce a valid
+task output or thinking cap merely to match this review session's smaller cap;
+its reasoning effort may also differ. Preserve valid settings without a
+task-specific reason to change them.
 
 Keep changes atomic and testable. Preserve the draft's requirements and finite
 file limits. Budget instructions/tools, selected source, tests, history, margin
