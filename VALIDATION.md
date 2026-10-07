@@ -270,3 +270,8 @@ for draft, generic repair, selected-task refinement and coverage selects compati
 prompts. Pi system prompt hooks are checked for local and cloud planners, and the
 new review rules are copied and hashed into immutable session runtimes. No game
 contract, acceptance test or implementation was authored or changed by Codex.
+
+An additional system-prompt check found coding-only rules were prepended to all
+architect sessions. Architects now receive only their planning mode's rules;
+executors keep their coding rules, test-gate instructions and tools. The actual
+Pi hook regression covers both planner providers and unchanged executor rules.

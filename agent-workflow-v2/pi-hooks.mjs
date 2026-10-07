@@ -108,7 +108,7 @@ export function installPromptHooks(pi, home) {
     const role = process.env.QWEN_WORKFLOW_ROLE;
     const phase = ['research','intake','reviewer','memory','chat','inspect'].includes(role);
     const planningRules=process.env.QWEN_WORKFLOW_PLAN_DRAFT ? 'architect-review-rules.txt' : 'architect-rules.txt';
-    const extra = role === 'architect' ? readFileSync(join(runtime, planningRules), 'utf8') : '';
+    const roleRules=role==='architect' ? planningRules : phase ? role+'-rules.txt' : 'qwen-rules.txt';
     const workspace='\nWORKSPACE BINDING: The actual user project root is '+process.env.QWEN_WORKFLOW_PROJECT+'. The current process working directory may be an isolated read-only shadow or phase folder. It is NOT a different user project. Resolve user references to here/current directory/project to the actual project root. Do not copy shadow/session paths into refined requests, implementation instructions, test paths, or clarification questions. All implementation paths are relative to the actual project root.';
     const state = process.env.QWEN_WORKFLOW_STATE ? '\nFrozen task state: ' + process.env.QWEN_WORKFLOW_STATE : '';
     const skills = process.env.QWEN_WORKFLOW_SKILLS ? readFileSync(process.env.QWEN_WORKFLOW_SKILLS,'utf8') : '';
@@ -121,7 +121,7 @@ export function installPromptHooks(pi, home) {
       ', total output=' + process.env.QWEN_WORKFLOW_OUTPUT_BUDGET + ', thinking=' + process.env.QWEN_WORKFLOW_THINKING +
       ', separate thinking cap=' + (process.env.QWEN_WORKFLOW_REASONING_BUDGET_TOKENS || 'none/native') +
       '. The output cap includes thinking and tool arguments. Follow the selected frozen contract, not generic budget examples.';
-    return { systemPrompt: event.systemPrompt + '\n\n' + readFileSync(join(runtime, phase ? role+'-rules.txt' : 'qwen-rules.txt'), 'utf8') + '\n' + extra + '\n' + skills + workspace + state + controls + knowledge + planningNavigation + (phase && role!=='chat'?'':domainInstructions()) };
+    return { systemPrompt: event.systemPrompt + '\n\n' + readFileSync(join(runtime, roleRules), 'utf8') + '\n' + skills + workspace + state + controls + knowledge + planningNavigation + (phase && role!=='chat'?'':domainInstructions()) };
   });
 }
 

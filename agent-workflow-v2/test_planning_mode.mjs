@@ -24,7 +24,9 @@ test('draft, refinement and coverage use compatible system instructions for loca
       {model:{provider}})).systemPrompt;
     for(const provider of ['local-qwen-workflow','openai']){
       delete process.env.QWEN_WORKFLOW_PLAN_DRAFT;delete process.env.QWEN_WORKFLOW_PLAN_COVERAGE;
-      assert.match(await prompt(provider),/Save a JSON object with exactly these required top-level field names/);
+      const initial=await prompt(provider);
+      assert.match(initial,/Save a JSON object with exactly these required top-level field names/);
+      assert.doesNotMatch(initial,/LOCAL QWEN CODING WORKFLOW|workflow_test\(\{\}\)/);
       for(const coverage of [false,true]){
         process.env.QWEN_WORKFLOW_PLAN_DRAFT=join(runtime,'bound.json');
         if(coverage)process.env.QWEN_WORKFLOW_PLAN_COVERAGE='1';
@@ -33,8 +35,14 @@ test('draft, refinement and coverage use compatible system instructions for loca
         assert.match(text,/context_overlay/);
         assert.doesNotMatch(text,/Save a JSON object with exactly these required top-level field names/);
         assert.doesNotMatch(text,/Finish by calling plan_store with the architecture and ordered todos/);
+        assert.doesNotMatch(text,/LOCAL QWEN CODING WORKFLOW|workflow_test\(\{\}\)/);
       }
     }
+    process.env.QWEN_WORKFLOW_ROLE='code';
+    const code=await prompt('local-qwen-workflow');
+    assert.match(code,/LOCAL QWEN CODING WORKFLOW/);
+    assert.match(code,/workflow_test\(\{\}\)/);
+    assert.doesNotMatch(code,/ARCHITECT REVIEW MODE|ARCHITECT MODE/);
     assert.equal(await hooks.before_agent_start({systemPrompt:'Base'},{model:{provider:'unrelated'}}),undefined);
   }finally{
     for(const key of keys)if(previous[key]===undefined)delete process.env[key];else process.env[key]=previous[key];
