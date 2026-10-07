@@ -105,6 +105,13 @@ class Artifacts(unittest.TestCase):
         path.write_text(json.dumps({'epoch':42,'server_rss_bytes':12345})+'\n'+json.dumps({'epoch':43,'server_rss_bytes':None})+'\n')
         row=monitor.snapshot();self.assertEqual(row['sampled_rss_bytes'],12345)
         self.assertEqual(row['rss_sample_epoch'],42)
+    def test_stopped_run_and_attempt_clocks_do_not_continue_while_waiting_for_replan(self):
+        monitor=self.setup_run(state={'status':'needs_replan','started_epoch':90,
+                               'attempt_started_epoch':100,'updated_epoch':500})
+        with patch('run_monitor.time.time',return_value=1000):row=monitor.snapshot()
+        self.assertEqual(row['elapsed_until_epoch'],500)
+        self.assertEqual(row['tasks'][0]['elapsed_seconds'],400)
+        self.assertIsNone(row['ended_epoch'])  # A paused run can still resume.
 
 
 class HTTPTests(unittest.TestCase):

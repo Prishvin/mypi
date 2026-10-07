@@ -141,6 +141,8 @@ class RunMonitor:
     def snapshot(self):
         """Combine frozen todo contracts, actual tool/test evidence and native progress."""
         run=self.selected();state=read(run/'state.json');plan=read(Path(state['plan'])) if state.get('plan') else {}
+        stopped=state.get('status') in ('needs_replan','interrupted')
+        until=(state.get('updated_epoch') or time.time()) if stopped else time.time()
         completed=plan.get('replan_lineage',{}).get('completed',[])
         accepted={t['id'] for t in plan.get('tasks',[]) if t.get('status')=='done'}
         accepted.update(t['id'] for t in completed)
@@ -167,7 +169,7 @@ class RunMonitor:
                 row['test_results']=prior.get('evidence',{}).get('results',[])
                 row['tools']=tools(Path(attempts[-1].get('log',str(run/'pi.log'))).parent,Path(attempts[-1]['session']))
             if active:row.update(tools=current_tools,test_results=frozen.get('evidence',{}).get('results',[]),tests_fresh=fresh,
-                elapsed_seconds=max(0,time.time()-state.get('attempt_started_epoch',time.time())))
+                elapsed_seconds=max(0,until-state.get('attempt_started_epoch',until)))
             tasks.append(row)
         prefixes=[]
         for path in self.folder.rglob('session.json'):
@@ -182,6 +184,7 @@ class RunMonitor:
             'status':state.get('status','planning'),'current_todo':state.get('current_todo'),
             'accepted':len([t for t in tasks if t['status']=='Accepted']),'total':len(tasks),'tasks':tasks,
             'reason':state.get('reason'),'started_epoch':state.get('started_epoch'),'ended_epoch':state.get('ended_epoch'),
+            'elapsed_until_epoch':until if stopped else state.get('ended_epoch'),
             'phases':phase_rows(self.folder),'native':self.telemetry(prefixes),'sampled_rss_bytes':rss,
             'rss_sample_epoch':sample.get('epoch'),
             'note':'Task acceptance proves frozen tests and gates passed; step completion is not inferred from model prose.'}

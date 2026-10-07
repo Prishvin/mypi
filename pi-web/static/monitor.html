@@ -1,9 +1,14 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>mypi · Run monitor</title><link rel="stylesheet" href="/monitor.css"></head>
 <body>
-<header><a class="brand" href="/">mypi<span>RUN MONITOR</span></a><div id="connection" role="status">Connecting…</div><button id="refresh">Refresh</button></header>
+<header>
+<div class="topbar"><a class="brand" href="/">mypi<span>RUN MONITOR</span></a><div id="connection" role="status">Connecting…</div><button id="refresh">Refresh</button></div>
+<section class="current-step" id="current-step" aria-label="Current step">
+<span class="step-indicator" aria-hidden="true"></span><div class="step-copy"><span class="step-label">CURRENT STEP</span><strong id="current-title">Reading run status…</strong><p id="current-detail">Waiting for recorded activity.</p></div><button id="current-jump" hidden>View task ↗</button>
+</section>
+</header>
 <main>
-<section class="hero"><div><p class="eyebrow" id="run-name">LOCAL DEVELOPMENT</p><h1 id="goal">Loading the run…</h1><p id="run-status">Reading recorded evidence</p></div><div class="completion"><strong id="completion">—</strong><span>tasks accepted</span></div></section>
+<section class="hero"><div><p class="eyebrow" id="run-name">LOCAL DEVELOPMENT</p><h1>Run overview</h1><p id="run-status">Reading recorded evidence</p><details class="brief"><summary>Project brief</summary><p id="goal">Loading the run…</p></details></div><div class="completion"><strong id="completion">—</strong><span>tasks accepted</span></div></section>
 <div class="progress"><div id="completion-bar"></div></div>
 <section class="stats" id="stats"></section>
 <section class="panel live"><div class="section-title"><h2>Live model activity</h2><span id="model-state">—</span></div><div id="native"></div><p class="subtle">Capacity is a limit, not padded input. Backend allocation, physical footprint and process RSS are separate measurements.</p></section>
