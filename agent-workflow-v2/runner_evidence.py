@@ -1,4 +1,4 @@
-"""Verify acceptance independently and prepare a shadow-only replanning handoff."""
+"""Verify acceptance and prepare bounded evidence plus interfaces for replanning."""
 import json
 from pathlib import Path
 import subprocess
@@ -116,7 +116,7 @@ def failure(root, plan_path, plan, task, result, gate, folder):
         'budget_observation': read(Path(result['session']) / 'request-budget-result.json') if result.get('session') else {},
         'tool_errors':read(Path(result['session'])/'tool-errors.json') if result.get('session') else {},
         'execution_progress':read(Path(result['session'])/'execution-progress.json').get('brief', {}) if result.get('session') else {},
-        'policy': 'Stop execution. Replan remaining authorized work; preserve accepted behavior, tests and scope. No implementation bodies in planner handoff.',
+        'policy': 'Stop execution. Replan remaining authorized work; preserve accepted behavior, tests and scope. No application implementation bodies in planner handoff. Python may select bounded failing-test evidence for review.',
         'created_epoch': time.time()}
     # The failed baseline contains source bodies and remains only in the local session.
     for todo in handoff['remaining'] + [handoff['failed_todo']]:

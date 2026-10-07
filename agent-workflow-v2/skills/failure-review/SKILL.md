@@ -6,11 +6,23 @@ description: Diagnose a failed atomic task against evidence, architecture, shado
 Review the failed todo before prescribing a repair. Inspect the supplied failure
 evidence, architecture, prototypes and original plan overview. If context selection
 omitted a needed contract, retrieve only relevant architecture sections/prototypes.
-Do not read or upload implementation bodies and do not edit source in this role.
+Do not read or upload application implementation bodies and do not edit source
+in this role. Python may supply bounded excerpts of declared failing tests as
+read-only evidence. These are selected cases, not a complete project or new
+requirements; omitted helpers remain unknown.
 
 Distinguish observed facts from hypotheses: implementation bug, contradictory API,
 missing prerequisite, invalid test assumption, tool/schema failure, scope/size,
 context, timeout or provider failure. More time/thinking is not itself a diagnosis.
+
+An assertion failure proves a mismatch, not which side is wrong. Use selected
+test setup and observed values to check the original frozen acceptance. Review
+prior corrective assumptions as hypotheses; do not keep asserting the same
+unverified cause after repeated unchanged outcomes. Correcting a self-authored
+test is permissible only when concrete evidence shows it contradicts the frozen
+behavior, with equivalent or stronger coverage preserved. External acceptance
+fixtures and frozen test commands remain immutable. If the required correction
+cannot fit these constraints, report the contradiction and stop for user review.
 
 Use execution_audit when supplied: it contains actual mutation/compaction counts
 and recent tool errors, without implementation bodies. Repeated source rewrites

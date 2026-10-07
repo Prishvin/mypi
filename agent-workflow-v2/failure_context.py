@@ -12,6 +12,8 @@ def build(root,packet,provider):
     data=scan(root,['.'])
     if data['snapshot']!=packet['current_snapshot']:raise ValueError('Failure evidence is stale; source changed')
     budget=limits(provider,'recovery');brief=distill(packet,focused=True)
+    from failure_test_context import collect as test_context
+    brief['selected_failing_test_evidence'] = test_context(root, packet)
     from execution_audit import summarize
     brief['execution_audit'] = summarize(packet.get('local_log'), packet['failed_todo']['files'])
     session = Path(packet['session']) if packet.get('session') else None

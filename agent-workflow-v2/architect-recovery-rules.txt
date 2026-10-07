@@ -1,7 +1,9 @@
 FOCUSED FAILURE REVIEW
 
 Review the supplied failed task, observed failures, architecture, prototypes and
-brief plan overview. Source edits and implementation bodies are unavailable.
+brief plan overview. Source edits and application implementation bodies are
+unavailable. Python may supply bounded failing-test excerpts as read-only
+evidence; compare their setup with frozen acceptance before assigning blame.
 Use project_map only for relevant architecture sections or prototypes you need.
 
 Call plan_store with failure_analysis and flat changed fields for this failed

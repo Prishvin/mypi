@@ -856,3 +856,29 @@ escaping paths, unrelated files, original fixture restrictions, runtime capture
 and finalization regressions. Read-only replay of the pilot request returns a
 3,798-byte page containing its diagnostic output, with log bytes and mtime
 unchanged. No supervisor-authored game changes were made.
+
+## Bounded failing-test evidence for recovery (2026-10-08 local time)
+
+Executor 4390b0c9abac successfully read recorded test logs, but repeated scoped
+implementation corrections left the same two failures. It stopped after 579.361
+seconds through the unchanged no-progress guard, with no recent tool errors.
+The previous recovery packet exposed assertion outcomes and prototypes but not
+the fixtures behind those assertions, allowing repeated unverified diagnoses.
+
+Python now selects at most two declared test files' relevant failure scopes,
+using exact stack locations from current runner-recorded failing logs. Selected
+spans are bounded, carry source hashes and may include referenced primitive test
+literals. Application bodies, external fixtures, unrelated test bodies and other
+sessions' logs are excluded. Packet token admission remains enforced. The review
+skill explicitly distinguishes a failed assertion from proof of an implementation
+bug; self-authored tests may only be corrected with evidence of a contradiction
+against frozen behavior and preserved coverage. Frozen commands and acceptance
+are unchanged, and all diagnosis/repair planning remains Qwen's work.
+
+**30 Python checks passed on macOS**, covering selected Node/Python cases, scope
+and session binding, unrelated source omission, exact path matching, byte limits,
+read-only operation and the real failure-review packet builder; the focused eight
+selector tests were rerun after tightening path matching. The pilot replay adds
+only two test spans and one relevant primitive literal: 1,419 bytes. Its full
+review packet estimates 14,973 tokens against a 32,768 packet limit. No game
+implementation, tests or corrective plan was authored by the supervisor.
