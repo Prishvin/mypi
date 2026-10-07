@@ -343,7 +343,7 @@ If an unfinished generated criterion is contradictory, use **revision**. The pla
   --reason "I approve the reviewed criterion correction and its preserved project intent."
 ~~~
 
-Approval records both versions and the original evidence, and publishes a new plan without starting it. Execute that plan in a new run directory. Expanding the project goal, architecture interfaces or file scope requires a separately revised user request; this bounded revision command rejects those changes.
+Approval records both versions and the original evidence, and publishes a new plan without starting it. Add `--criteria-only` to approve the exact criterion corrections while retaining the original steps, test strategy and controls; excluded proposal fields are recorded. Execute the approved plan in a new run directory. Expanding the project goal, architecture interfaces or file scope requires a separately revised user request; this bounded revision command rejects those changes.
 
 Task deadlines can be **30–2,700 seconds**. Planning guidance uses shorter limits for simple tasks and reserves up to 45 minutes for setup or repairs. A longer deadline is a ceiling; native acceptance exits immediately. Individual test commands still have a maximum 300-second deadline. See [the workflow review](WORKFLOW_REVIEW.md) for measured overhead and remaining limitations.
 

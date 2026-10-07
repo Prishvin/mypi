@@ -19,10 +19,12 @@ def main(argv):
     approval.add_argument('project', type=Path); approval.add_argument('proposal', type=Path)
     approval.add_argument('--out', type=Path, required=True)
     approval.add_argument('--sha256', required=True); approval.add_argument('--reason', required=True)
+    approval.add_argument('--criteria-only', action='store_true', help='Approve exact criterion corrections; retain the original steps, test strategy and controls')
     args = parser.parse_args(argv)
     try:
         result = (propose(args.project, args.evidence, args.out, args.reason, args.planner, args.timeout)
-                  if args.action == 'propose' else approve(args.project, args.proposal, args.out, args.sha256, args.reason))
+                  if args.action == 'propose' else approve(args.project, args.proposal, args.out, args.sha256, args.reason,
+                                                         criteria_only=args.criteria_only))
         print(json.dumps(result, indent=2))
         return int(result.get('passed') is False)
     except (OSError, ValueError, KeyError) as error:

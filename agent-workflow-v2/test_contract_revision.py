@@ -73,6 +73,20 @@ class RevisionTests(unittest.TestCase):
             with self.assertRaises(ValueError): approve(self.root, self.proposal, self.output, sha, reason)
         self.assertFalse(self.output.exists())
 
+    def test_criteria_only_approval_does_not_adopt_other_model_strategy_changes(self):
+        data = self.candidate()
+        original = copy.deepcopy(data['tasks'][0])
+        data['tasks'][0]['steps'] = ['Different proposed strategy', 'Different proposed validation']
+        data['tasks'][0]['test_strategy'] = 'Different proposed test strategy that the user did not approve.'
+        self.proposal.write_text(json.dumps(data))
+        approve(self.root, self.proposal, self.output, digest(data), self.reason, criteria_only=True)
+        approved = json.loads(self.output.read_text()); selected = approved['tasks'][0]
+        for key in ('steps', 'assumptions', 'test_strategy', 'context', 'execution', 'acceptance'):
+            self.assertEqual(selected[key], original[key])
+        self.assertEqual(approved['contract_revision']['selection'], 'criteria_only')
+        self.assertEqual(approved['contract_revision']['excluded_proposal_fields'], ['steps','test_strategy'])
+        self.assertEqual(json.loads(self.proposal.read_text()), data)
+
     def test_edited_source_parent_or_evidence_rejects_approval(self):
         data = self.candidate(); sha = digest(data)
         (self.root/'changed.py').write_text('x=1')

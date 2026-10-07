@@ -134,7 +134,7 @@ def propose(root, evidence, folder, reason, planner='qwen', timeout=1800):
         return result
 
 
-def approve(root, proposal, output, proposal_sha256, reason):
+def approve(root, proposal, output, proposal_sha256, reason, *, criteria_only=False):
     """Publish a separately approved plan with exact revision audit and accepted lineage."""
     from project_lock import exclusive
     from runner_process import BASE
@@ -145,6 +145,15 @@ def approve(root, proposal, output, proposal_sha256, reason):
         if digest(read(proposal)) != proposal_sha256:
             raise ValueError('Proposal differs from the reviewed digest')
         plan, packet, binding, corrections = inspect(root, proposal)
+        excluded_fields = []
+        if criteria_only:
+            original_draft = read(proposal.parent/'draft.json')
+            proposed_task = next(t for t in plan['tasks'] if t['id'] == binding['target'])
+            original_task = next(t for t in original_draft['tasks'] if t['id'] == binding['target'])
+            excluded_fields = [key for key in set(original_task) | set(proposed_task)
+                               if key != 'acceptance' and original_task.get(key) != proposed_task.get(key)]
+            original_task['acceptance'] = copy.deepcopy(proposed_task['acceptance'])
+            plan = original_draft
         # Only these exact, explicitly approved cases replace the old preservation
         # baseline. Original evidence is immutable and both values stay in the receipt.
         authorized = copy.deepcopy(packet)
@@ -156,6 +165,8 @@ def approve(root, proposal, output, proposal_sha256, reason):
             selected['baseline'] = str(Path(packet['session'])/'task-state.json')
         plan['contract_revision'] = {'status': 'approved', 'proposal': str(proposal),
             'proposal_sha256': proposal_sha256, 'binding': binding, 'corrections': corrections,
+            'selection': 'criteria_only' if criteria_only else 'complete_proposal',
+            'excluded_proposal_fields': sorted(excluded_fields),
             'approval_reason': reason, 'approved_epoch': time.time()}
         plan['replan_validation'] = {'passed': True, 'method': 'Explicit approved contract revision; all other preservation checks retained'}
         from plan_runner import validate
