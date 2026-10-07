@@ -186,3 +186,16 @@ All 20 model-authored tasks were preserved and passed native plan validation.
 The original failure, correction and metrics are retained in the pilot report.
 The same plan checkpoint resumed with the validated draft; coverage and all
 20 task refinements are still required before implementation can start.
+
+### Coverage progress visibility — 2026-10-07
+
+The resumed coverage request continued generating (5,229 to 8,350 output tokens,
+about 20 tokens/s); no coverage validation result had arrived. It reviewed
+100 existing acceptance cases across 20 tasks in one buffered tool response.
+The monitor now names coverage/refinement generation explicitly and explains
+that partial arguments are unavailable until delivery. Native tool/answer/prompt
+phases override a stale Pi thinking-stream flag; the original thinking text stays
+available. Thirteen monitor unit checks and a live Chrome check passed, including
+increasing token counts, the corrected thinking label and mobile width. No model
+request was restarted. This is a display correction, not a coverage acceptance
+or a reduction in the large response's generation time.

@@ -8,9 +8,14 @@ export function testState(result,fresh){if(!result)return 'Not run';if(fresh===f
 
 /** Label actual external-model reasoning, retaining clear empty and stopped states. */
 export function thinkingView(run){
- const t=run.thinking||{},text=typeof t.text==='string'?t.text:'',streaming=run.status==='running'&&t.streaming===true;
- const status=streaming?'Streaming':text?(run.status==='running'?(t.previous?'Previous response':'Latest recorded thinking'):(run.status==='complete'?'Run complete':'Run stopped')+' · last recorded thinking'):'No thinking text yet';
- const detail=[t.todo||run.current_todo,t.attempt,'Recorded Pi reasoning; updates every 3 seconds.',t.truncated?'Earlier text omitted; showing the recent tail.':''].filter(Boolean).join(' · ');
+ const t=run.thinking||{},text=typeof t.text==='string'?t.text:'';
+ const native=run.native?.requests?.[0],movedOn=native?.phase&&native.phase!=='reasoning';
+ const idle=run.native?.available===true&&!native;
+ const streaming=run.status==='running'&&t.streaming===true&&!t.previous&&!movedOn&&!idle;
+ const status=streaming?'Streaming':text?(run.status==='running'?(t.previous?'Previous response':movedOn?phase(native.phase)+' · last recorded thinking':'Latest recorded thinking'):(run.status==='complete'?'Run complete':'Run stopped')+' · last recorded thinking'):'No thinking text yet';
+ const note=run.status==='running'&&native?.phase==='tool_call'?
+  'Thinking text has ended; the backend is writing tool arguments, which may be buffered until the call is complete.':'Recorded Pi reasoning; updates every 3 seconds.';
+ const detail=[t.todo||run.current_todo,t.attempt,note,t.truncated?'Earlier text omitted; showing the recent tail.':''].filter(Boolean).join(' · ');
  return {status,detail,streaming,text:text||(streaming?'Waiting for the first thinking text…':'No thinking text is available in the recorded output for this attempt.')};
 }
 
@@ -35,10 +40,13 @@ export function currentStep(run){
   const progress=tokens!=null?(reading?number(tokens)+' / '+number(native.prompt_tokens)+' prompt tokens':number(tokens)+' output tokens'):'';
   const speed=reading?native.prefill_tok_s:native.decode_tok_s;
   const rate=typeof speed==='number'&&Number.isFinite(speed)?number(speed)+' tok/s':'';
-  const drafting=run.workflow_phase==='planning'&&id==='DRAFT';
-  const title=drafting&&!reading?'Generating draft plan':phase(native.phase);
-  const note=drafting?'Implementation has not started. '+(native.phase==='tool_call'?
-   'Waiting for complete tool arguments before validation.':'The draft must pass validation and task review first.'):'';
+  const planning=run.workflow_phase==='planning',drafting=planning&&id==='DRAFT';
+  const planningTitle=id==='DRAFT'?'Generating draft plan':id==='COVERAGE'?'Generating coverage plan':
+   id?.startsWith('REVIEW-')?'Refining task plan':'Generating planning response';
+  const title=planning&&!reading?planningTitle:phase(native.phase);
+  const note=planning?(drafting?'Implementation has not started. ':'This planning step is not yet validated. ')+
+   (native.phase==='tool_call'?'Waiting for complete tool arguments before validation; partial arguments are not shown.':
+    'Implementation waits for all required planning reviews to pass.'):'';
   return {title:title+suffix,detail:[goal,progress,rate,note].filter(Boolean).join(' — '),state:'running',todo:id};
  }
  if(run.native?.other_requests)return {title:'Waiting for the model'+suffix,detail:'The model is serving another request. '+goal,state:'waiting',todo:id};

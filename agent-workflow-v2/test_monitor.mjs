@@ -10,6 +10,17 @@ test('Thinking labels distinguish live, previous and stopped output without manu
  r.status='running';r.thinking.streaming=false;r.thinking.previous=true;assert.equal(thinkingView(r).status,'Previous response');
  assert.match(thinkingView({}).text,/No thinking text/);
 });
+test('Native tool-call phase ends the visible thinking stream even if Pi has not emitted thinking_end',()=>{
+ const r={status:'running',thinking:{text:'Last thought',streaming:true},native:{available:true,requests:[{phase:'tool_call'}]}};
+ let view=thinkingView(r);assert.equal(view.streaming,false);assert.match(view.status,/Writing tool call/);
+ assert.match(view.detail,/buffered until the call is complete/);assert.equal(view.text,'Last thought');
+ r.native.requests[0].phase='reasoning';assert.equal(thinkingView(r).streaming,true);
+ for(const p of ['answer','chunk']){r.native.requests[0].phase=p;assert.equal(thinkingView(r).streaming,false);}
+ r.native.requests=[];assert.equal(thinkingView(r).streaming,false);
+ r.native={available:false};assert.equal(thinkingView(r).streaming,true);
+ r.thinking.previous=true;assert.equal(thinkingView(r).streaming,false);
+ r.status='needs_replan';assert.match(thinkingView(r).status,/Run stopped/);
+});
 test('Elapsed durations and completion limits do not fabricate progress',()=>{assert.equal(duration(61),'1m 1s');assert.equal(duration(3661),'1h 1m');assert.equal(duration(-1),'0s');assert.equal(completion(5,10),50);assert.equal(completion(99,10),100);assert.equal(completion(0,0),0);});
 test('Test success becomes stale after source changes',()=>{assert.equal(testState(undefined),'Not run');assert.equal(testState({exit_code:0},false),'Stale');assert.equal(testState({exit_code:1},true),'Failed');assert.equal(testState({exit_code:0},true),'Passed');assert.equal(phase('reasoning'),'Thinking');});
 
@@ -28,6 +39,18 @@ test('Long draft generation exposes live rate and validation boundary without cl
  r.native.requests[0].decode_tok_s=null;assert.doesNotMatch(currentStep(r).detail,/tok\/s/);
  r.native.requests[0].phase='chunk';assert.match(currentStep(r).title,/Reading prompt/);
  r.workflow_phase='execution';assert.doesNotMatch(currentStep(r).detail,/Implementation has not started/);
+});
+test('Coverage and refinement explain buffered generation without inventing verified checks',()=>{
+ for(const [id,title] of [['COVERAGE','Generating coverage plan'],['REVIEW-01-T1','Refining task plan']]){
+  const r={...run(),workflow_phase:'planning',current_todo:id,tasks:[{id,goal:'Review'}],
+   native:{requests:[{phase:'tool_call',output_tokens:5229,decode_tok_s:20.6}]}};
+  const view=currentStep(r);assert.equal(view.title,title+' · '+id);
+  assert.match(view.detail,/20.6 tok\/s/);assert.match(view.detail,/not yet validated/);
+  assert.match(view.detail,/partial arguments are not shown/);assert.doesNotMatch(view.detail,/%|checks completed/);
+  r.native.requests[0].phase='chunk';assert.match(currentStep(r).title,/Reading prompt/);
+  r.tasks[0].tools=[{name:'plan_store',status:'Running'}];assert.match(currentStep(r).title,/Running plan_store/);
+  r.status='needs_replan';assert.equal(currentStep(r).state,'stopped');
+ }
 });
 test('A running tool identifies its real file instead of replaying a completed action',()=>{
  const r=run();r.tasks[0].tools=[{name:'write',target:'old.py',status:'Completed'},{name:'edit',target:'active.py',status:'Running'}];
