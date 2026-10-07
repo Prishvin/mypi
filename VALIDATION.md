@@ -793,3 +793,19 @@ rerun after adding whitespace-separated batch routing checks. No Linux test clai
 Read-only replay of the pilot's exact request returns both definitions in 116
 bytes, with the source hash and mtime unchanged. No game code or tests were authored
 by the supervisor. Live recovery with this new runtime remains to be demonstrated.
+
+## Telemetry coverage (2026-10-08 local time)
+
+The f60deb79e87e receipt has four started provider requests but only three matching
+native records. One completed response streamed thinking while its provider usage
+reported zero reasoning tokens. Reports now identify native request coverage and
+observed incomplete reasoning usage instead of implying a complete speed sample
+or a reliable zero. Raw provider totals remain unchanged; no token counts are
+invented from text. The overnight table marks the affected reasoning count partial
+and labels speed as the median of observed records.
+
+**12 metrics, recovery-control and replan-brief tests passed on macOS.** They cover
+exact request identity (including the optional server prefix), cancellation,
+duplicate/legacy records, missing decode rates, missing reasoning usage and
+existing backend/provider attribution. This records the gap; it does not repair
+or make claims about the backend's missing record.

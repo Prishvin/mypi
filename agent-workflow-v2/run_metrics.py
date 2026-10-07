@@ -37,7 +37,8 @@ def collect(result, folder):
     session = Path(result['session']) if result.get('session') else None
     if not session:
         return {}
-    provider = [r for r in rows(session / 'provider-timing.jsonl') if r.get('type') == 'request_end']
+    timing = rows(session / 'provider-timing.jsonl')
+    provider = [r for r in timing if r.get('type') == 'request_end']
     status = read(BASE.parent / 'reports/quality-main-status.json')
     native = [r for r in rows(Path(status.get('logs', '/nonexistent')) / 'requests.jsonl')
               if session.name in str(r.get('request_id', ''))]
@@ -95,4 +96,6 @@ def collect(result, folder):
             reasoning=sum(r.get('output_tokens_details',r.get('completion_tokens_details',{})).get('reasoning_tokens',0) for r in usage)
             metrics.update(requests=len(usage),input_tokens_sum=total-cached,cache_read_tokens_sum=cached,
                 output_tokens_sum=generated,reasoning_tokens_sum=reasoning,usage_source='Gateway API usage including final tool-producing response')
+    from metrics_coverage import summarize
+    metrics['telemetry_coverage'] = summarize(timing, native)
     return metrics
