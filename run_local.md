@@ -44,6 +44,12 @@ Review granular todos and acceptance before execution. For one todo:
 mypi run /path/to/project /path/outside/project/plan.json T1
 ```
 
+## Live todo dashboard
+
+From another terminal, run `mypi monitor /path/outside/project/run` and open **http://localhost:8137/**. Use `--port` to choose another port. Passing the parent evidence folder follows the newest `run-*` after repair/restart. Web conversations also expose a **Run monitor** link on their execution plan.
+
+To share on your LAN: `mypi monitor /path/outside/project/run --listen 0.0.0.0 --allow-address THIS_MACHINE_LAN_IP`. Open **http://THIS_MACHINE_LAN_IP:8137/**. The viewer is read-only and starts no model requests. It shows granular todos, actual tools/tests, stale test evidence, task budgets, live native token speed and memory where available, refreshing every three seconds.
+
 At most two clarification answers are shared by request routing and intake. Unanswered questions pause rather than guessing. Noninteractive planning can supply `--answers-file`, a JSON array of up to two answers. Research uses `knowledge.md` and selected briefs, not whole fetched pages.
 
 Generated shadow is outside source. Existing project `architecture.md` is accepted as written without a line-count or file-size limit, and generated architecture links it to current module prototypes. Model request budgets still apply to retrieved context. Above 32768 combined prototype/map tokens, architecture-only navigation and selected prototype supplements are enforced. Session `shadow-budget.json` records counts and tokenizer hash. Architecture-page evidence is invalidated by source changes.

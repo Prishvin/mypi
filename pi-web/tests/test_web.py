@@ -67,6 +67,19 @@ class HTTP(unittest.TestCase):
             with self.assertRaises(HTTPError):self.call('/api/conversations/'+row['id']+'/message','POST',{'text':'/bash rm -rf /'})
         self.call('/api/conversations/'+row['id'],'DELETE')
         self.assertTrue(Path(row['project']).exists())
+    def test_conversation_monitor_is_readonly_cached_and_available_as_page(self):
+        row=self.call('/api/conversations','POST',{})
+        path='/api/conversations/'+row['id']+'/monitor'
+        with self.assertRaises(HTTPError) as error:self.call(path)
+        self.assertEqual(error.exception.code,400)
+        run=Path(self.tmp.name)/'run-1';run.mkdir()
+        self.app.store.update(row['id'],run_dir=str(run))
+        with patch('run_monitor.RunMonitor.telemetry',return_value={'available':False}),patch.object(self.app.jobs,'submit') as submit:
+            self.assertEqual(self.call(path,token=False)['total'],0)
+            instance=self.app.monitors[row['id']];self.call(path)
+            self.assertIs(instance,self.app.monitors[row['id']]);submit.assert_not_called()
+        with urlopen(self.url+'/monitor?conversation='+row['id']) as response:
+            self.assertIn(b'monitor.js',response.read())
     def test_configured_lan_host_keeps_origin_and_mutation_token_checks(self):
         lan='192.168.1.34:'+str(self.server.server_port)
         self.call('/api/bootstrap',headers={'Host':lan,'Origin':'http://'+lan})

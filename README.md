@@ -129,6 +129,7 @@ The web UI opens at **http://localhost:8099**. Use **--port 8120** if another ap
 - Independent input, total output and thinking controls.
 - Inline clarification questions, plans, progress, stop/resume and measured results.
 - Conversation links that another user can open on the local network.
+- A **Run monitor** link on execution plans, showing granular todo and test evidence.
 
 To expose the **client's UI**, rather than the model API:
 
@@ -139,6 +140,24 @@ mypi web --listen 0.0.0.0 --allow-address CLIENT_MACHINE_LAN_IP
 Open **http://CLIENT_MACHINE_LAN_IP:8099** from another device. The allowlist and sharing links refer to the machine hosting this UI, which can differ from the Qwen Mac. Do not confuse UI port **8099** with model API port **8000**.
 
 The terminal starts an architectural conversation and prepares a development project. The web UI additionally classifies ordinary questions and read-only inspection before choosing a development flow. **Raw Qwen** is direct chat: saved history and token/thinking limits apply, but it has no Pi tools, research, planning or source edits.
+
+### Built-in run dashboard
+
+Open **Run monitor** from a web conversation's execution plan, or monitor a CLI run directly:
+
+~~~sh
+mypi monitor /path/outside/project/run --port 8137
+# A parent evidence folder follows the newest run-*/state.json after a restart:
+mypi monitor /path/outside/project/evidence --port 8137
+# Share this viewer on the local network:
+mypi monitor /path/outside/project/evidence --listen 0.0.0.0 --allow-address UI_MACHINE_LAN_IP
+~~~
+
+Open **http://localhost:8137/**, or **http://UI_MACHINE_LAN_IP:8137/**. The monitor is part of mypi, works on macOS/Linux and runs independently of the conversation UI. It reads run artifacts and polls the configured model's native metrics endpoint; it starts no model and generates no inference requests. Other compatible backends still show todos and evidence when native metrics are unavailable.
+
+The viewer refreshes every three seconds and shows accepted/running/blocked/failed/interrupted todos, dependencies, planned atomic steps, file changes, acceptance criteria mapped to frozen test commands, passing/failing/stale test results, recent tool calls with timings/errors, attempt history, task deadlines and context/output/thinking budgets. It retains accepted lineage after replanning. Select a todo to add its ID to the URL for sharing.
+
+Live native telemetry shows actual prompt processing, cached/new prompt tokens, reasoning/tool/answer phase, generation speed and separate allocation/footprint/RSS measurements when available. Capacity is a limit; missing measurements appear as **—**. Process RSS requires a recorded sampler; the viewer does not inspect a remote PID. Planned steps are displayed as instructions, not invented completion checkmarks. Task acceptance reflects the runner's frozen test and scope gates, rather than a model's claim of success.
 
 ## Complete Pi workflow
 

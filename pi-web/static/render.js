@@ -61,6 +61,7 @@ export function plan(container,row,action){
     if(!row.busy){const b=el('button','Resume planning','primary');b.onclick=()=>action('message',{text:'/resume-planning'});container.append(b);}return;}
   if(!row.plan_data)return;
   container.append(el('h2',row.plan_data.title||'Development plan'));
+  if(row.run_dir){const link=el('a','Open granular live todo dashboard','monitor-link');link.href='/monitor?conversation='+encodeURIComponent(row.id);link.target='_blank';link.rel='noopener';container.append(link);}
   for(const task of row.plan_data.tasks||[]){const node=el('div',undefined,'plan-task');
     node.append(el('strong',(task.status==='done'?'✓ ':'○ ')+task.id+' · '+task.goal));
     const details=el('details');details.append(el('summary','Scope, acceptance, tests & context'),el('pre',JSON.stringify({files:task.files,acceptance:task.acceptance,tests:task.tests,context:task.context},null,2)));node.append(details);container.append(node);}

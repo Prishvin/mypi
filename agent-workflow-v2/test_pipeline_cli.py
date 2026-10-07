@@ -12,6 +12,12 @@ pi_local=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(pi_local
 
 
 class CliTests(unittest.TestCase):
+    def test_monitor_routes_without_initialization_or_model_start(self):
+        with (patch('monitor_server.main',return_value=0) as monitor,
+              patch.object(pi_local,'initialize') as initialize,patch.object(pi_local,'start') as start):
+            self.assertEqual(pi_local.main(['monitor','/tmp/evidence','--port','8137']),0)
+        monitor.assert_called_once_with(['/tmp/evidence','--port','8137'])
+        initialize.assert_not_called();start.assert_not_called()
     def test_draft_option_reaches_planning_service_without_execution(self):
         with tempfile.TemporaryDirectory() as folder:
             draft=Path(folder)/'draft.json'
