@@ -701,3 +701,18 @@ A read-only replay against the recorded pilot failure returns the exact current
 Qwen request or game mutation was made for this replay. The stopped pilot retains
 its consumed repair allowance; this change has not yet demonstrated a successful
 live Qwen retry. No additional Linux run is claimed.
+
+The subsequent authorized live retry (`641617e24cfe`) demonstrated recovery:
+its first callback edit failed, the helper returned exact current source, and
+Qwen's next successful edit used old text copied exactly from that evidence.
+All eight T03 checks, the required architecture insertion and T01/T02 regressions
+passed. The runner accepted T03 and advanced automatically to T04, preserving
+the two previously accepted tasks. No supervisor-authored game edits were used.
+
+The corrective execution took **334.472 seconds**, five completed requests,
+2,662 output tokens (1,064 reasoning), with median native decode **21.84 tokens/s**.
+Maximum completed-request active allocation was **37.89 GB** and maximum sampled
+physical footprint was **48.49 GB** (six supervision samples; not RSS). The
+preceding Qwen review took 318.831 seconds and preserved all frozen acceptance
+and unrelated pending tasks. This resumed existing partial work, so these figures
+are not a clean-start benchmark or an isolated comparison of thinking caps.
