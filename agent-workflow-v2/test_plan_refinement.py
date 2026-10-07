@@ -13,6 +13,17 @@ from test_coverage_plan import draft,coverage,gap
 
 
 class RefinementTests(unittest.TestCase):
+    def test_duplicate_target_entries_get_actionable_error_in_native_and_serialized_forms(self):
+        updates=[{'id':'T1','steps':['Implement','Test']},{'id':'T1','add_coverage':[]}]
+        for value in (updates,json.dumps(updates)):
+            with self.assertRaises(ValueError) as caught:guard(draft(),{'task_updates':value},'T1')
+            message=str(caught.exception)
+            self.assertIn("Received 2 entries with IDs ['T1', 'T1']",message)
+            self.assertIn('Combine all changes into ONE',message)
+        for value in (None,{},42,[None],['T1']):
+            with self.assertRaisesRegex(ValueError,'array containing one object'):
+                guard(draft(),{'task_updates':value},'T1')
+
     def test_target_scope_and_split_dependency_gate(self):
         plan=draft()
         for change in ({'task_updates':[]},{'task_updates':[{'id':'T1'},{'id':'T2'}]},

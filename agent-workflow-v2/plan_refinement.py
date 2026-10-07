@@ -9,8 +9,14 @@ def guard(proposal, patch, target):
     """Refine exactly one original todo; splits must retain its final dependency gate."""
     patch,_=decode(patch)
     updates=patch.get('task_updates',[])
+    if not isinstance(updates,list) or any(not isinstance(update,dict) for update in updates):
+        raise ValueError('task_updates must be an array containing one object with id '+target)
     if len(updates)!=1 or updates[0].get('id')!=target:
-        raise ValueError('Refinement must update exactly the selected todo: '+target)
+        ids=[str(update.get('id','<missing>'))[:80] for update in updates[:5]]
+        raise ValueError('Refinement must update exactly the selected todo: '+target+
+                         f'. Received {len(updates)} entries with IDs {ids}. '+
+                         'Combine all changes into ONE task_updates object with that id; '+
+                         'do not repeat the id or edit other todos. Put split children inside replace_with.')
     original=next(t for t in proposal['tasks'] if t['id']==target)
     children=updates[0].get('replace_with')
     if children is not None:

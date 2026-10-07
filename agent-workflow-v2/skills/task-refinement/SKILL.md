@@ -26,7 +26,16 @@ Put combined tests only in a child whose prerequisites create the needed files;
 earlier children need their own runnable tests. Include a full V3 contract per
 child, including context estimates/margin, execution policy and coverage.
 
-Save ONE sparse plan_store call: task_updates contains exactly the selected ID.
+Save ONE sparse plan_store call: task_updates contains exactly ONE object with
+the selected ID. Combine all its changes into that object, never two objects with
+the same ID. The current_task is a full contract to read, not the patch format.
+Use context_overlay for changed context fields (never context), and add_coverage,
+add_tests, add_files and add_acceptance to append entries (never coverage, tests,
+files or acceptance). Omit unchanged values. For example:
+{"task_updates":[{"id":"selected ID","context_overlay":{"max_input_tokens":16384},"add_coverage":[{"criterion":"existing criterion ID","test":0}]}]}
+Replace the example IDs and values with this task's actual requirements; do not
+copy example budgets. Split children go in replace_with inside that one object;
+each child is a full V3 contract and therefore uses context, not context_overlay.
 Read coverage_plan: incorporate every gap assigned to this task with the exact
 case, test argv and matching coverage; add fixture files to scope as needed.
 Python rejects a refinement that leaves any assigned gap unaddressed. Preserve

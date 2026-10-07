@@ -176,10 +176,13 @@ export function failureFeedback(failures) {
 
 function registerPlan(pi) {
   /** Persist structured todos outside the project; planning cannot execute them. */
+  const draft=process.env.QWEN_WORKFLOW_PLAN_DRAFT;
+  const target=draft && process.env.QWEN_WORKFLOW_PLAN_COVERAGE!=='1' ? JSON.parse(readFileSync(draft,'utf8')).refine_task : undefined;
+  const refinement=target ? ' Refine only '+target+': task_updates must contain ONE object with that id. Combine all changes in it. Use context_overlay, add_coverage, add_tests, add_acceptance and add_files; omit unchanged fields. Splits belong inside replace_with, not extra task_updates.' : '';
   pi.registerTool({
     name: 'plan_store', label: 'Save architecture and todos',
-    description: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? 'Attach coverage_plan to the unchanged pinned draft. Map every acceptance case and request requirement to observable checks, and assign missing cases to tasks. Does not implement tests.' : process.env.QWEN_WORKFLOW_PLAN_DRAFT ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.' : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
-    parameters: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? coverageParameters() : process.env.QWEN_WORKFLOW_PLAN_DRAFT ? repairParameters() : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
+    description: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? 'Attach coverage_plan to the unchanged pinned draft. Map every acceptance case and request requirement to observable checks, and assign missing cases to tasks. Does not implement tests.' : draft ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.'+refinement : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
+    parameters: process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? coverageParameters() : draft ? repairParameters(target) : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
       goal: Type.String(), architecture: Type.String(),
       failure_analysis: Type.Optional(Type.String({minLength:40,description:'For evidence-bound recovery: observed failure, cause/hypothesis, corrective approach and validation.'})),
       tasks: Type.Union([Type.Array(Type.Object({ id: Type.String(), goal: Type.String(),

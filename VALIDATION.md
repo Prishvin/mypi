@@ -233,3 +233,25 @@ rejected payloads through the pure patch function produces specific corrections
 without modifying the saved plan. Reading the retained tool log confirms two
 historical failures followed by the successful save; the live monitor reports
 weapons review Accepted and enemies review Running. Only the monitor was restarted.
+
+### Bound task refinement schema — 2026-10-07
+
+Enemy review submitted two entries for the same selected task, then an unsupported
+`context` patch field, then coverage referencing nonexistent acceptance ID `G`.
+The native gates rejected these calls. Qwen corrected them; its fourth save was
+accepted and the pipeline advanced to spawn review without a restart.
+
+New sessions derive the tool schema's literal todo ID and one-entry limit from
+the pinned draft binding. Unknown patch properties are rejected by Pi, while
+serialized adapter input still passes through the independent Python guards.
+Native scope errors list received IDs and explain how to combine changes. The
+refinement skill distinguishes full task contracts from sparse patches and split
+children. Coverage schema text requires exact existing or newly added IDs.
+
+Verification: **37 Python and 8 JavaScript tests pass**, covering duplicate IDs,
+wrong targets, typed and serialized patches, unknown properties without silent
+dropping, unchanged-task acknowledgements, split children, generic multi-task
+repair, native validation, checkpoint resume and immutable session runtimes.
+Spawn review already had the preceding field-diagnostic fix; the tighter schema
+will take effect in the next newly created session. Existing runtimes and model
+work were not modified or restarted.
