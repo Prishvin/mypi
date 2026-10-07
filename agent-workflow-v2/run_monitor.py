@@ -2,6 +2,7 @@
 import hashlib
 import json
 from pathlib import Path
+import re
 import threading
 import time
 import urllib.request
@@ -34,6 +35,16 @@ def tail_json(path, limit=524288):
     except OSError:return []
 
 
+def tool_error_summary(error, limit=600):
+    """Show the final Python exception before its stack; retain full evidence in the log."""
+    for marker in ('Received arguments:','Closest SOURCE','\nSymbols:'):
+        error=error.split(marker)[0]
+    if 'Traceback (most recent call last):' in error:
+        exceptions=list(re.finditer(r'^[\w.]*(?:Error|Exception|Interrupt|Exit):[^\n]*',error,re.MULTILINE))
+        if exceptions:error=error[exceptions[-1].start():]
+    return error.strip()[:limit]
+
+
 def tools(session,timing=None):
     """Expose tool names/status/timing and bounded errors, excluding arguments and source."""
     calls={}
@@ -48,8 +59,7 @@ def tools(session,timing=None):
             if event.get('isError'):
                 content=event.get('result',{}).get('content',[])
                 error=' '.join(x.get('text','') for x in content if isinstance(x,dict))
-                for marker in ('Received arguments:','Closest SOURCE','\nSymbols:'):error=error.split(marker)[0]
-                row['error']=error[:600]
+                row['error']=tool_error_summary(error)
     for event in tail_json((timing or session)/'tool-timing.jsonl'):
         row=calls.get(event.get('tool_call_id'))
         if row:

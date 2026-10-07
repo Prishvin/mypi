@@ -110,8 +110,13 @@ def update_task(task, update):
     """Apply explicit metadata or additive test changes without weakening acceptance."""
     allowed = {'id','estimated_changed_lines','steps','test_strategy','assumptions','context_overlay',
                'execution','add_files','add_tests','add_coverage','add_acceptance','replace_with','criterion_replacements'}
-    if set(update) - allowed:
-        raise ValueError('Unknown draft task patch fields')
+    unknown = set(update) - allowed
+    if unknown:
+        aliases = {'context':'context_overlay', 'coverage':'add_coverage', 'files':'add_files',
+                   'tests':'add_tests', 'acceptance':'add_acceptance (or criterion_replacements for corrections)'}
+        hints = '; '.join(f'use {aliases[key]} for {key}' for key in sorted(unknown & aliases.keys()))
+        raise ValueError(f"Unknown draft task patch fields for {task['id']}: {', '.join(sorted(unknown))}. "
+                         + (hints + '. ' if hints else '') + 'Unchanged fields should be omitted.')
     if 'replace_with' in update:
         replacement = split_data(update)
         preserved(task, replacement)

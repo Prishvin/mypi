@@ -217,3 +217,19 @@ share-link reload, current-step navigation and mobile width, with no script
 errors. A browser response fixture verified the transition to implementation
 while retaining completed planning results. No model work was restarted, and no
 game implementation acceptance is implied by these UI checks.
+
+### Sparse plan save diagnostics — 2026-10-07
+
+Weapons refinement rejected two plan_store calls because full-task `context` and
+`coverage` fields were used in a sparse patch. Qwen corrected them and the third
+save passed; planning advanced to enemies. The original rejected artifacts remain
+unchanged. Native errors now name unknown fields and explain `context_overlay`
+and additive alternatives. Tool schema descriptions clarify these fields. The
+monitor shows the final Python exception before traceback frames, retaining
+bounded output and argument/source redaction; complete logs remain available.
+
+Verification: **45 Python tests and 7 Pi integration tests pass**. Replaying both
+rejected payloads through the pure patch function produces specific corrections
+without modifying the saved plan. Reading the retained tool log confirms two
+historical failures followed by the successful save; the live monitor reports
+weapons review Accepted and enemies review Running. Only the monitor was restarted.

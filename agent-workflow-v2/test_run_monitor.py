@@ -9,7 +9,7 @@ from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
-from run_monitor import RunMonitor, read, tail_json, tools, file_status, task_status
+from run_monitor import RunMonitor, read, tail_json, tools, file_status, task_status, tool_error_summary
 from monitor_server import handler
 
 
@@ -130,6 +130,25 @@ class Artifacts(unittest.TestCase):
     def test_jsonl_tail_skips_partial_records(self):
         path=self.root/'events';path.write_text('garbage\n[]\n42\n'+json.dumps({'good':1})+'\n{"half":')
         self.assertEqual(tail_json(path),[{'good':1}])
+
+    def test_tool_error_shows_final_exception_instead_of_truncated_traceback(self):
+        stack='Traceback (most recent call last):\n'+('  File "runtime.py", line 100, in save\n'*30)
+        raw=stack+'ValueError: Unknown draft task patch fields\n\nOriginal rejected proposal and error retained: local.json'
+        (self.root/'pi.log').write_text(json.dumps({'type':'tool_execution_end','toolCallId':'1',
+            'toolName':'plan_store','isError':True,'result':{'content':[{'text':raw}]}})+'\n')
+        error=tools(self.root)[0]['error']
+        self.assertTrue(error.startswith('ValueError: Unknown draft task patch fields'))
+        self.assertIn('local.json',error);self.assertNotIn('runtime.py',error)
+        self.assertEqual(json.loads((self.root/'pi.log').read_text())['result']['content'][0]['text'],raw)
+
+    def test_tool_error_redaction_chaining_plain_validation_and_bounds(self):
+        raw='Traceback (most recent call last):\nKeyError: old\n\nTraceback (most recent call last):\nValueError: current'
+        self.assertEqual(tool_error_summary(raw),'ValueError: current')
+        for marker in ('Received arguments:','Closest SOURCE','\nSymbols:'):
+            self.assertNotIn('SECRET',tool_error_summary(raw+'\n'+marker+' SECRET\nRuntimeError: SECRET'))
+        plain='Validation failed for tool "plan_store":\n  - tasks.0: must be object'
+        self.assertEqual(tool_error_summary(plain),plain)
+        self.assertEqual(len(tool_error_summary('x'*1000)),600)
     def test_snapshot_freshness_is_bound_to_final_source_and_last_results(self):
         monitor=self.setup_run();session=self.root/'session';session.mkdir()
         self.write('run-1/01-A/session.json',{'session':str(session)})

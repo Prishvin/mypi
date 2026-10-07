@@ -101,6 +101,18 @@ class DraftTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             apply(proposal(),{'task_updates':[{'id':'A'}],'goal':'change goal'})
 
+    def test_full_task_fields_in_sparse_patch_name_fields_and_explain_correction(self):
+        raw=proposal();before=copy.deepcopy(raw)
+        with self.assertRaises(ValueError) as caught:
+            apply(raw,{'task_updates':[{'id':'A','context':{'max_input_tokens':8192},'coverage':[]}]})
+        message=str(caught.exception)
+        self.assertIn('for A: context, coverage',message)
+        self.assertIn('use context_overlay for context',message)
+        self.assertIn('use add_coverage for coverage',message)
+        self.assertEqual(raw,before)
+        with self.assertRaisesRegex(ValueError,'for A: unknown_field'):
+            apply(raw,{'task_updates':[{'id':'A','unknown_field':True}]})
+
     def test_additive_integration_fixture_retains_old_command_and_indices(self):
         raw=proposal();command=['node','--test','test/main.test.mjs']
         result=apply(raw,{'task_updates':[{'id':'A','add_files':['test/main.test.mjs'],
