@@ -24,6 +24,7 @@ import {registerPlanChildren} from './pi-plan-children.mjs';
 import {repairParameters} from './pi-plan-draft.mjs';
 import {coverageParameters} from './pi-coverage-plan.mjs';
 import {recoveryParameters} from './pi-replan-patch.mjs';
+import {installExecutionProgressHooks} from './pi-execution-progress.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -53,6 +54,7 @@ export default function (pi) {
   installPromptHooks(pi, home);
   installToolHooks(pi, mutations);
   installRefreshHooks(pi, python, cli, scopeArgs, mutations);
+  installExecutionProgressHooks(pi,python,process.env.QWEN_WORKFLOW_RUNTIME || home);
   (process.env.QWEN_WORKFLOW_COMPACTION_FIX === '1' ? installFixedCompactionHooks : installCompactionHooks)(pi, python, cli);
   installTimingHooks(pi);
   registerMap(pi);

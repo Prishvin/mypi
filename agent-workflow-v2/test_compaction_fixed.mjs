@@ -51,7 +51,8 @@ test('oversized contract cancels the hook without Pi model fallback',async()=>{
     Object.assign(process.env,{QWEN_WORKFLOW_ROLE:'code',QWEN_WORKFLOW_SESSION:folder,
       QWEN_WORKFLOW_STATE:join(folder,'state.json')});
     installFixedCompactionHooks({on:(_name,callback)=>{handler=callback;},
-      exec:async()=>({stdout:JSON.stringify(gate),code:1})},'python','workflow.py');
+      exec:async(_bin,args)=>args[0].endsWith('progress_observer.py')?
+        {stdout:'{"status":"continue"}',code:0}:{stdout:JSON.stringify(gate),code:1}},'python','workflow.py');
     const result=await handler({preparation:{firstKeptEntryId:'entry',tokensBefore:22000}},
       {model:{provider:'local-qwen-workflow'},abort:()=>{aborted=true;}});
     assert.deepEqual(result,{cancel:true});assert.equal(aborted,true);
@@ -69,13 +70,16 @@ test('hook emits a deterministic handoff for the recorded failing task',async()=
     Object.assign(process.env,{QWEN_WORKFLOW_ROLE:'code',QWEN_WORKFLOW_SESSION:folder,
       QWEN_WORKFLOW_STATE:join(source,'task-state.json')});
     installFixedCompactionHooks({on:(_name,callback)=>{handler=callback;},
-      exec:async()=>({stdout:JSON.stringify(gate),code:1})},'python','workflow.py');
+      exec:async(_bin,args)=>args[0].endsWith('progress_observer.py')?
+        {stdout:JSON.stringify({status:'continue',recent_errors:[{error:'exact text mismatch'}]}),code:0}:
+        {stdout:JSON.stringify(gate),code:1}},'python','workflow.py');
     const result=await handler({preparation:{firstKeptEntryId:'entry',tokensBefore:22000}},
       {model:{provider:'local-qwen-workflow'},abort:()=>{throw new Error('Unexpected abort');}});
     assert.equal(result.compaction.details.modelCall,false);
     assert.equal(result.compaction.details.fullContractPreserved,true);
     assert.equal(result.compaction.firstKeptEntryId,'entry');
     assert.ok(result.compaction.summary.length<=12000);
+    assert.match(result.compaction.summary,/exact text mismatch/);
   } finally {
     for (const key of Object.keys(process.env))if (!(key in old))delete process.env[key];
     Object.assign(process.env,old);rmSync(folder,{recursive:true,force:true});

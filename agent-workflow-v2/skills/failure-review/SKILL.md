@@ -19,6 +19,13 @@ Make creating the declared tests and collecting executable evidence an early
 checkpoint before further speculative source revisions. Keep scratch diagnostics
 inside declared files; dependency changes require a scoped replan.
 
+Use execution_progress and context_pressure when supplied. They distinguish
+unchanged rounds, repeated retrieval, compaction churn and new test outcomes.
+Do not prescribe the same read/reason loop again: preserve useful retrieved
+evidence, identify the next executable observation, and adjust context only from
+measured headroom. More time or thinking alone does not resolve no_progress.
+These diagnostics do not grant another repair allowance or relax acceptance.
+
 Save failure_analysis: concise observed cause/evidence, uncertainty, the smallest
 corrective approach and the tests that will demonstrate the fix. Use plan_store
 with flat changes to the failed todo only: steps, test_strategy, assumptions,

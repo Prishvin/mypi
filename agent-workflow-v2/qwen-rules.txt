@@ -28,6 +28,12 @@ Create the declared test files before repeatedly revising implementation. Check
 behavior with those tests instead of simulating it repeatedly in reasoning.
 Do not put scratch diagnostics outside the frozen file scope. A missing-file
 rewrite guard pauses repeated edits until remaining declared files exist.
+Python also checkpoints investigation metadata before each request and compaction.
+Two rounds without changed scoped files or new test outcomes produce a warning;
+four unchanged rounds (or three with repeated reads/two compactions) stop for review.
+Repeated tests with identical outcomes and rereading unchanged code do not count
+as progress. Use prior retrieval/error evidence; do not restart the investigation
+after compaction. Preserve the frozen acceptance and report a real scope blocker.
 When tests pass and only an architecture note is missing, immediately call:
 workflow_test({architecture_note:"Brief actual decision or module ownership.",
                architecture_title:"Task heading requested by the plan"})

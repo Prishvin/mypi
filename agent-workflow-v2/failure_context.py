@@ -14,6 +14,17 @@ def build(root,packet,provider):
     budget=limits(provider,'recovery');brief=distill(packet,focused=True)
     from execution_audit import summarize
     brief['execution_audit'] = summarize(packet.get('local_log'), packet['failed_todo']['files'])
+    session = Path(packet['session']) if packet.get('session') else None
+    from runner_process import read
+    from token_budget import history_trigger
+    if session:
+        brief['execution_progress'] = read(session/'execution-progress.json').get('brief', {})
+    context = packet['failed_todo']['context']
+    brief['context_pressure'] = {'task_input_cap': context['max_input_tokens'],
+        'compaction_trigger': history_trigger(context['max_input_tokens']),
+        'task_window': context.get('window_tokens'),
+        'note': 'Compaction consumes history headroom and may invalidate cached prefixes. '
+                'Use measured requests and preserved investigation when sizing a corrective task.'}
     original=json.loads(Path(packet['plan']).read_text())
     brief['original_plan_overview']=[{k:t[k] for k in ('id','goal','depends_on','files') if k in t} for t in original['tasks']]
     brief.pop('remaining_overview',None)

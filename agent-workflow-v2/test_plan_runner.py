@@ -121,6 +121,40 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(packet['failed_tests'])
         self.assertTrue(any('tests' in v.lower() for v in packet['violations']))
 
+    def test_progress_stop_survives_zero_exit_and_reaches_reviewer_packet(self):
+        self.save()
+        def stalled(*args):
+            result=self.fake(*args,correct=False)
+            session=Path(result['session'])
+            brief={'status':'stop','rounds_without_progress':5,'recent_errors':[{'error':'text mismatch'}]}
+            (session/'progress-stop.json').write_text(json.dumps({'reason':'no_progress',
+                'identity':{'project':str(self.root.resolve()),'task':'T1'},'brief':brief}))
+            (session/'execution-progress.json').write_text(json.dumps({'brief':brief}))
+            return result
+        self.assertEqual(execute(self.root,self.path,self.folder,stalled),REPLAN_EXIT)
+        packet=read(self.folder/'replan-request.json')
+        self.assertEqual(packet['reason'],'no_progress')
+        self.assertEqual(packet['execution_progress']['rounds_without_progress'],5)
+        self.assertEqual(packet['failed_todo']['acceptance'],self.plan['tasks'][0]['acceptance'])
+
+    def test_progress_stop_from_another_task_cannot_override_acceptance(self):
+        self.save()
+        def success(*args):
+            result=self.fake(*args)
+            (Path(result['session'])/'progress-stop.json').write_text(json.dumps({'reason':'no_progress',
+                'identity':{'project':str(self.root.resolve()),'task':'DIFFERENT'}}))
+            return result
+        self.assertEqual(execute(self.root,self.path,self.folder,success),0)
+
+    def test_progress_observer_error_is_reported_instead_of_generic_acceptance_failure(self):
+        self.save()
+        def broken(*args):
+            result=self.fake(*args,correct=False)
+            (Path(result['session'])/'progress-error.json').write_text('{"error":"Progress journal truncated"}')
+            return result
+        self.assertEqual(execute(self.root,self.path,self.folder,broken),REPLAN_EXIT)
+        self.assertEqual(read(self.folder/'replan-request.json')['reason'],'progress_monitor_failed')
+
     def test_missing_evidence_cannot_finish_a_task(self):
         self.save()
         def empty(command, folder, timeout):

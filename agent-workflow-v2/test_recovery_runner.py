@@ -150,6 +150,31 @@ class RecoveryTests(unittest.TestCase):
         packet=self.packet(self.path);packet['current_snapshot']='stale'
         with self.assertRaisesRegex(ValueError,'stale'):build(self.root,packet,'qwen')
 
+    def test_stall_evidence_is_reviewed_once_then_escalated_on_repeat(self):
+        original=self.packet
+        def stalled(path):
+            packet=original(path)
+            packet.update(reason='no_progress',execution_progress={'rounds_without_progress':5})
+            return packet
+        self.codes=[20,20]
+        with patch.object(self,'packet',side_effect=stalled):
+            result=self.run_flow()
+        self.assertEqual(result['code'],20);self.assertEqual(len(self.reviews),1)
+        self.assertEqual(len(self.runs),2)
+        self.assertEqual(read(self.folder/'replan-request.json')['reason'],'no_progress')
+        self.assertEqual(self.run_flow(resume=True)['code'],20)
+        self.assertEqual(len(self.runs),2)
+
+    def test_reviewer_gets_bounded_investigation_and_measured_context_pressure(self):
+        packet=self.packet(self.path);session=self.base/'session';session.mkdir()
+        packet['session']=str(session)
+        save(session/'execution-progress.json',{'brief':{'status':'stop','rounds_without_progress':5,
+            'recent_errors':[{'error':'exact text mismatch'}]}})
+        prompt,_=build(self.root,packet,'qwen')
+        for text in ('rounds_without_progress','exact text mismatch','compaction_trigger','task_input_cap'):
+            self.assertIn(text,prompt)
+        self.assertNotIn('PRIVATE_BODY_SENTINEL',prompt)
+
     def test_large_shadow_is_selected_for_qwen_and_fits_cloud_review(self):
         (self.root/'architecture.md').write_text('# Normalization\none.py\n'+'boundary '*35000)
         packet=self.packet(self.path);qwen,q=build(self.root,packet,'qwen');cloud,c=build(self.root,packet,'chatgpt')

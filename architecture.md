@@ -62,6 +62,15 @@ while declared new files are absent, using a session journal that compaction
 cannot erase. `execution_audit.py` streams Pi events into bounded recovery counts
 and diagnostics without implementation bodies or reasoning.
 
+`execution_progress.py` decides warning/stop from new scoped content and stable
+test outcomes. `progress_observer.py` consumes bounded Pi event metadata under a
+session lock and persists fingerprints, counters and investigation history.
+`pi-execution-progress.mjs` records lifecycle events and invokes Python before
+requests/compaction; a durable `progress-stop.json` reaches native recovery as
+`no_progress`, even if Pi exits zero. Compaction retains investigation metadata;
+failure review receives it plus task input/compaction limits. Repair allowances
+and frozen acceptance remain unchanged. No model call implements this watchdog.
+
 `retrieval.read_symbol` prefers exact qualified locators and resolves a short name
 only when it uniquely identifies a symbol in the requested file. It returns the
 qualified identity and exact bounded span; ambiguity still requires selection.

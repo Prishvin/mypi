@@ -12,6 +12,16 @@ from runner_process import read, save
 def acceptance(result, task, root):
     """Require a current frozen contract and fresh gate; ignore model success prose."""
     session = Path(result['session']) if result.get('session') else None
+    stalled = read(session / 'progress-stop.json') if session else {}
+    if (stalled.get('reason') == 'no_progress' and stalled.get('identity') ==
+            {'project': str(root.resolve()), 'task': task['id']}):
+        return {'passed': False, 'reason': 'no_progress',
+                'violations': ['Repeated model rounds without new file contents or test outcomes'],
+                'investigation': stalled.get('brief', {})}
+    monitor_error = read(session / 'progress-error.json') if session else {}
+    if monitor_error:
+        return {'passed': False, 'reason': 'progress_monitor_failed',
+                'violations': [str(monitor_error.get('error', 'Progress monitor failed'))[:500]]}
     if result['exit_code'] or session is None:
         reason = 'timeout' if result['exit_code'] == 124 else 'execution_failed'
         if session:
@@ -105,6 +115,7 @@ def failure(root, plan_path, plan, task, result, gate, folder):
         'local_log': result.get('log'), 'session': result.get('session'),
         'budget_observation': read(Path(result['session']) / 'request-budget-result.json') if result.get('session') else {},
         'tool_errors':read(Path(result['session'])/'tool-errors.json') if result.get('session') else {},
+        'execution_progress':read(Path(result['session'])/'execution-progress.json').get('brief', {}) if result.get('session') else {},
         'policy': 'Stop execution. Replan remaining authorized work; preserve accepted behavior, tests and scope. No implementation bodies in planner handoff.',
         'created_epoch': time.time()}
     # The failed baseline contains source bodies and remains only in the local session.

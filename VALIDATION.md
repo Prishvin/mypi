@@ -613,3 +613,32 @@ receipts were retained; corrected interpretation is recorded separately.
 The execution audit also now retains the terminal exception instead of truncating
 the start of a traceback. **Three audit tests passed**, including a long private
 traceback whose bounded summary retains the cause without implementation frames.
+
+### Progress-aware execution recovery — 2026-10-07
+
+The prior T03 corrective worker kept reading and compacting after creating its
+tests, so the missing-file rewrite guard did not stop that pattern. Python now
+compares actual scoped content hashes and stable test outcomes at each request
+and compaction boundary. It warns after two unchanged completed model rounds and
+stops after four, or after three with repeated retrieval/two compactions. A
+session journal survives compaction and records bounded selectors/errors without
+source bodies or reasoning. Duplicate tests, timing changes and previously seen
+content do not reset progress. These are heuristic lack-of-progress thresholds;
+they do not prove that every stopped investigation was unproductive.
+
+Native recovery receives `no_progress` even if Pi exits zero. The existing repair
+allowance, source/plan binding and frozen acceptance remain enforced. Compaction
+retains bounded investigation history; review receives it and measured task input
+and compaction limits. Observer corruption fails visibly as `progress_monitor_failed`.
+
+**61 Python and 47 JavaScript tests passed on macOS.** They include real Python
+watchdog execution through Pi hook fixtures, exact request/compaction thresholds,
+durable event cursors, partial journal writes, timing-independent test evidence,
+source/path privacy, stop classification, preserved acceptance, one-review-then-
+escalate behavior, role isolation and immutable runtime capture. No new Linux run
+or claim of successful game completion is included in this validation.
+
+An offline replay of the previous worker's round/mutation/compaction events
+triggers the guard; it changes no project files and is not a model benchmark.
+The separately authorized live Qwen review/rerun is recorded in the pilot's
+`stall-recovery-*` logs and results, preserving earlier failed attempts.
