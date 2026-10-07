@@ -151,6 +151,9 @@ def write_brief(folder, task, session, changed, accepted):
               'last_activity': str(activity.get('activity', ''))[:300],
               'previous_test_observations': failed_tests(str(session))[:4] if session else [],
               'instructions': 'Continue this same frozen task from its current files. Preserve partial work and accepted behavior. The supplied packet has fresh architecture/interfaces/source. Retrieve missing spans only. Run frozen acceptance; never widen scope or replay completed todos.'}
+    if session and (session/'task-state.json').is_file():
+        packet['remaining_gate_violations']=tasks.check(session/'task-state.json').get('violations',[])
+        packet['finalization']='If tests already pass and only the architecture note is missing, call workflow_test with architecture_note and architecture_title immediately; preserve passing code.'
     text = 'RESUMING INTERRUPTED ATOMIC TASK\n' + json.dumps(packet, indent=2)
     if len(text.encode()) > 8000:
         packet['previous_test_observations'] = []

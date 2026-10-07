@@ -5,6 +5,11 @@ import selectors
 import signal
 import subprocess
 import time
+import threading
+
+
+class SkillInterrupted(BaseException):
+    """Escape selector EINTR handling so parent termination cleans up its child."""
 
 
 def stop(process):
@@ -24,6 +29,12 @@ def execute(argv, folder, timeout, maximum, runtime):
     started = time.monotonic()
     process = subprocess.Popen(argv, cwd=folder, env=env, stdin=subprocess.DEVNULL,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    previous=None
+    if threading.current_thread() is threading.main_thread():
+        previous=signal.getsignal(signal.SIGTERM)
+        def interrupted(_signal,_frame):
+            raise SkillInterrupted('Skill parent terminated')
+        signal.signal(signal.SIGTERM,interrupted)
     output = {'stdout': bytearray(), 'stderr': bytearray()}
     try:
         with selectors.DefaultSelector() as selector:
@@ -46,6 +57,7 @@ def execute(argv, folder, timeout, maximum, runtime):
         stop(process)
         raise
     finally:
+        if previous is not None:signal.signal(signal.SIGTERM,previous)
         process.stdout.close(); process.stderr.close()
     return {'exit_code': code, 'seconds': round(time.monotonic() - started, 3),
             **{label: data.decode('utf-8', errors='replace') for label, data in output.items()}}

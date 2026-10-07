@@ -62,8 +62,8 @@ Each todo needs:
 - context.margin_tokens: >=25% of the component sum and >=1024. Sum plus margin
   must fit max_input_tokens. Estimates are not backend measurements. Admission
   counts every serialized request with additional headroom and stops on overflow.
-- execution: timeout_seconds (30-1200), test_timeout_seconds (1-300 per command),
-  on_failure="replan". Default 600/60 for a small task; complex tasks at most 1200.
+- execution: timeout_seconds (30-2700), test_timeout_seconds (1-300 per command),
+  on_failure="replan". Default 600/60 for a small task; use 1800 for standard work and at most 2700 for setup/repairs.
 
 Budget examples: small input16384/output8192; standard24576/16384;
 large40960/32768, only for a bounded handoff that needs it. Small example:

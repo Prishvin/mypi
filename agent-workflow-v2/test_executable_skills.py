@@ -50,6 +50,21 @@ class SkillTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'symlinks'):
             load('text-metrics',base)
 
+    def test_parent_termination_cleans_long_running_skill_group(self):
+        import subprocess,signal,time,os
+        pidfile=self.session/'child.pid'
+        child='import os,time;open('+repr(str(pidfile))+',"w").write(str(os.getpid()));time.sleep(30)'
+        wrapper='from skill_process import execute;from pathlib import Path;execute('+repr([sys.executable,'-c',child])+',Path('+repr(str(self.session))+'),30,512,Path('+repr(str(BASE))+'))'
+        parent=subprocess.Popen([sys.executable,'-c',wrapper],cwd=BASE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        try:
+            deadline=time.monotonic()+5
+            while not pidfile.exists() and time.monotonic()<deadline:time.sleep(.02)
+            self.assertTrue(pidfile.exists());pid=int(pidfile.read_text())
+            parent.send_signal(signal.SIGTERM);parent.wait(timeout=5)
+            with self.assertRaises(ProcessLookupError):os.kill(pid,0)
+        finally:
+            if parent.poll() is None:parent.kill();parent.wait()
+
     def test_process_timeout_and_hard_output_limit(self):
         with self.assertRaisesRegex(ValueError,'deadline'):
             execute([sys.executable,'-c','import time; time.sleep(5)'],self.session,.15,512,BASE)

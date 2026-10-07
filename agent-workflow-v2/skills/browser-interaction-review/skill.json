@@ -1,0 +1,10 @@
+{
+ "version":1,"name":"browser-interaction-review",
+ "purpose":"Focused browser/game integration checklist: composition root, event state, pointer lock, visibility, restart and fake adapter tests.",
+ "roles":["code","architect","reviewer"],"side_effects":"session-artifacts",
+ "pre_prompt":"For browser adapters, verify composition-root initialization actually runs and matches public signatures. Keep imports inert and DOM/RAF injectable. Mouse displacement is consumed once per frame; keyboard turning is a rate. Pointer-lock rejection needs a usable fallback and resume needs a fresh user gesture. Pause on focus loss, cap delta time, and reset state through the accepted factory. Preserve live state references after restart. Verify computed overlay visibility and real clicks: CSS display:flex can override hidden. Test handlers and startup with fake adapters, then validate browser behavior; symbol presence alone is insufficient.",
+ "post_prompt":"These are review obligations, not proof of a browser test. Record actual checks and failures; never claim unexecuted checks passed.",
+ "input_schema":{"type":"object","properties":{},"additionalProperties":false},
+ "binaries":{"python":"python"},
+ "steps":[{"argv":["{python}","{skill}/scripts/checklist.py"],"timeout_seconds":5,"max_output_bytes":2048}]
+}

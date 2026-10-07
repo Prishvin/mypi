@@ -66,14 +66,13 @@ test('opt-in source edits run frozen tests and stop only after a fresh passing g
     const handlers={};let aborted=0,passing=true;const calls=[];
     installRefreshHooks({on:(n,h)=>{handlers[n]=h;},exec:async(_bin,argv)=>{
       calls.push(argv[1]);
-      if(argv[1]==='test')return {code:0,stdout:'{"results":[]}'};
-      if(argv[1]==='check')return {code:passing?0:1,stdout:JSON.stringify({passed:passing,shadow_snapshot:'new'})};
+      if(argv[1]==='finalize')return {code:passing?0:1,stdout:JSON.stringify({passed:passing,shadow_snapshot:'new'})};
       return {code:0,stdout:'{"snapshot":"new"}'};
     }},'python','workflow.py',()=>[]);
     const ctx={model:{provider:'local-qwen-workflow'},cwd:'/repo',abort:()=>{aborted++;}};
     const e={toolName:'write',content:[]};
     assert.equal((await handlers.tool_result(e,ctx)).details.acceptedCompletion,true);
-    assert.deepEqual(calls,['refresh','test','check']);assert.equal(aborted,1);
+    assert.deepEqual(calls,['refresh','finalize']);assert.equal(aborted,1);
     passing=false;assert.equal((await handlers.tool_result(e,ctx)).details.acceptedCompletion,false);assert.equal(aborted,1);
   } finally {
     for(const key of keys)if(old[key]===undefined)delete process.env[key];else process.env[key]=old[key];
@@ -125,11 +124,12 @@ test('ChatGPT execution requires its own explicit workflow selector', () => {
 });
 
 test('explicit ChatGPT baseline uses bounded tools and a capped response', async () => {
-  const keys=['QWEN_WORKFLOW_EXECUTOR','QWEN_WORKFLOW_ROLE','QWEN_WORKFLOW_STATE','QWEN_WORKFLOW_PROJECT','QWEN_WORKFLOW_OUTPUT_BUDGET'];
+  const folder=mkdtempSync(join(tmpdir(),'pi-finalize-cloud-'));
+  const keys=['QWEN_WORKFLOW_EXECUTOR','QWEN_WORKFLOW_ROLE','QWEN_WORKFLOW_STATE','QWEN_WORKFLOW_PROJECT','QWEN_WORKFLOW_OUTPUT_BUDGET','QWEN_WORKFLOW_SESSION'];
   const old=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
   try {
     Object.assign(process.env,{QWEN_WORKFLOW_EXECUTOR:'chatgpt',QWEN_WORKFLOW_ROLE:'code',
-      QWEN_WORKFLOW_STATE:'/frozen/state.json',QWEN_WORKFLOW_PROJECT:'/repo',QWEN_WORKFLOW_OUTPUT_BUDGET:'32768'});
+      QWEN_WORKFLOW_STATE:'/frozen/state.json',QWEN_WORKFLOW_PROJECT:'/repo',QWEN_WORKFLOW_OUTPUT_BUDGET:'32768',QWEN_WORKFLOW_SESSION:folder});
     const handlers={},tools={},calls=[];
     extension({on:(name,handler)=>{handlers[name]=handler;},registerCommand:()=>{},registerTool:tool=>{tools[tool.name]=tool;},
       exec:async (_binary,args)=>{calls.push(args);return {code:0,stdout:'{"results":[]}'};}});
@@ -137,7 +137,7 @@ test('explicit ChatGPT baseline uses bounded tools and a capped response', async
     await tools.source_query.execute('',{action:'search',paths:['app/model.js'],query:'needle'},null,null,ctx);
     assert.ok(calls[0].includes('app/model.js'));
     await tools.workflow_test.execute('',{},null,null,ctx);
-    assert.deepEqual(calls[1].slice(-3),['test','--state','/frozen/state.json']);
+    assert.ok(calls[1].includes('finalize'));assert.ok(calls[1].includes('/frozen/state.json'));assert.ok(calls[1].includes('--input'));
     assert.equal(await handlers.tool_call({toolName:'source_query',input:{action:'search',query:'new'}},ctx),undefined);
     const promptHandlers={};
     installPromptHooks({on:(n,h)=>{promptHandlers[n]=h;}},fileURLToPath(new URL('.',import.meta.url)));
@@ -147,6 +147,7 @@ test('explicit ChatGPT baseline uses bounded tools and a capped response', async
     assert.deepEqual(capped.input,payload.input);
     assert.deepEqual(capped.reasoning,payload.reasoning);
   }finally{
+    rmSync(folder,{recursive:true,force:true});
     for(const key of keys)if(old[key]===undefined)delete process.env[key];else process.env[key]=old[key];
   }
 });

@@ -10,6 +10,15 @@ from prefetch import packet, module_literals
 
 class PrefetchTests(unittest.TestCase):
     """Use an actual tiny Git project and an external acceptance fixture."""
+    def test_browser_skill_is_loaded_only_for_browser_boundary_tasks(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)/'project';root.mkdir();state=Path(folder)/'state.json'
+            state.write_text(json.dumps({'readonly_tests':{}}))
+            pure=packet(root,['.'],{'files':['src/engine/math.mjs'],'context':{}},state)
+            browser=packet(root,['.'],{'files':['src/ui/input.mjs'],'context':{}},state)
+            self.assertNotIn('Mouse displacement',pure)
+            self.assertIn('Mouse displacement',browser)
+            self.assertIn('TASK SKILL browser-interaction-review',browser)
     def test_selected_functions_and_literals_exclude_unrelated_bodies(self):
         """The packet carries its recipe without expanding to the whole module."""
         with tempfile.TemporaryDirectory() as folder:

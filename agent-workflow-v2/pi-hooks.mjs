@@ -275,16 +275,10 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
       if (applies(ctx.model) && process.env.QWEN_WORKFLOW_ROLE === 'code' &&
           process.env.QWEN_WORKFLOW_STOP_AFTER_PASS === '1' && !event.isError && process.env.QWEN_WORKFLOW_STATE) {
         const state = process.env.QWEN_WORKFLOW_STATE;
-        const tests = await pi.exec(python, [cli, 'test', '--state', state], { timeout:310000 });
-        const checked = await pi.exec(python, [cli, 'check', '--state', state], { timeout:30000 });
-        const gate = JSON.parse(checked.stdout);
-        const accepted = tests.code === 0 && checked.code === 0 && gate.passed;
-        const results = JSON.parse(tests.stdout).results || [];
-        const failed = results.filter(row => row.exit_code);
-        const index = failed.map(row => ({log:row.log,exit_code:row.exit_code,
-          failing_tests:readFileSync(row.log,'utf8').split('\n').filter(line => /^(?:not ok|[✖×])/.test(line)).map(line=>line.slice(0,300))}));
-        const failures = 'Complete failure index: '+JSON.stringify(index)+'\n'+
-          failed.map(row => readFileSync(row.log,'utf8').slice(-1800)).join('\n').slice(0,6000);
+        if(mutations.size>1)return {content:[...event.content,{type:'text',text:'Navigation refreshed. Other edits are finishing; verify after the batch.'}],details:{...(event.details||{}),shadow:summary}};
+        const checked=await pi.exec(python,[cli,'finalize','--state',state,'--automatic'],{timeout:2705000});
+        const gate=JSON.parse(checked.stdout);
+        const accepted=checked.code===0 && gate.passed===true;
         if (accepted) {
           const session = process.env.QWEN_WORKFLOW_SESSION;
           if (session) writeFileSync(join(session,'completion-stop.json'),JSON.stringify({
@@ -293,10 +287,9 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
           },null,2));
           ctx.abort();
         }
-        return {content:[...event.content,{type:'text',text:'Shadow refreshed: '+summary.snapshot+
-          '\nAutomatic frozen tests and gate:\n'+tests.stdout+'\n'+checked.stdout+'\n'+failures}],
-          details:{...(event.details||{}),shadow:summary,automaticTestsPassed:tests.code===0,
-            gatePassed:gate.passed,acceptedCompletion:accepted}};
+        return {content:[...event.content,{type:'text',text:'Native finalization: '+checked.stdout}],
+          details:{...(event.details||{}),shadow:summary,automaticTestsPassed:gate.tests_passed===true,
+            gatePassed:gate.passed===true,acceptedCompletion:accepted}};
       }
       const recovery=architectureEdit ? '' : await failedEditEvidence(pi,event,ctx,python,cli,scopeArgs);
       return { content: [...event.content, { type: 'text', text: 'Shadow refreshed: ' + summary.snapshot + recovery }],

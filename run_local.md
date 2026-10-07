@@ -67,6 +67,17 @@ mypi replan /path/to/project /path/outside/project/run/replan-request.json \
 
 Resume uses the original run directory and immutable task scope/acceptance. Completed tasks are not repeated. Failure exit 20 requests a replan; exit 21 means coding finished but final review failed. Changed baselines or fixtures require explicit recovery. A reviewer follow-up plan is saved separately and does not execute automatically.
 
+For a timeout with unchanged requirements and source since failure, retry without regenerating the plan:
+
+```sh
+mypi retry /path/to/project --from-run /path/outside/project/run \
+  --out /path/outside/project/retry.json --task-timeout 2700
+mypi execute /path/to/project /path/outside/project/retry.json \
+  --run-dir /path/outside/project/retry-run --reviewer qwen
+```
+
+This preserves existing code, original task baselines, criteria and test commands. It changes the pending task deadlines to 45 minutes and supplies a short continuation brief. It refuses changed source/fixtures; use evidence-based replanning for contract changes. Acceptance exits early, and individual tests remain capped at five minutes.
+
 For a complete but unaccepted planner proposal, use `mypi plan PROJECT --request-file corrections.md --draft-plan rejected.draft.json --planner qwen --out repaired.json`. Keep all proposal/correction/output files outside source. Qwen supplies sparse metadata or task-split corrections; Python preserves unchanged contracts and validates the full plan. Executed tasks still require `replan` and their recorded evidence.
 
 Progress is recorded/reported every 30 seconds. Metrics distinguish native token speed, first-token delay, token usage, model memory and sampled host RSS. Native metrics retain only the server's recent 32 requests; unavailable remote records are reported as unavailable. An SSH tunnel can be used in place of direct LAN serving, provided it forwards health/capabilities/metrics as well as completions.
@@ -74,6 +85,8 @@ Progress is recorded/reported every 30 seconds. Metrics distinguish native token
 ## Remember and skills
 
 `/remember` makes a fresh model request that distills essential information from the last completed assistant response into bounded `knowledge.md`, then refreshes shadow. It never copies the full answer as a fallback. `mypi skills` lists built-in executable skills and fixed input/output contracts. Web research includes DuckDuckGo, Wikipedia and focused public-page extraction. Optional domain skill bundles can be installed outside this repository and selected with `MYPI_DOMAIN_SKILLS`.
+
+Coding workers load only their core retrieval/finalization procedures by default. Python automatically refreshes architecture metadata, shadow and the map after edits. The `task-finalize` skill reuses current tests and returns bounded feedback. When an authored decision is required, Qwen calls `workflow_test` with a brief `architecture_note` and optional `architecture_title`; the skill inserts it and verifies the same frozen acceptance. Browser interaction guidance loads only for relevant UI tasks. Skills run trusted local Python/scripts; they do not add model calls for mechanical work.
 
 ## Architecture navigation and rebuild
 

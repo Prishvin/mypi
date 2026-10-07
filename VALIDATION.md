@@ -1,5 +1,25 @@
 # Release verification
 
+## Latest: local-Qwen efficiency and executable finalization — 2026-10-07
+
+| Check | macOS Apple Silicon | Linux ARM64 Docker |
+| --- | ---: | ---: |
+| Workflow Python | 276 passed | 276 passed |
+| Web Python | 22 passed | 22 passed |
+| Host artifacts/guards | 11 passed | 11 passed |
+| JavaScript | 66 passed | 66 passed |
+| **Total** | **375 passed** | **375 passed** |
+
+New coverage exercises the actual `task-finalize` skill with CPU tests: pending deliverables, preserved source/prose, current test reuse, idempotent notes, failed tests blocking publication, scope/role/insertion restrictions, bounded verbose failures and retained local logs. It also checks unchanged-contract retries, baseline/fixture/source guards, task-specific procedure loading, Node test totals and cleanup of a running skill when its parent is terminated. Python's selector can swallow an `InterruptedError`; the cleanup signal now raises a distinct exception, and the real subprocess regression passes on both platforms.
+
+Coding rules plus default skill instructions measure 1,601 tokens versus 3,969 before (59.7% less), using the same bundled tokenizer. This excludes framework/tool schemas, task packets and history. The isolated Docker test VM was stopped after verification.
+
+The live local-Qwen retry **accepted T1 in 107.409 seconds**, with **one model request, one `workflow_test` call and 15 passing tests**. All four source/test hashes were unchanged from its supplied packet. Qwen authored the brief missing architecture decision; Python inserted it, refreshed navigation and verified the gate (291 changed lines, zero violations), then stopped before another request. The scheduler advanced to T2. This completes existing work; it is not a fresh implementation benchmark against the original 1,200-second attempt.
+
+Native measurements: 10,305 uncached prompt tokens, 254 output tokens, 53 provider-reported reasoning tokens, 90.47-second cold first-token delay, 114.04 tok/s prefill, 19.71 tok/s decode and 34.57 GiB active backend allocation. Settings stayed at 98,304 server capacity, 65,536 task window, 24,576 input cap, 16,384 output cap, 1,024 thinking cap and medium effort. Most retry time was cold prompt processing. Game correctness and playability remain subject to later tasks and independent browser checks.
+
+## Original release verification
+
 Measured on 2026-10-06. This verifies client portability and the existing Pi workflow; it is not a new model comparison.
 
 | Check | macOS Apple Silicon | Linux ARM64 container |

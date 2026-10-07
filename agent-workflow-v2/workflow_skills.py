@@ -9,7 +9,8 @@ def instructions(base: Path, role='code') -> str:
     if not manifest.exists():
         return ''
     chunks = []
-    names = json.loads(manifest.read_text())['default_skills']
+    selected=json.loads(manifest.read_text())
+    names = selected.get('role_skills',{}).get(role,selected['default_skills'])
     if role in ('intake','memory'):
         return ''
     if role in ('chat', 'inspect'):

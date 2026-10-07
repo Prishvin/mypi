@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import {randomUUID} from 'node:crypto';
 import { Type } from '@earendil-works/pi-ai';
 import { applies, active, installPromptHooks, installToolHooks, installRefreshHooks } from './pi-hooks.mjs';
 import { installCompactionHooks } from './pi-compaction.mjs';
@@ -140,21 +141,22 @@ function registerSource(pi) {
 }
 
 function registerTests(pi) {
-  /** Execute only frozen test commands and return failure evidence. */
+  /** One call performs the reviewed native finalization skill and returns compact evidence. */
   pi.registerTool({
-    name: 'workflow_test', label: 'Declared unit tests',
-    description: 'Run the frozen task test commands and save validation evidence. No arbitrary shell command.',
-    parameters: Type.Object({}),
-    async execute(_id, _params, signal, _update, ctx) {
-      const state = process.env.QWEN_WORKFLOW_STATE;
-      if (!active(ctx.model) || process.env.QWEN_WORKFLOW_ROLE !== 'code' || !state) throw new Error('Coding phase needs a task contract');
-      const result = await pi.exec(python, [cli, 'test', '--state', state], { signal, timeout: 310000 });
-      const gate = await pi.exec(python, [cli, 'check', '--state', state], { signal, timeout: 30000 });
-      const failures = JSON.parse(result.stdout).results.filter(row => row.exit_code);
-      const tails = failureFeedback(failures);
-      return { content: [{ type: 'text', text: tails + '\n' + (result.stdout + gate.stdout).slice(0, 6000) }],
-        details: { testsPassed: result.code === 0, gatePassed: gate.code === 0 } };
-    },
+    name:'workflow_test',label:'Finalize task and verify',
+    description:'Run frozen tests and the completion gate. If an architecture note is required, pass one brief architecture_note and optional architecture_title: Python handles scoped insertion, hashes, shadow/map refresh and verification in this same call. Do not rewrite passing source to fix a missing note.',
+    parameters:Type.Object({architecture_note:Type.Optional(Type.String({minLength:1,maxLength:1200})),
+      architecture_title:Type.Optional(Type.String({minLength:1,maxLength:120}))}),
+    async execute(_id,params,signal,_update,ctx) {
+      const state=process.env.QWEN_WORKFLOW_STATE;
+      if(!active(ctx.model)||process.env.QWEN_WORKFLOW_ROLE!=='code'||!state)throw new Error('Coding phase needs a task contract');
+      const request=join(process.env.QWEN_WORKFLOW_SESSION,'finalization-input-'+randomUUID()+'.json');
+      writeFileSync(request,JSON.stringify(params));
+      const result=await pi.exec(python,[cli,'finalize','--state',state,'--input',request],{signal,timeout:2705000});
+      let data;try{data=JSON.parse(result.stdout);}catch{throw new Error((result.stdout+result.stderr).slice(0,2000));}
+      return {content:[{type:'text',text:result.stdout}],
+        details:{testsPassed:data.tests_passed===true,gatePassed:data.passed===true}};
+    }
   });
 }
 
@@ -181,7 +183,7 @@ function registerPlan(pi) {
         assumptions: Type.Optional(Type.Array(Type.String())),
         test_strategy: Type.Optional(Type.String()),
         estimated_changed_lines: Type.Integer({minimum:1,maximum:300}),
-        execution: Type.Optional(Type.Object({timeout_seconds:Type.Integer({minimum:30,maximum:1200}),
+        execution: Type.Optional(Type.Object({timeout_seconds:Type.Integer({minimum:30,maximum:2700}),
           test_timeout_seconds:Type.Integer({minimum:1,maximum:300}),on_failure:Type.Literal('replan')})),
         acceptance: Type.Array(Type.Object({ id: Type.String(), given: Type.String(), when: Type.String(), then: Type.String() })),
         files: Type.Array(Type.String()),

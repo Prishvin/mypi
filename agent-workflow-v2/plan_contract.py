@@ -23,8 +23,8 @@ def validate(task):
     policy = task.get('execution', {})
     if set(policy) != {'timeout_seconds', 'test_timeout_seconds', 'on_failure'}:
         raise ValueError('V3 execution needs timeout_seconds/test_timeout_seconds/on_failure')
-    if type(policy['timeout_seconds']) is not int or not 30 <= policy['timeout_seconds'] <= 1200:
-        raise ValueError('Todo timeout must be 30-1200 seconds')
+    if type(policy['timeout_seconds']) is not int or not 30 <= policy['timeout_seconds'] <= 2700:
+        raise ValueError('Todo timeout must be 30-2700 seconds')
     if type(policy['test_timeout_seconds']) is not int or not 1 <= policy['test_timeout_seconds'] <= 300:
         raise ValueError('Each test timeout must be 1-300 seconds')
     if policy['on_failure'] != 'replan':

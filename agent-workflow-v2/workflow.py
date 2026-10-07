@@ -58,6 +58,10 @@ def arguments():
     for name in ['test', 'check']:
         command = sub.add_parser(name)
         command.add_argument('--state', type=Path, required=True)
+    finalizing=sub.add_parser('finalize')
+    finalizing.add_argument('--state',type=Path,required=True)
+    finalizing.add_argument('--input',type=Path)
+    finalizing.add_argument('--automatic',action='store_true')
     reading = sub.add_parser('read-symbol')
     reading.add_argument('path')
     reading.add_argument('name')
@@ -89,7 +93,14 @@ def main() -> int:
     import shadow_navigation
     navigation = shadow_navigation.planning_context(args, root, prefixes)
     mapped = navigation[0] if navigation else None
-    if args.command == 'save-plan':
+    if args.command == 'finalize':
+        from skill_runner import prepare,run
+        session=args.state.resolve().parent
+        inputs=json.loads(args.input.read_text()) if args.input else {}
+        if args.automatic:inputs['automatic']=True
+        prepare(session,'task-finalize','code')
+        result=run(session,'task-finalize',inputs,'code')['data']
+    elif args.command == 'save-plan':
         import os
         proposal = json.loads(args.input.read_text())
         if os.environ.get('QWEN_WORKFLOW_PLAN_DRAFT'):

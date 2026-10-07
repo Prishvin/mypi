@@ -201,9 +201,11 @@ Built-in executable skills:
 | architecture-maintenance | Automatic Python after-change update of architecture metadata, shadow and map. |
 | architecture-sync-check | Detect drift; rebuild after confirmation and verify consistency. |
 | architecture-update | Append/insert scoped decision prose with a current document hash. |
+| task-finalize | Insert an optional task decision, refresh navigation, reuse fresh frozen tests and enforce acceptance in one call. |
+| browser-interaction-review | Load browser lifecycle/input/visibility checks for UI tasks; its checklist does not claim tests ran. |
 | text-metrics | Example deterministic multi-step script with typed output. |
 
-Default workflow skills cover granular planning, scoped retrieval, verification/shadow updates and dependency contracts. Skills have fixed input/output contracts, purposes, native scripts and pre/post-processing instructions. Optional electronics/KiCad bundles remain external, selected with **MYPI_DOMAIN_SKILLS**.
+Skills have fixed input/output contracts, purposes, native scripts and pre/post-processing instructions. Coding sessions load scoped retrieval and finalization instructions; architects load granular planning, architecture navigation and research. Relevant task procedures load with the selected packet, and other skills remain available through the bounded catalog. This keeps unrelated procedures out of each Qwen request. Optional electronics/KiCad bundles remain external, selected with **MYPI_DOMAIN_SKILLS**.
 
 ### 4. Build an architecture-linked shadow
 
@@ -259,7 +261,9 @@ The worker uses native tools to edit and run the declared tests. Test results, s
 
 After every successful or partial failed edit/write, the Pi extension directly invokes the **architecture-maintenance** Python skill. No model call is used. It classifies added/modified/deleted files and unambiguous exact-content renames, marks interface changes, updates the owned interface block in **architecture.md**, refreshes prototypes and rebuilds a missing/stale compact map. Already-current maps are retained. Every coding contract reserves architecture.md before editing; this consumes one of its eight file slots. Existing architectural prose and line endings are preserved.
 
-Changed responsibilities/invariants still need a human-readable explanation: the worker uses **architecture-update** to append a section or insert prose before a section's children. Full-document replacement is blocked. Set **context.architecture_update_required=true** when a todo needs such a decision; acceptance requires the current insertion receipt as well as tests. A mechanical interface record does not claim to understand behavior.
+Changed responsibilities/invariants still need a human-readable explanation. The worker calls **workflow_test({architecture_note, architecture_title})**, which invokes the **task-finalize** skill: Python resolves current hashes, appends the brief Qwen-authored decision, refreshes navigation, runs frozen tests and checks acceptance. Use **architecture-update** for a precise insertion into an existing section. Full-document replacement is blocked. Set **context.architecture_update_required=true** only when a todo needs a new decision; acceptance then requires the current insertion receipt as well as tests. Implementing already-planned interfaces normally needs only automatic metadata maintenance.
+
+Finalization runs automatically after edits once declared new files exist. Tests already bound to the current snapshot are reused; a source or architecture change invalidates them. Passing tests with a missing note trigger a targeted finalization instruction, not another code rewrite. Failing tests prevent publication of a completion note. Tool feedback is bounded; full test logs and gate results remain local. Native acceptance stops the worker without another model request.
 
 The **architecture-sync-check** skill reports stale code/architecture hashes, prototypes or map content. It asks for confirmation in the main chat before rebuilding external drift. Use **/rebuild** to execute that native skill and verify the result; in the web UI this bypasses classification and model startup entirely. A coding rebuild respects frozen scope, and all rebuilds preserve authored decision prose. Before accepting completion it checks the current source snapshot, declared file scope, size rules and fresh test evidence. Source functions should be individually testable, with small modules and pure boundaries where practical.
 
@@ -271,7 +275,9 @@ A failed test, unexpected scope change, stale fixture, deadline or budget overfl
 
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 
-Use **resume** for an interruption. Use **replan** for an actual failed contract. A changed source baseline or fixture requires recovery rather than silent acceptance.
+Use **resume** for an interruption. Use **replan** when behavior, scope or acceptance needs changing. For a stopped timeout/execution/acceptance failure with unchanged source and contracts, an explicit **retry** creates a new plan without asking an LLM to regenerate it. It preserves original baselines, completed tasks, files, criteria, tests and context budgets, and changes only task deadlines. Changed source or immutable fixtures block this retry.
+
+Task deadlines can be **30–2,700 seconds**. Planning guidance uses shorter limits for simple tasks and reserves up to 45 minutes for setup or repairs. A longer deadline is a ceiling; native acceptance exits immediately. Individual test commands still have a maximum 300-second deadline. See [the workflow review](WORKFLOW_REVIEW.md) for measured overhead and remaining limitations.
 
 ### 9. Review the outcome
 
@@ -341,6 +347,12 @@ mypi resume /path/to/project /path/outside/project/plan.json \
 
 mypi replan /path/to/project /path/outside/project/run/replan-request.json \
   --planner qwen --out /path/outside/project/replacement.json
+
+# Retry unchanged work after a timeout, preserving its original acceptance:
+mypi retry /path/to/project --from-run /path/outside/project/run \
+  --out /path/outside/project/retry.json --task-timeout 2700
+mypi execute /path/to/project /path/outside/project/retry.json \
+  --run-dir /path/outside/project/retry-run --reviewer qwen
 
 mypi review /path/to/project /path/outside/project/plan.json \
   --run-dir /path/outside/project/run --reviewer chatgpt

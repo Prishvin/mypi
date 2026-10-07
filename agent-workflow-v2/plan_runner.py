@@ -155,6 +155,13 @@ def run_locked(root, path, plan, folder, invoke_fn, resume=False):
         state = {'plan': str(path), 'project': str(root), 'contract_digest': digest,
                  'attempts': [], 'started_epoch': time.time(), 'snapshot': snapshot}
         state['architecture_seed'] = architecture_seed
+        retry=plan.get('operational_retry')
+        if retry:
+            if snapshot!=plan['replan_lineage']['snapshot']:raise ValueError('Retry source changed; replan from fresh evidence')
+            task=next(t for t in plan['tasks'] if t['id']==retry['todo'])
+            runner_resume.write_brief(folder,task,Path(retry['session']),task['files'],
+                                      [t['id'] for t in plan['replan_lineage']['completed']])
+            state.update(resume_prompt=str(folder/'resume-brief.txt'),resume_todo=task['id'])
     checkpoint(folder, state, status='ready')
     return advance(root, path, plan, folder, state, invoke_fn)
 

@@ -119,6 +119,9 @@ class ResearchTests(unittest.TestCase):
     def test_default_skills_are_active_and_bounded(self):
         """The explicit private loader enables research without global skill discovery."""
         text = instructions(Path(__file__).resolve().parent)
-        for name in ['web-research','granular-planning','scoped-retrieval','verification-shadow','dependency-contracts']:
+        for name in ['scoped-retrieval','task-finalize']:
             self.assertIn('ACTIVE PRIVATE PI SKILL: '+name,text)
+        self.assertNotIn('ACTIVE PRIVATE PI SKILL: granular-planning',text)
+        self.assertIn('duckduckgo-research',text)  # Available on demand, not removed.
+        self.assertNotIn('Mouse displacement',text)  # Browser procedure is task-local.
         self.assertLess(len(text.encode()),14000)

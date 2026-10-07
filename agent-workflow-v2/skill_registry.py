@@ -39,7 +39,8 @@ def load(name, base=BASE):
         raise ValueError('A skill must declare its allowed workflow roles')
     scoped = name in {'architecture-update', 'architecture-maintenance'} and data.get('side_effects') == 'scoped-architecture' and data['roles'] == ['code']
     bound = name == 'architecture-sync-check' and data.get('side_effects') == 'bound-navigation'
-    if data.get('side_effects') != 'session-artifacts' and not scoped and not bound:
+    finalizer = name == 'task-finalize' and data.get('side_effects') == 'scoped-task' and data['roles'] == ['code']
+    if data.get('side_effects') != 'session-artifacts' and not scoped and not bound and not finalizer:
         raise ValueError('Skills must declare generated files as owned session artifacts')
     Draft202012Validator.check_schema(data['input_schema'])
     binaries = data.get('binaries', {})
@@ -54,8 +55,8 @@ def load(name, base=BASE):
             raise ValueError('Skill commands must be bounded literal argv lists')
         if argv[0] not in {'{' + key + '}' for key in binaries}:
             raise ValueError('Step executable must be a declared binary placeholder')
-        if not 1 <= step.get('timeout_seconds', 0) <= 45:
-            raise ValueError('Each skill step needs a 1-45 second deadline')
+        if not 1 <= step.get('timeout_seconds', 0) <= (2700 if finalizer else 45):
+            raise ValueError('Skill step deadline exceeds its allowed bound')
         if not 512 <= step.get('max_output_bytes', 0) <= 8192:
             raise ValueError('Each skill step needs a 512-8192 byte output bound')
     digest = hashlib.sha256()

@@ -9,5 +9,16 @@
     "architecture-sync-check",
     "architecture-maintenance"
   ],
-  "loading": "Explicit private Pi extension, pinned and active at every session start; no global skill discovery"
+  "loading": "Explicit private Pi extension, pinned and active at every session start; no global skill discovery",
+  "role_skills": {
+    "code": [
+      "scoped-retrieval",
+      "task-finalize"
+    ],
+    "architect": [
+      "granular-planning",
+      "architecture-navigation",
+      "web-research"
+    ]
+  }
 }

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "name": "task-finalize",
+  "purpose": "Finalize one frozen task: insert a brief authored architecture note when needed, maintain maps, reuse fresh tests and verify acceptance in Python.",
+  "roles": ["code"],
+  "side_effects": "scoped-task",
+  "pre_prompt": "Use workflow_test as the one-call shortcut. Supply architecture_note only for required new responsibilities/invariants/decisions, with optional architecture_title. Keep the note brief and factual. Python resolves hashes and scope, inserts the note without replacing existing prose, refreshes shadow/map and runs only frozen test commands. No preparatory map/hash lookup is required.",
+  "post_prompt": "passed=true is native acceptance. Otherwise follow next_action and only repair listed failures. Passing tests with a missing note means finalize the note, not rewrite passing code. Full evidence remains in the session.",
+  "input_schema": {"type":"object","additionalProperties":false,"properties":{
+    "architecture_note":{"type":"string","minLength":1,"maxLength":1200},
+    "architecture_title":{"type":"string","minLength":1,"maxLength":120},
+    "automatic":{"type":"boolean"}
+  }},
+  "binaries":{"python":"python"},
+  "steps":[{"argv":["{python}","{skill}/scripts/finalize.py","{session}","{input}"],"timeout_seconds":2700,"max_output_bytes":8192}]
+}

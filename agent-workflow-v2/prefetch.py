@@ -88,6 +88,14 @@ def packet(root: Path, prefixes: list[str], task: dict, state: Path, limit=24000
         used += len(section.encode())
         return True
 
+    # Procedure prompts are task-local; browser rules do not tax pure math/CPU tasks.
+    if any(Path(name).suffix=='.html' or '/ui/' in '/'+name for name in task['files']):
+        from skill_runner import prepare
+        procedure=prepare(state.parent,'browser-interaction-review','code')
+        add('TASK SKILL browser-interaction-review',procedure['pre_prompt']+'\n'+procedure['post_prompt'])
+    if recipe.get('architecture_update_required'):
+        add('REQUIRED FINALIZATION', 'After code/tests pass, call workflow_test with a brief architecture_note and optional architecture_title. Python runs task-finalize; no document hash/skill preparation call is needed.')
+
     focused = recipe.get('selected_symbols_only', False)
     planned_new = {relative for relative in task['files'] if not (root / relative).exists()}
     if planned_new:
