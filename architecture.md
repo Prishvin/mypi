@@ -75,6 +75,10 @@ guard counts for review, excluding launch commands, prompts and source bodies.
 The observer also binds deadline feedback to the task's launch and owned process
 start time. Near expiry, the Pi context hook supplies a remaining-time notice;
 this changes neither timeout enforcement nor stagnation/acceptance decisions.
+`token_budget.history_trigger` matches the installed Pi full-usage estimator;
+it does not subtract a tool/system envelope twice. Serialized admission remains
+the hard input guard. Recovery reads historical session settings for the actual
+compaction trigger rather than inferring it from the current implementation.
 
 `retrieval.read_symbol` prefers exact qualified locators and resolves a short name
 only when it uniquely identifies a symbol in the requested file. It returns the

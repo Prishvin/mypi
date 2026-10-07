@@ -323,6 +323,8 @@ A separate Python watchdog detects stalled execution even after all files exist.
 
 The same checkpoint records the bound attempt's remaining wall time. Near the deadline (the last third, capped at five minutes and at least one minute), it reminds the executor that prompt loading, reasoning, tools and tests share that allowance. The reminder favors a small scoped edit and verification, preserves every acceptance check, and does not extend the timeout or count clock changes as progress. The process supervisor remains responsible for enforcing the deadline.
 
+Compaction follows Pi's full provider-usage estimate, which already includes system and tool instructions. It retains the 25% admission margin and 256-token template reserve without subtracting another 4,096 tokens for those same instructions. For a 24,576-token input cap, the trigger is 19,456 rather than 15,360 tokens. Cached input and trailing tool results still count; the complete serialized request must pass admission before every model call. Recovery reads the failed session's recorded compaction setting, so old sessions are not described using a newer policy.
+
 Recovery also receives effective executor limits inherited from the selected profile, including its thinking cap, and counts of completed requests that hit the native thinking guard. Missing telemetry is marked unknown. Frequent cap hits are evidence to assess, not an automatic instruction to raise the cap.
 
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.

@@ -30,7 +30,7 @@ class ProfileTests(unittest.TestCase):
         args = options(**kwargs)
         return args, profiles.resolve(args, task or {}, profiles.apply_identity(args))
 
-    def test_compaction_precedes_serialized_admission_with_envelope_headroom(self):
+    def test_compaction_precedes_serialized_admission_without_double_counting_envelope(self):
         import math
         from token_budget import ADMISSION_FACTOR, TEMPLATE_RESERVE
         with tempfile.TemporaryDirectory() as folder,patch('launch.server_config.load',return_value={
@@ -41,7 +41,7 @@ class ProfileTests(unittest.TestCase):
                 launch.tune_context(folder,budget,8192)
                 settings=json.loads((folder/'settings.json').read_text())
                 trigger=98304-settings['compaction']['reserveTokens']
-                self.assertLessEqual(math.ceil((trigger+4096)*ADMISSION_FACTOR)+TEMPLATE_RESERVE,budget)
+                self.assertLessEqual(math.ceil(trigger*ADMISSION_FACTOR)+TEMPLATE_RESERVE,budget)
                 self.assertEqual(settings['compaction']['keepRecentTokens'],min(4000,budget//3))
                 model=json.loads((folder/'models.json').read_text())['providers']['local-qwen-workflow']['models'][0]
                 self.assertEqual((model['contextWindow'],model['maxTokens']),(98304,8192))

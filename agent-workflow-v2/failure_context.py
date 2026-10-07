@@ -17,15 +17,19 @@ def build(root,packet,provider):
     session = Path(packet['session']) if packet.get('session') else None
     from runner_process import read
     from token_budget import history_trigger
+    recorded_trigger = None
     if session:
         brief['execution_progress'] = read(session/'execution-progress.json').get('brief', {})
         from recovery_controls import summarize as control_summary
         launch = read(session/'launch.json')
         if launch.get('project') == str(root.resolve()) and launch.get('role') == 'code':
             brief.update(control_summary(launch, packet.get('metrics', {})))
+            from recovery_controls import compaction_trigger
+            recorded_trigger = compaction_trigger(session)
     context = packet['failed_todo']['context']
     brief['context_pressure'] = {'task_input_cap': context['max_input_tokens'],
-        'compaction_trigger': history_trigger(context['max_input_tokens']),
+        'compaction_trigger': recorded_trigger if recorded_trigger is not None else history_trigger(context['max_input_tokens']),
+        'trigger_source': 'recorded_session_settings' if recorded_trigger is not None else 'current_policy_estimate',
         'task_window': context.get('window_tokens'),
         'note': 'Compaction consumes history headroom and may invalidate cached prefixes. '
                 'Use measured requests and preserved investigation when sizing a corrective task.'}

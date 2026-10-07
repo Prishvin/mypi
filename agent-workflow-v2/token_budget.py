@@ -10,8 +10,8 @@ ADMISSION_FACTOR = 1.25
 TEMPLATE_RESERVE = 256
 
 
-def history_trigger(limit: int, envelope_reserve: int = 4096) -> int:
-    """Compact history before serialized envelope and admission margin consume the cap."""
+def history_trigger(limit: int, envelope_reserve: int = 0) -> int:
+    """Bound Pi's full provider-usage estimate; reserve an envelope only if excluded."""
     raw_capacity = math.floor((limit - TEMPLATE_RESERVE) / ADMISSION_FACTOR)
     return max(512, raw_capacity - envelope_reserve)
 

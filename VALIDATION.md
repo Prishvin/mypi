@@ -741,3 +741,21 @@ feedback now require a nonempty search query and point file-only requests to
 `inspect`. Whitespace-only queries are rejected. **29 JavaScript routing, scope,
 architecture-maintenance and provider-isolation checks passed**; this does not
 change the running review's pinned tools or silently reinterpret its request.
+
+## Compaction accounting correction (2026-10-08 local time)
+
+The installed Pi `estimateContextTokens` uses full provider usage, including
+system/tools and cached input, then adds trailing-message estimates. Mypi had
+subtracted an extra 4,096-token envelope when configuring the compaction trigger.
+This caused the recorded 16,379-token T05 context to compact below its actual
+24,576-token input allowance. The corrected trigger is 19,456, still retaining
+the 25% serialized-admission margin plus 256 template tokens. The final full
+request admission check is unchanged. Existing workers retain pinned settings.
+
+**37 Python and 17 JavaScript tests passed on macOS**, including the installed
+Pi estimator, cached input/trailing tool results, the earlier oversized Linux
+payload, strict admission rejection, runtime capture, recovery and historical
+compaction settings. The recorded Linux-sized overflow still triggers compaction;
+these tests were executed on macOS. Recovery packets now distinguish recorded
+session thresholds from fallback current-policy estimates. Reduced live latency
+has not yet been demonstrated; fewer premature compactions are the intended effect.

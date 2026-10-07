@@ -1,6 +1,21 @@
 """Expose measured executor controls to recovery without launcher prompts or source."""
 
 
+def compaction_trigger(session):
+    """Read the historical session setting, rather than infer it from today's policy."""
+    from runner_process import read
+    settings = read(session / 'pi-config/settings.json').get('compaction', {})
+    models = read(session / 'pi-config/models.json')
+    entries = models.get('providers', {}).get('local-qwen-workflow', {}).get('models', [])
+    window = entries[0].get('contextWindow') if entries else None
+    reserve = settings.get('reserveTokens')
+    if (isinstance(window, int) and not isinstance(window, bool)
+            and isinstance(reserve, int) and not isinstance(reserve, bool)
+            and window > 0 and 0 <= reserve < window):
+        return window - reserve
+    return None
+
+
 def summarize(launch, metrics):
     """Distinguish inherited thinking limits and forced closes from planning ceilings."""
     settings = launch.get('effective_settings', {})
