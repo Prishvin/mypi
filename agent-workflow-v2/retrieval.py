@@ -23,13 +23,14 @@ def source_path(root: Path, relative: str) -> Path:
 
 
 def read_symbol(root: Path, relative: str, name: str, offset=0, limit=100) -> dict:
-    """Return one exact function/class span in bounded pages with source identity."""
+    """Return an exact or uniquely scoped function/class in bounded pages."""
     path = source_path(root, relative)
     record = inspect_file(path, root.resolve() if path.is_relative_to(root.resolve()) else path.parent)
     matches = [s for s in record['symbols'] if s['name'] == name]
+    if not matches:
+        matches = [s for s in record['symbols'] if s['name'].split('.')[-1].split('#')[0] == name]
     if len(matches) != 1:
-        candidates = [s['name'] for s in record['symbols']
-                      if s['name'].split('.')[-1].split('#')[0] == name][:8]
+        candidates = [s['name'] for s in matches][:8]
         raise ValueError('Use an exact qualified symbol name. Candidates: ' + json.dumps(candidates))
     symbol = matches[0]
     if 'start_byte' in symbol:
@@ -41,7 +42,8 @@ def read_symbol(root: Path, relative: str, name: str, offset=0, limit=100) -> di
     excerpt = '\n'.join(f'{symbol["line"] + i}: {rows[i]}' for i in range(start, stop))
     if len(excerpt.encode()) > 12000:
         raise ValueError('Symbol page too large; request fewer lines')
-    return {'path': relative, 'sha256': record['sha256'], 'symbol': name,
+    return {'path': relative, 'sha256': record['sha256'], 'symbol': symbol['name'],
+            **({'requested_symbol': name} if name != symbol['name'] else {}),
             'total_lines': symbol['lines'], 'next_offset': stop,
             'more': stop < len(rows), 'source': excerpt}
 

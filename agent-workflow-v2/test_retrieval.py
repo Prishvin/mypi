@@ -110,6 +110,25 @@ class RetrievalTests(unittest.TestCase):
         self.assertNotIn('return 1', str(error.exception))
         self.assertIn('return 1', read_symbol(self.root, 'nested.js', 'a.restart')['source'])
 
+    def test_unique_short_name_returns_qualified_identity_and_exact_span(self):
+        (self.root/'nested.js').write_text('function factory(){const locate=(x)=>x+1; return {locate};} function other(){return "unrelated";}')
+        found=read_symbol(self.root,'nested.js','locate')
+        exact=read_symbol(self.root,'nested.js','factory.locate')
+        self.assertEqual(found['symbol'],'factory.locate')
+        self.assertEqual(found['requested_symbol'],'locate')
+        self.assertEqual(found['source'],exact['source']);self.assertEqual(found['sha256'],exact['sha256'])
+        self.assertNotIn('unrelated',found['source'])
+        with self.assertRaises(ValueError):read_symbol(self.root,'nested.js','wrong.locate')
+        batch=read_symbols(self.root,'nested.js',['locate','missing'])
+        self.assertEqual(batch['symbols'][0]['symbol'],'factory.locate')
+        self.assertEqual(batch['errors'][0]['symbol'],'missing')
+
+    def test_exact_names_keep_precedence_over_nested_short_matches(self):
+        (self.root/'scopes.py').write_text('def locate():\n    return 1\nclass Store:\n    def locate(self):\n        return 2\n')
+        found=read_symbol(self.root,'scopes.py','locate')
+        self.assertEqual(found['symbol'],'locate');self.assertNotIn('requested_symbol',found)
+        self.assertNotIn('return 2',found['source'])
+
     def test_inline_html_and_decorators_keep_precise_spans(self):
         """Inline scripts and decorated functions preserve their true boundaries."""
         (self.root / 'view.html').write_text('<script\n type="module">function go() { return 1; }</script><p>outside</p>')

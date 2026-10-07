@@ -124,7 +124,7 @@ function registerSource(pi) {
   /** Retrieve one symbol or bounded references for the local executor. */
   pi.registerTool({
     name: 'source_query', label: 'Targeted source',
-    description: 'Read exact qualified symbols, variable declarations, literal rg matches, or one bounded source page. symbol/search require query. variables defaults to all. file reads one exact project file with optional line offset and no query. fixture reads an exact absolute pinned test file from frozen tests argv, with no query; project source passed as fixture is served as a bounded file page. Never pass a directory or test index. Symbol batches accept 1-8 whitespace-separated names. Line prefixes are navigation labels, not edit text. Read supplied spans first; use next_offset only when more=true.',
+    description: 'Read qualified symbols (a short name resolves only when uniquely matched in that file), variable declarations, literal rg matches, or one bounded source page. symbol/search require query. variables defaults to all. file reads one exact project file with optional line offset and no query. fixture reads an exact absolute pinned test file from frozen tests argv, with no query; project source passed as fixture is served as a bounded file page. Never pass a directory or test index. Symbol batches accept 1-8 whitespace-separated names. Line prefixes are navigation labels, not edit text. Read supplied spans first; use next_offset only when more=true.',
     parameters: Type.Object({
       action: Type.Union(['symbol', 'variables', 'search', 'file', 'fixture'].map(x => Type.Literal(x))),
       paths: Type.Array(Type.String(), { minItems: 1, maxItems: 5 }),

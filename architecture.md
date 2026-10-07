@@ -61,3 +61,7 @@ an evidence-based next action. `pi-progress-guard.mjs` limits repeated mutations
 while declared new files are absent, using a session journal that compaction
 cannot erase. `execution_audit.py` streams Pi events into bounded recovery counts
 and diagnostics without implementation bodies or reasoning.
+
+`retrieval.read_symbol` prefers exact qualified locators and resolves a short name
+only when it uniquely identifies a symbol in the requested file. It returns the
+qualified identity and exact bounded span; ambiguity still requires selection.

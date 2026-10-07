@@ -564,5 +564,24 @@ Pi hook lifecycle, rejected edits, persisted rewrite counts, missing-file
 creation, compaction contract preservation, stale/mismatched continuation,
 one-attempt limits, CLI exclusivity, finalization, resume and task scheduling.
 The real failed T03 contract plus fresh progress fits an 8,162-byte handoff.
-Qwen review session `a246673f8db7` received the recorded audit; its outcome is
-still pending. Codex did not edit game source, tests or task-specific repair prose.
+Qwen review session `a246673f8db7` received the recorded audit and published a
+validated repair in **327.205 seconds**, after correcting one rejected reasoning
+effort value. It used 4,651 output tokens; the two decode rates were 19.85 and
+42.76 tokens/s. All 17 other pending contracts and all frozen acceptance cases,
+test commands and file scopes were compared and preserved. The next worker
+created the missing test file and collected eight tests; implementation is still
+under repair. Codex did not edit game source, tests or task-specific repair prose.
+
+### Unambiguous symbol lookup — 2026-10-07
+
+The active worker requested a short function name with exactly one qualified
+match, which formerly produced a traceback and forced another model request.
+`retrieval.read_symbol` now resolves that unique short name in the requested file
+and returns its qualified identity plus the original query. Exact locators retain
+precedence; ambiguous names, nonexistent scopes and path escapes remain rejected.
+Pagination, byte hashes and source span boundaries are unchanged.
+
+**14 Python and 20 JavaScript tests passed**, including unique nested JavaScript
+retrieval, exact Python-name precedence, ambiguity, wrong qualification, batch
+partial success, pinned fixtures, source limits and the Pi tool adapter. The
+current worker's immutable runtime was retained; future sessions receive the fix.
