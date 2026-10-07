@@ -6,10 +6,21 @@ import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
-import {installExecutionProgressHooks,executionProgress} from './pi-execution-progress.mjs';
+import {installExecutionProgressHooks,executionProgress,progressNotice} from './pi-execution-progress.mjs';
 
 const runtime=dirname(fileURLToPath(import.meta.url));
 const python=process.env.PYTHON || join(runtime,'.venv/bin/python');
+
+test('request-local notices stay small even when the journal is large',()=>{
+  const brief={status:'warning',rounds_without_progress:2,compactions_without_progress:1,
+    repeated_read_count:2,recent_tools:Array(100).fill({query:'PRIVATE_SOURCE'.repeat(100)}),
+    tests:Array(100).fill({observations:['PRIVATE_TEST'.repeat(100)]}),
+    deadline:{near_deadline:true,remaining_seconds:239}};
+  const before=JSON.stringify(brief),text=progressNotice(brief);
+  assert.ok(text.length<800);assert.doesNotMatch(text,/PRIVATE_/);
+  assert.match(text,/239 seconds/);assert.match(text,/"status":"warning"/);
+  assert.equal(JSON.stringify(brief),before);
+});
 
 function setup(t) {
   const session=mkdtempSync(join(tmpdir(),'pi-stagnation-')),old={...process.env};

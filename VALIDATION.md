@@ -809,3 +809,27 @@ exact request identity (including the optional server prefix), cancellation,
 duplicate/legacy records, missing decode rates, missing reasoning usage and
 existing backend/provider attribution. This records the gap; it does not repair
 or make claims about the backend's missing record.
+
+## Request-local compaction headroom (2026-10-08 local time)
+
+Executor 61ac7d39c310 (thinking off) ran four completed requests and the expected
+8/10 test baseline, then stopped after 186.635 seconds at the input admission
+guard. It made no game edits. The installed Pi estimator reported 19,166 tokens
+(18,522 measured usage + 644 estimated trailing tokens); the actual serialized
+request counted 19,917 and required 25,153 against a 24,576 cap. The new tool page
+was denser than Pi's character estimate, and mypi added a 414-token progress
+checkpoint after Pi checked its compaction threshold.
+
+The previous zero-incremental-reserve change overlooked request-local additions.
+Compaction now retains 1,024 tokens for incremental tool-estimate uncertainty and
+small notices (18,432 trigger for this task), without restoring the old duplicate
+4,096-token system/tool envelope reserve. Progress notices omit duplicated tool
+and test history, which remains fully recorded locally. The strict serialized
+admission guard remains unchanged. This bounds the observed problem; unusually
+dense large tool results may still require the guard to stop a request.
+
+**25 Python and 19 JavaScript checks passed on macOS.** The installed Pi estimator
+now compacts the recorded 19,166-token case, still avoids the earlier unnecessary
+16,379-token compaction, and retains complete frozen acceptance in deterministic
+handoffs. Large journals produce small notices without losing local evidence or
+changing watchdog/deadline enforcement. This is not yet a live success claim.

@@ -26,6 +26,19 @@ export async function executionProgress(pi,python,runtime,ctx,compaction=false) 
   }
 }
 
+export function progressNotice(brief) {
+  // Detailed observations already exist in tool results and the durable journal.
+  // Keep this request-local addition small; Pi checks compaction before this hook.
+  const status={status:brief.status,rounds_without_progress:brief.rounds_without_progress,
+    compactions_without_progress:brief.compactions_without_progress,repeated_read_count:brief.repeated_read_count};
+  let text='Native progress checkpoint (observed tool evidence):\n'+JSON.stringify(status);
+  if(brief.status==='warning')text+='\nNo measured progress in two model rounds. Use prior evidence for a scoped edit or test; avoid repeated reads. Preserve frozen acceptance. If blocked, report evidence. Further unchanged rounds stop for review.';
+  if(brief.deadline?.near_deadline)text+='\nATTEMPT DEADLINE: '+brief.deadline.remaining_seconds+
+    ' seconds remain, including prompt loading, reasoning, tools and tests. Prefer a small edit and verification. '+
+    'Preserve all acceptance checks; the timeout is unchanged.';
+  return text+'\nDetailed history remains in execution-progress.json and prior tool results.';
+}
+
 export function installExecutionProgressHooks(pi,python,runtime) {
   const pending=new Map();
   const save=row=>appendFileSync(join(process.env.QWEN_WORKFLOW_SESSION,'execution-events.jsonl'),JSON.stringify(row)+'\n');
@@ -56,10 +69,6 @@ export function installExecutionProgressHooks(pi,python,runtime) {
     if(!brief)return;
     if(brief.status==='stop')throw new Error('Stopped for evidence-based replanning: no_progress');
     if(brief.status==='warning'||brief.deadline?.near_deadline)return {messages:[...event.messages,{role:'user',timestamp:Date.now(),
-      content:[{type:'text',text:'Native progress checkpoint (observed tool evidence):\n'+JSON.stringify(brief)+
-        (brief.deadline?.near_deadline ? '\nATTEMPT DEADLINE: '+brief.deadline.remaining_seconds+
-          ' seconds remain, including prompt loading, reasoning, tools and verification. Prefer a small scoped edit and fresh tests; '+
-          'avoid redundant reads, long rewrites or explanations. Preserve all acceptance checks. '+
-          'If completion is infeasible, preserve partial work and report the concrete blocker. The timeout is unchanged.' : '')}]}]};
+      content:[{type:'text',text:progressNotice(brief)}]}]};
   });
 }

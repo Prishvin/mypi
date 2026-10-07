@@ -8,10 +8,13 @@ from tokenizers import Tokenizer
 
 ADMISSION_FACTOR = 1.25
 TEMPLATE_RESERVE = 256
+# Pi estimates new tool text by characters and checks before request-local notices.
+# This is incremental uncertainty, not another system/tool envelope reservation.
+REQUEST_TRANSFORM_RESERVE = 1024
 
 
-def history_trigger(limit: int, envelope_reserve: int = 0) -> int:
-    """Bound Pi's full provider-usage estimate; reserve an envelope only if excluded."""
+def history_trigger(limit: int, envelope_reserve: int = REQUEST_TRANSFORM_RESERVE) -> int:
+    """Leave bounded headroom for trailing-tool estimates and request-local notices."""
     raw_capacity = math.floor((limit - TEMPLATE_RESERVE) / ADMISSION_FACTOR)
     return max(512, raw_capacity - envelope_reserve)
 

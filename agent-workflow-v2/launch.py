@@ -240,7 +240,8 @@ def tune_context(folder: Path, input_tokens: int, output_tokens: int) -> None:
     (folder / 'models.json').write_text(json.dumps(models, indent=2))
     settings = json.loads((folder / 'settings.json').read_text())
     # Installed Pi uses full provider usage (including system/tools) plus trailing
-    # messages. Keep admission headroom, without subtracting the envelope twice.
+    # messages. Leave incremental headroom for estimated trailing tool text and
+    # request-local notices, without subtracting the whole envelope twice.
     from token_budget import history_trigger
     trigger = history_trigger(input_tokens)
     settings['compaction'].update(reserveTokens=descriptor['contextWindow'] - trigger,

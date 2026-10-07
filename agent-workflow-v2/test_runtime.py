@@ -44,8 +44,8 @@ class RuntimeTests(unittest.TestCase):
             settings = json.loads((config / 'settings.json').read_text())
             self.assertEqual(model['contextWindow'], 32768)
             self.assertEqual(model['maxTokens'], 4096)
-            # Full provider usage already includes the envelope; retain admission margin.
-            self.assertEqual(settings['compaction']['reserveTokens'], 23373)
+            # Full usage includes the envelope; reserve incremental tool/notice uncertainty.
+            self.assertEqual(settings['compaction']['reserveTokens'], 24397)
 
     def test_64k_context_can_reserve_32k_output(self):
         """The expanded profile preserves real context while limiting input separately."""
@@ -56,8 +56,8 @@ class RuntimeTests(unittest.TestCase):
             descriptor = json.loads((config / 'models.json').read_text())['providers']['local-qwen-workflow']['models'][0]
             self.assertEqual(descriptor['contextWindow'], 65536)
             self.assertEqual(descriptor['maxTokens'], 32768)
-            # A 24576 admission cap permits 19456 full-request raw tokens.
-            self.assertEqual(json.loads((config / 'settings.json').read_text())['compaction']['reserveTokens'], 46080)
+            # 19456 raw capacity minus 1024 for trailing estimates and local notices.
+            self.assertEqual(json.loads((config / 'settings.json').read_text())['compaction']['reserveTokens'], 47104)
 
     def test_model_context_ceilings(self):
         """27B can select 96k while 128k is available only for Flash Next."""

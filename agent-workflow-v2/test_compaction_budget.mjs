@@ -48,6 +48,19 @@ test('the recorded oversized Linux payload still crosses the corrected trigger',
   assert.equal(shouldCompact(estimateContextTokens([reply(26513,0)]).tokens,65536,config),true);
 });
 
+test('recorded short tool burst compacts before the full-payload guard',t=>{
+  const config=settings(t);
+  // Pilot: native usage 18522, SDK trailing estimate 644; final serialized
+  // payload was 19917 after tokenization and request-local progress feedback.
+  const estimate=estimateContextTokens([reply(596,45,17881),
+    {role:'toolResult',toolCallId:'x',toolName:'source_query',content:[{type:'text',text:'x'.repeat(2576)}],isError:false,timestamp:1}]);
+  assert.equal(estimate.tokens,19166);
+  assert.equal(shouldCompact(estimate.tokens,65536,{...config,reserveTokens:46080}),false);
+  assert.equal(shouldCompact(estimate.tokens,65536,config),true);
+  // The earlier excessive 16k compaction remains avoided.
+  assert.equal(shouldCompact(16379,65536,config),false);
+});
+
 test('the full serialized admission check still rejects oversized requests',()=>{
   const script='from unittest.mock import Mock,patch;from pathlib import Path;import tempfile,json;from token_budget import count_request;'+
     '\nwith tempfile.TemporaryDirectory() as tmp:\n p=Path(tmp)/"payload.json";p.write_text("{}")\n tok=Mock();tok.encode.return_value.ids=list(range(21000))\n with patch("token_budget.Tokenizer.from_file",return_value=tok): print(json.dumps(count_request(p,24576,Path("unused"))))';
