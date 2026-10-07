@@ -116,7 +116,8 @@ def propose(root, evidence, folder, reason, planner='qwen', timeout=1800):
     root, folder = root.resolve(), folder.resolve()
     with exclusive(root, BASE):
         binding, packet, draft = prepare(root, evidence, folder, reason)
-        from plan_refinement import packet_data, bounded_prompt, invoke_review
+        from plan_refinement import bounded_prompt, invoke_review
+        from revision_context import packet_data
         from failure_test_context import collect
         data = packet_data(reason, draft, binding['target'])
         data['observed_failure'] = {'reason': packet['reason'], 'failed_tests': packet['failed_tests'],
@@ -124,7 +125,8 @@ def propose(root, evidence, folder, reason, planner='qwen', timeout=1800):
         prompt = bounded_prompt('contract-revision', data, planner)
         output = folder/'proposal.json'
         result = invoke_review(root, folder/'draft.json', output, planner, timeout, prompt,
-                               ['--refine-task', binding['target']], binding['target'], phase='recovery')
+                               ['--refine-task', binding['target']], binding['target'], phase='recovery',
+                               representation='selected_contract_and_direct_producers_consumers')
         if result['passed']:
             _, _, _, corrections = inspect(root, output)
             result.update(requires_approval=True, proposal_sha256=digest(read(output)), corrections=corrections)

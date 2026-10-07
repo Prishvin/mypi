@@ -83,7 +83,7 @@ def review_coverage(project,request,draft_path,output,planner,timeout):
     return invoke_review(project,draft_path,output,planner,timeout,prompt,['--plan-coverage'],'COVERAGE')
 
 
-def invoke_review(project,current_path,output,planner,timeout,prompt,mode,target,*,phase=None):
+def invoke_review(project,current_path,output,planner,timeout,prompt,mode,target,*,phase=None,representation=None):
     """Share isolated invocation and durable metrics across coverage and per-task reviews."""
     from runner_process import BASE,invoke,read,save
     from run_metrics import collect
@@ -91,7 +91,7 @@ def invoke_review(project,current_path,output,planner,timeout,prompt,mode,target
     from shadow_navigation import count
     save(output.with_suffix('.context-budget.json'),{
         'target':target,'provider':planner,'packet_tokens':count(prompt),'limits':limits(planner,phase),
-        'representation':'coverage_review' if target=='COVERAGE' else 'current_contracts_once',
+        'representation':representation or ('coverage_review' if target=='COVERAGE' else 'current_contracts_once'),
         'includes_implementation_source':False,'context_plan':str(current_path)})
     request_path=output.with_suffix('.request.txt');request_path.write_text(prompt)
     command=[str(BASE/'qwen-agent'),'--profile','chatgpt-quality' if planner=='chatgpt' else 'mtplx-quality',
