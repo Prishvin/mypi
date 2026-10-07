@@ -74,7 +74,7 @@ def deadline(session, identity, now=None):
     elapsed = max(0, clock - started)
     remaining = max(0, math.ceil(timeout - elapsed))
     return {'elapsed_seconds': math.floor(elapsed), 'remaining_seconds': remaining,
-            'timeout_seconds': timeout, 'near_deadline': remaining <= min(300, max(60, timeout / 3)),
+            'timeout_seconds': timeout, 'near_deadline': remaining <= min(300, timeout),
             'rule': 'Includes prompt loading, reasoning, tools and tests. This notice never extends the deadline.'}
 
 

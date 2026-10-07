@@ -759,3 +759,12 @@ compaction settings. The recorded Linux-sized overflow still triggers compaction
 these tests were executed on macOS. Recovery packets now distinguish recorded
 session thresholds from fallback current-policy estimates. Reduced live latency
 has not yet been demonstrated; fewer premature compactions are the intended effect.
+
+The first 600-second T06 correction also timed out at eight of ten tests. Its
+last request started with 239 seconds remaining, outside the original last-third
+notice window, then spent substantial time reprocessing context. Deadline advice
+now begins in the last five minutes (or throughout a shorter attempt). **Seven
+Python and seven JavaScript checks passed**, including that observed 239-second
+case; timeout enforcement and acceptance remain unchanged. The failed assertions
+were present in bounded feedback with expected/actual values, so no missing
+diagnostic or game-test correction by the supervisor was involved.

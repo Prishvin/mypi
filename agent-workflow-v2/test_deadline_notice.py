@@ -46,8 +46,9 @@ class DeadlineTests(unittest.TestCase):
         self.assertEqual(json.loads((self.session / 'launch.json').read_text()), self.launch)
 
     def test_short_and_long_limits_have_bounded_notice_window(self):
-        for timeout, remaining, expected in [(30, 30, True), (120, 61, False),
-                                               (120, 60, True), (2700, 301, False), (2700, 300, True)]:
+        for timeout, remaining, expected in [(30, 30, True), (120, 120, True),
+                                               (600, 301, False), (600, 300, True),
+                                               (600, 239, True), (2700, 301, False), (2700, 300, True)]:
             with self.subTest(timeout=timeout, remaining=remaining):
                 self.write('launch.json', {**self.launch, 'timeout_seconds': timeout})
                 self.assertEqual(deadline(self.session, self.identity, 1000 + timeout - remaining)['near_deadline'], expected)
