@@ -9,6 +9,15 @@ the project goal, architecture interfaces, completed behavior, file scope, depen
 coverage IDs and all other todos. Do not read application implementation bodies.
 
 Check each acceptance case's given, when and then together against the interface.
+Read defaults as fallback values, not mandatory constants that discard supplied
+arguments, unless the interface explicitly says otherwise. Do not invent stronger
+initialization restrictions. Before saving, trace each changed example from its
+stated initial values through every operation: check arithmetic, conserved counts,
+units, bounds and any required preconditions. The given must describe one coherent
+state; do not introduce unstated interventions to reach the expected result.
+Compare the proposal with every unchanged acceptance case, not just the failing
+assertion. Recheck these consistency questions independently after drafting the
+correction and before plan_store.
 Changing a test's starting fixture while retaining a conflicting acceptance given
 does not satisfy the criterion. If a generated case is contradictory, propose the
 smallest coherent correction explicitly; do not hide it in assumptions or test
