@@ -92,6 +92,26 @@ def validate_coverage(task: dict) -> None:
         raise ValueError('Every acceptance criterion needs a planned test')
 
 
+def validate_task(root: Path, task: dict, version=3) -> None:
+    """Share per-task gates between staged children and final plan publication."""
+    if not task.get('goal') or not task.get('acceptance') or not task.get('tests'):
+        raise ValueError('Each todo requires goal, acceptance and tests')
+    files = task.get('files', [])
+    if not files or len(set(files)) > 8:
+        raise ValueError('Each todo needs 1-8 exact file paths')
+    validate_paths(root, files)
+    validate_context(root, task)
+    validate_coverage(task)
+    if version in [2, 3]:
+        validate_granularity(task)
+    if version == 3:
+        from plan_contract import validate
+        validate(task)
+    for command in task['tests']:
+        if not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command):
+            raise ValueError('Tests must be argv lists')
+
+
 def save(root: Path, prefixes: list[str], plan: dict, output: Path) -> dict:
     """Validate task boundaries and reset planned todos; never overwrite an existing plan."""
     if output.exists():
@@ -112,22 +132,7 @@ def save(root: Path, prefixes: list[str], plan: dict, output: Path) -> dict:
             raise ValueError('Todo ids must be unique nonempty strings')
         if not set(task.get('depends_on', [])) <= known:
             raise ValueError('Dependencies must refer to preceding todos')
-        if not task.get('goal') or not task.get('acceptance') or not task.get('tests'):
-            raise ValueError('Each todo requires goal, acceptance and tests')
-        files = task.get('files', [])
-        if not files or len(set(files)) > 8:
-            raise ValueError('Each todo needs 1-8 exact file paths')
-        validate_paths(root, files)
-        validate_context(root, task)
-        validate_coverage(task)
-        if plan.get('plan_version') in [2, 3]:
-            validate_granularity(task)
-        if plan.get('plan_version') == 3:
-            from plan_contract import validate
-            validate(task)
-        for command in task['tests']:
-            if not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command):
-                raise ValueError('Tests must be argv lists')
+        validate_task(root, task, plan.get('plan_version', 1))
         task['status'] = 'todo'
         known.add(identifier)
     from tasks import readonly_tests

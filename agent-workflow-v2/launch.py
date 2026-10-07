@@ -152,6 +152,8 @@ def prepare(args) -> dict:
              'chat':'project_map,skill_use,skill_read',
              'inspect':'project_map,source_query,skill_use,skill_read',
              'code':'project_map,source_query,edit,write,workflow_test,web_research,skill_read,skill_use'}[args.role]
+    if args.role == 'architect' and getattr(args,'refine_task',None):
+        tools += ',plan_child_store'
     phase_output = getattr(args, 'phase_output', None)
     if args.role in ('research', 'intake','reviewer','memory') and (not phase_output or phase_output.resolve().is_relative_to(root)):
         raise ValueError('Research/intake requires --phase-output outside the project')
@@ -168,10 +170,12 @@ def prepare(args) -> dict:
         command.append('--offline')
     prompt = args.prompt or 'Plan the architecture for the requested change using project interfaces only.'
     if args.role == 'architect':
-        mode='coverage' if getattr(args,'plan_coverage',False) else 'repair' if draft_path else 'draft'
+        mode='coverage' if getattr(args,'plan_coverage',False) else 'refine' if getattr(args,'refine_task',None) else 'repair' if draft_path else 'draft'
         prompt = task_prompts.planning(prompt, effective, mode)
         if getattr(args,'plan_coverage',False):
             prompt += '\n\nCOVERAGE REVIEW MODE: plan_store accepts only coverage_plan. Review the draft and map requirements to observable checks; record missing cases as gaps. Do not rewrite the plan or implement tests. Python attaches your coverage plan to the unchanged draft.'
+        elif draft_path and getattr(args,'refine_task',None):
+            prompt += '\n\nSELECTED TASK REVIEW: plan_store accepts flat changed fields; Python supplies the selected ID. Stage split children individually with plan_child_store, then commit ordered child_refs. Do not send task_updates or replace_with. Unchanged review uses unchanged:true. All native preservation, dependency, coverage and V3 gates remain mandatory.'
         elif draft_path:
             prompt += '\n\nPINNED DRAFT REPAIR MODE: plan_store accepts only sparse task_updates and optional architecture_replacements. Do not send goal/architecture/tasks or replay the full proposal. Python retains unchanged contracts. Missing metadata must come from your estimates; no automatic clamping. Preserve original cases/tests/files when splitting and keep the original ID in the final replacement todo. All final V3 gates remain mandatory.'
         from knowledge import read_project

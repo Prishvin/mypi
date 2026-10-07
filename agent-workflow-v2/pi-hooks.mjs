@@ -2,6 +2,7 @@
 import { readFileSync, appendFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import {refinementTarget} from './pi-plan-children.mjs';
 import {domainInstructions} from './pi-domain-skills.mjs';
 import {failedEditEvidence} from './pi-edit-recovery.mjs';
 import {requireThinkingCaps} from './pi-thinking-cap.mjs';
@@ -147,7 +148,7 @@ export function installToolHooks(pi, mutations = new Map()) {
       const coding = process.env.QWEN_WORKFLOW_ROLE === 'code' && process.env.QWEN_WORKFLOW_STATE;
       const role = process.env.QWEN_WORKFLOW_ROLE;
       pi.setActiveTools(role==='chat'?['project_map','skill_use','skill_read']:role==='inspect'?['project_map','source_query','skill_use','skill_read']:role==='memory'?['memory_store']:role==='intake'?['intake_store']:role==='reviewer'?['project_map','plan_store','review_store']:role==='research'?['project_map','web_research','skill_use','knowledge_store']:
-        coding ? ['project_map', 'source_query', 'edit', 'write', 'workflow_test', 'web_research', 'skill_read','skill_use'] : ['project_map', 'plan_store', 'web_research', 'skill_read','skill_use']);
+        coding ? ['project_map', 'source_query', 'edit', 'write', 'workflow_test', 'web_research', 'skill_read','skill_use'] : ['project_map', 'plan_store', ...(refinementTarget()?['plan_child_store']:[]), 'web_research', 'skill_read','skill_use']);
     }
   });
   pi.on('tool_call', async (event, ctx) => {

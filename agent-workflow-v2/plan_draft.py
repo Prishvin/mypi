@@ -140,18 +140,26 @@ def apply(proposal, patch):
     return result
 
 
-def restore(root, prefixes, bound_path, patch):
-    """Reject changed bindings or source before merging a model's patch."""
+def checked_binding(root, prefixes, bound_path):
+    """Pin child staging and publication to the same draft and source snapshot."""
     bound = json.loads(Path(bound_path).read_text())
     if bound['project'] != str(root.resolve()) or bound['snapshot'] != scan(root, prefixes)['snapshot']:
         raise ValueError('Draft binding or source snapshot is stale')
     if digest(bound['proposal']) != bound['proposal_sha256']:
         raise ValueError('Pinned draft proposal hash changed')
+    return bound
+
+
+def restore(root, prefixes, bound_path, patch):
+    """Reject changed bindings or source before merging a model's patch."""
+    bound = checked_binding(root, prefixes, bound_path)
     if bound.get('coverage_review'):
         from coverage_plan import annotate
         return annotate(bound['proposal'],patch)
     if bound.get('refine_task'):
         from plan_refinement import guard
+        from plan_refinement_store import assemble
+        patch=assemble(bound_path, bound, patch)
         patch=guard(bound['proposal'],patch,bound['refine_task'])
     result=apply(bound['proposal'], patch)
     if bound.get('refine_task'):

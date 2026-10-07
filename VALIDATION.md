@@ -315,3 +315,35 @@ to T13 with 12 original reviews accepted. The prior 11 reviews and source snapsh
 were verified unchanged. The model authored the successful proposal; Codex only
 changed mypi tooling. Replay and rerun evidence are retained in the pilot report
 as `t12-transport-replay.json` and `t12-transport-rerun-result.json`.
+
+### Typed task review and staged split children — 2026-10-07
+
+T15 failed again while submitting a 10,694-character nested patch. The installed
+Qwen XML parser uses only a parameter's direct `type`; the advertised
+array-or-string `anyOf` for task_updates had no direct type, so it arrived as text.
+Previous diagnostic changes exposed the error but did not eliminate this fragile
+model-facing format.
+
+Selected-task reviews now submit flat typed fields. Python supplies the pinned
+task ID and assembles the existing sparse representation. Splits use one
+`plan_child_store` call per full child, followed by `plan_store` with ordered
+immutable receipts. Each receipt binds the exact child to its session, draft and
+source snapshot. Staging never publishes or executes a plan. Final commit keeps
+all original preservation, dependency, coverage-gap and V3 budget gates. A
+rejected child can be replaced without regenerating valid siblings. Generic
+native patch artifacts remain readable; no malformed JSON or task values are
+repaired. Initial whole-plan generation is unchanged.
+
+**89 Python tests and 31 JavaScript tests passed.** These include reproducing the
+old union-as-text behavior through the actual installed Qwen parser and an
+end-to-end XML → Pi tool lifecycle → native staging → final save test. Tests cover
+flat edits, no-op review, split receipts, exact value retention, source/draft
+staleness, tampering, session replay, unknown fields, invalid budgets, incomplete
+coverage, preservation failures and corrected-child retries. Child staging does
+not trigger Pi's accepted-plan stop hook. Launch tests verify that only selected
+task reviews receive the child tool and matching instructions.
+
+Restarted T15 through mypi after checking the canonical saved-plan digest, all 14
+accepted review IDs and the source snapshot against pre-interruption evidence.
+No game contract, game source or game acceptance tests were authored by Codex.
+Live rerun evidence is recorded under `t15-typed-*` in the pilot report directory.

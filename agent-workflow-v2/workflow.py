@@ -52,6 +52,8 @@ def arguments():
     planning = sub.add_parser('save-plan')
     planning.add_argument('--input', type=Path, required=True)
     planning.add_argument('--output', type=Path, required=True)
+    child = sub.add_parser('stage-plan-child')
+    child.add_argument('--input', type=Path, required=True)
     start = sub.add_parser('begin')
     start.add_argument('--task', type=Path, required=True)
     start.add_argument('--state', type=Path, required=True)
@@ -103,6 +105,12 @@ def main() -> int:
         if args.automatic:inputs['automatic']=True
         prepare(session,'task-finalize','code')
         result=run(session,'task-finalize',inputs,'code')['data']
+    elif args.command == 'stage-plan-child':
+        import os
+        if os.environ.get('QWEN_WORKFLOW_ROLE') != 'architect' or not os.environ.get('QWEN_WORKFLOW_PLAN_DRAFT'):
+            raise ValueError('Child staging requires a bound architect review')
+        from plan_refinement_store import stage
+        result = stage(root, prefixes, os.environ['QWEN_WORKFLOW_PLAN_DRAFT'], json.loads(args.input.read_text()))
     elif args.command == 'save-plan':
         import os
         proposal = json.loads(args.input.read_text())

@@ -26,9 +26,9 @@ test('repair schema omits full-plan resend and exposes explicit corrections',()=
   const schema=repairParameters();
   assert.deepEqual(schema.required,['task_updates']);
   assert.equal(schema.properties.tasks,undefined);
-  assert.ok(schema.properties.task_updates.anyOf[0].items.properties.criterion_replacements);
-  assert.equal(schema.properties.task_updates.anyOf[0].items.properties.estimated_changed_lines.maximum,300);
-  assert.equal(schema.properties.task_updates.anyOf[1].maxLength,1048576);
+  assert.ok(schema.properties.task_updates.items.properties.criterion_replacements);
+  assert.equal(schema.properties.task_updates.items.properties.estimated_changed_lines.maximum,300);
+  assert.equal(schema.properties.task_updates.type,'array');
 });
 
 test('full plan schema requires estimated_changed_lines; pinned draft selects sparse schema',()=>{
@@ -42,9 +42,10 @@ test('full plan schema requires estimated_changed_lines; pinned draft selects sp
     process.env.QWEN_WORKFLOW_PLAN_DRAFT=join(folder,'plan-draft.json');
     writeFileSync(process.env.QWEN_WORKFLOW_PLAN_DRAFT,JSON.stringify({refine_task:'T08-enemies'}));
     extension(pi);
-    assert.deepEqual(tools.plan_store.parameters.required,['task_updates']);
-    assert.equal(tools.plan_store.parameters.properties.task_updates.anyOf[0].maxItems,1);
-    assert.equal(tools.plan_store.parameters.properties.task_updates.anyOf[0].items.properties.id.const,'T08-enemies');
+    assert.equal(tools.plan_store.parameters.properties.task_updates,undefined);
+    assert.equal(tools.plan_store.parameters.properties.context_overlay.type,'object');
+    assert.ok(tools.plan_child_store);
+    assert.equal(tools.plan_child_store.parameters.properties.id.type,'string');
     assert.match(tools.plan_store.description,/Refine only T08-enemies/);
   }finally{
     if(old===undefined)delete process.env.QWEN_WORKFLOW_PLAN_DRAFT;else process.env.QWEN_WORKFLOW_PLAN_DRAFT=old;
@@ -52,24 +53,16 @@ test('full plan schema requires estimated_changed_lines; pinned draft selects sp
   }
 });
 
-test('actual Pi validator restricts refinement to one target and rejects full-contract patch fields',()=>{
+test('actual Pi validator accepts typed flat fields and rejects wrappers or serialized objects',()=>{
   const tool={name:'plan_store',parameters:repairParameters('T08-enemies')};
   const validate=arguments_=>validateToolArguments(tool,{name:'plan_store',arguments:arguments_});
-  for(const input of [
-    {task_updates:[{id:'T08-enemies'},{id:'T08-enemies',add_coverage:[]}]},
-    {task_updates:[{id:'T09-spawn'}]},
-    {task_updates:[{id:'T08-enemies',context:{max_input_tokens:16384}}]},
-    {task_updates:[{id:'T08-enemies',coverage:[]}]},
-    {task_updates:[{id:'T08-enemies'}],goal:'Unrelated change'},
-  ]){const before=structuredClone(input);assert.throws(()=>validate(input));assert.deepEqual(input,before);}
-  for(const input of [
-    {task_updates:[{id:'T08-enemies',context_overlay:{max_input_tokens:16384},add_coverage:[{criterion:'G',test:0}]}]},
-    {task_updates:[{id:'T08-enemies'}]},
-    {task_updates:[{id:'T08-enemies',replace_with:[{id:'T08a',context:{}},{id:'T08-enemies',context:{}}]}]},
-  ])assert.deepEqual(validate(input),input);
-  // Serialized adapter compatibility still reaches the independent Python scope guard.
-  const serialized={task_updates:JSON.stringify([{id:'T08-enemies'},{id:'T08-enemies'}])};
-  assert.deepEqual(validate(serialized),serialized);
+  for(const input of [{task_updates:[{id:'T08-enemies'}]},{id:'T09'}, {context:{}},
+    {context_overlay:'{"max_input_tokens":16384}'},{steps:'["one","two"]'}, {coverage:[]},{},
+    {context_overlay:{nonsense:10}},{child_refs:['../escape']}]){
+    const before=structuredClone(input);assert.throws(()=>validate(input));assert.deepEqual(input,before);
+  }
+  for(const input of [{context_overlay:{max_input_tokens:16384},add_coverage:[{criterion:'G',test:0}]},
+    {unchanged:true},{child_refs:['a'.repeat(64),'b'.repeat(64)]}])assert.deepEqual(validate(input),input);
   const generic={name:'plan_store',parameters:repairParameters()};
   const updates={task_updates:[{id:'A'},{id:'B'}]};
   assert.deepEqual(validateToolArguments(generic,{name:'plan_store',arguments:updates}),updates);

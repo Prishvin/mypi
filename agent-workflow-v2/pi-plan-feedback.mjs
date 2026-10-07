@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 
 export function planFailure(event){
   const role=process.env.QWEN_WORKFLOW_ROLE,session=process.env.QWEN_WORKFLOW_SESSION;
-  if(!session||!['architect','reviewer'].includes(role)||event.toolName!=='plan_store'||!event.isError)return;
+  if(!session||!['architect','reviewer'].includes(role)||!['plan_store','plan_child_store'].includes(event.toolName)||!event.isError)return;
   const error=(event.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('\n');
   const original=JSON.stringify({arguments:event.input,error});
   const artifact=join(session,'rejected-plan-'+createHash('sha256').update(original).digest('hex').slice(0,24)+'.json');
@@ -17,7 +17,7 @@ export function planFailure(event){
   }
   const bounded=diagnostic.length<=3000?diagnostic:diagnostic.slice(0,1200)+'\n…\n'+diagnostic.slice(-1800);
   const retry=process.env.QWEN_WORKFLOW_PLAN_DRAFT ?
-    ' Resubmit one complete corrected sparse patch containing ALL intended edits; each save starts from the pinned draft, not the previous rejected patch. Do not resend untouched draft tasks.' :
+    ' Follow the current tool schema. For selected-task review, send flat changed fields or child_refs; do not send task_updates. Correct a failed plan_child_store by resending only that full child; other receipts remain usable. For plan_store, resubmit the complete corrected change containing ALL intended edits; each save starts from the pinned draft, not the previous rejected patch. Do not resend untouched draft tasks.' :
     ' Correct the rejected call, preserve unchanged contracts, and do not repeat the whole proposal in explanations.';
   return {content:[{type:'text',text:bounded+'\n\nOriginal rejected proposal and error retained: '+artifact+
     '\nNo plan was accepted.'+retry}],
@@ -27,7 +27,7 @@ export function planFailure(event){
 export function planFailureContext(messages){
   /** Pi skips tool_result hooks for schema errors; bound those before provider serialization. */
   return messages.map(message=>{
-    if(message.role!=='toolResult'||message.toolName!=='plan_store'||!message.isError||
+    if(message.role!=='toolResult'||!['plan_store','plan_child_store'].includes(message.toolName)||!message.isError||
        !message.content?.some(c=>c.type==='text'&&c.text.includes('Received arguments:')))return message;
     const result=planFailure(message);
     return result?{...message,content:result.content,details:result.details}:message;

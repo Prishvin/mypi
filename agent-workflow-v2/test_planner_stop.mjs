@@ -19,6 +19,8 @@ test('only the selected architect stops on a successful persisted plan',async()=
     const ctx={model:{provider:'local-qwen-workflow'},abort:()=>{stopped++;}};
     assert.equal((await handlers.tool_result({...event,isError:true},ctx)).isError,true);
     assert.equal(stopped,0);
+    await handlers.tool_result({toolName:'plan_child_store',content:[],details:{staged:true,planAccepted:false}},ctx);
+    assert.equal(stopped,0);
     assert.equal(await handlers.tool_result(event,{...ctx,model:{provider:'unrelated'}}),undefined);
     assert.equal(existsSync(join(dir,'planning-stop.json')),false);
     assert.equal((await handlers.tool_result(event,ctx)).details.acceptedPlanningStop,true);

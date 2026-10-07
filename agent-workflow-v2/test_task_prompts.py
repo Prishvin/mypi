@@ -12,7 +12,7 @@ class PlanningPromptTests(unittest.TestCase):
 
     def test_review_preserves_exact_packet_without_wrapping_it_as_new_development(self):
         request='REVIEW INPUT: {"current_task":{"id":"T1"},"literal":"{{CONTEXT}}"}'
-        for mode,contract in [('repair','sparse task_updates'),('coverage','coverage_plan only')]:
+        for mode,contract in [('repair','sparse task_updates'),('coverage','coverage_plan only'),('refine','flat changed fields')]:
             with self.subTest(mode=mode):
                 text=planning(request,{'context':272000},mode)
                 self.assertTrue(text.endswith(request))

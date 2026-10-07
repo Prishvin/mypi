@@ -1,19 +1,25 @@
-/** A compact authoring schema for repairing unaccepted proposals, without a full resend. */
-import { Type } from '@earendil-works/pi-ai';
+/** Model-facing refinement uses flat fields; Python supplies the pinned target. */
+import {Type} from '@earendil-works/pi-ai';
+import {caseSchema,coverageSchema,contextSchema,executionSchema,childParameters} from './pi-plan-contract.mjs';
 
-export function repairParameters(target) {
-  /** Keep corrections typed; full V3 validation remains native and mandatory. */
-  return Type.Object({task_updates:Type.Union([Type.Array(Type.Object({id:target?Type.Literal(target):Type.String(),
-    estimated_changed_lines:Type.Optional(Type.Integer({minimum:1,maximum:300})),
+function changes(){
+  return {estimated_changed_lines:Type.Optional(Type.Integer({minimum:1,maximum:300})),
     steps:Type.Optional(Type.Array(Type.String(),{minItems:2,maxItems:6})),
-    test_strategy:Type.Optional(Type.String()), assumptions:Type.Optional(Type.Array(Type.String())),
-    context_overlay:Type.Optional(Type.Any({description:'Merge only changed context fields; use context_overlay, not context. After merging, margin_tokens must be at least max(1024, ceil(sum(estimate values) * 0.25)); estimate sum + margin must fit max_input_tokens.'})), execution:Type.Optional(Type.Any()),
-    criterion_replacements:Type.Optional(Type.Array(Type.Object({old:Type.Any(),new:Type.Any(),reason:Type.String({minLength:16})}))),
-    add_files:Type.Optional(Type.Array(Type.String())),
-    add_tests:Type.Optional(Type.Array(Type.Array(Type.String()))),
-    add_coverage:Type.Optional(Type.Array(Type.Object({criterion:Type.String({description:'Exact existing acceptance ID, or an ID added in add_acceptance in this same patch.'}),test:Type.Integer({minimum:0})}),{description:'Append coverage entries while preserving existing coverage; use add_coverage, not coverage.'})),
-    add_acceptance:Type.Optional(Type.Array(Type.Object({id:Type.String(),given:Type.String(),when:Type.String(),then:Type.String()}))),
-    replace_with:Type.Optional(Type.Array(Type.Any(),{minItems:1}))
-  },{additionalProperties:false}),{minItems:1,...(target?{maxItems:1,description:'Exactly one object for '+target+'. Combine all changed fields into that object; splits go inside replace_with.'}:{})}),Type.String({maxLength:1048576,description:'Compatibility for literal JSON serialized by legacy tool adapters; prefer an array of objects.'})]), architecture_replacements:Type.Optional(Type.Array(
-    Type.Object({old:Type.String({minLength:1}),new:Type.String({minLength:1})}))) },{additionalProperties:false});
+    test_strategy:Type.Optional(Type.String()),assumptions:Type.Optional(Type.Array(Type.String())),
+    context_overlay:Type.Optional(Type.Partial(contextSchema(),{additionalProperties:false,description:'Merge changed context fields. Let E=sum(estimate); margin_tokens >= max(1024,ceil(E*0.25)), and E+margin <= max_input_tokens.'})),
+    execution:Type.Optional(executionSchema()),
+    criterion_replacements:Type.Optional(Type.Array(Type.Object({old:caseSchema(),new:caseSchema(),reason:Type.String({minLength:16})},{additionalProperties:false}))),
+    add_files:Type.Optional(Type.Array(Type.String())),add_tests:Type.Optional(Type.Array(Type.Array(Type.String()))),
+    add_coverage:Type.Optional(coverageSchema()),add_acceptance:Type.Optional(Type.Array(caseSchema()))};
+}
+export function repairParameters(target){
+  const architecture_replacements=Type.Optional(Type.Array(Type.Object({old:Type.String({minLength:1}),new:Type.String({minLength:1})},{additionalProperties:false})));
+  if(target)return Type.Object({...changes(),
+    unchanged:Type.Optional(Type.Boolean({description:'True only when the selected task needs no changes; cannot combine with edits.'})),
+    child_refs:Type.Optional(Type.Array(Type.String({pattern:'^[a-f0-9]{64}$'}),{minItems:2,maxItems:4,
+      description:'For a split ONLY: ordered receipts returned by plan_child_store. Do not combine with direct task changes.'})),
+    architecture_replacements},{additionalProperties:false,minProperties:1});
+  return Type.Object({task_updates:Type.Array(Type.Object({id:Type.String(),...changes(),
+    replace_with:Type.Optional(Type.Array(childParameters(),{minItems:2,maxItems:4}))},{additionalProperties:false}),{minItems:1}),
+    architecture_replacements},{additionalProperties:false});
 }

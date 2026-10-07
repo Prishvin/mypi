@@ -26,22 +26,29 @@ Put combined tests only in a child whose prerequisites create the needed files;
 earlier children need their own runnable tests. Include a full V3 contract per
 child, including context estimates/margin, execution policy and coverage.
 
-Save ONE sparse plan_store call: task_updates contains exactly ONE object with
-the selected ID. Combine all its changes into that object, never two objects with
-the same ID. The current_task is a full contract to read, not the patch format.
-Use context_overlay for changed context fields (never context), and add_coverage,
-add_tests, add_files and add_acceptance to append entries (never coverage, tests,
-files or acceptance). Omit unchanged values. For example:
-{"task_updates":[{"id":"selected ID","context_overlay":{"max_input_tokens":16384},"add_coverage":[{"criterion":"existing criterion ID","test":0}]}]}
-Replace the example IDs and values with this task's actual requirements; do not
-copy example budgets. Split children go in replace_with inside that one object;
-each child is a full V3 contract and therefore uses context, not context_overlay.
-Send real JSON arrays and objects, not JSON embedded in a quoted string. Close
-each nested array before its enclosing object, e.g. "steps":["First","Second"]}.
-The replace_with array stays inside the single selected update object; finish
-each complete child object before starting the next one.
-After a rejected save, resubmit the complete corrected sparse patch with all
-intended changes. Rejected patches are not merged into the pinned base.
+For ordinary refinement, call plan_store with changed fields DIRECTLY:
+steps, test_strategy, assumptions, estimated_changed_lines, context_overlay,
+execution, criterion_replacements, add_files, add_tests, add_acceptance and
+add_coverage. Python injects the selected ID. Do not send id, task_updates,
+replace_with, status or whole task contracts. Omit unchanged fields. For example:
+{"context_overlay":{"max_input_tokens":16384},"add_coverage":[{"criterion":"existing criterion ID","test":0}]}
+Replace example values with your reviewed estimates and actual case IDs.
+Use unchanged:true alone if the task needs no changes.
+
+For a split, call plan_child_store ONCE PER CHILD with a full V3 task's fields
+at the top level. Children use context, files, tests, acceptance and coverage.
+The tool validates and stores the child, returning child_ref. It does not publish
+or execute a plan. Then call plan_store with child_refs containing the 2-4
+returned receipts in dependency order, plus optional architecture_replacements.
+Do not combine child_refs with direct changes: put those in the child contracts.
+If a child fails validation, correct and resend just that child. If final commit
+fails, valid child receipts remain usable; stage corrected children and commit
+the complete ordered receipt list again. Never invent receipts.
+
+Send real JSON arrays and objects. Every top-level parameter has a direct type.
+Each ordinary plan_store starts from the pinned task, not prior rejected edits:
+resubmit ALL intended changes together after rejection. Python preserves every
+untouched contract and assembles the complete plan without inventing task content.
 Read coverage_plan: incorporate every gap assigned to this task with the exact
 case, test argv and matching coverage; add fixture files to scope as needed.
 Python rejects a refinement that leaves any assigned gap unaddressed. Preserve
@@ -49,8 +56,6 @@ the global testing strategy and check producer/consumer integration contracts.
 Check module growth: prefer <=4096 source tokens, ceiling8192 plus300 lines/32KiB.
 The complete file(s), tests and tool overhead must fit the task input with margin.
 Split by responsibility when needed; architecture documents use selected sections.
-Use replace_with for a split; otherwise supply only changed fields. An unchanged
-task is acknowledged with {"id":"selected ID"}; do not manufacture changes.
-Add acceptance with add_acceptance and matching add_coverage/add_tests. Exact
-architecture_replacements may reconcile an affected API, preserving unrelated
-decisions. Python validates and assembles the plan. Stop after a successful save.
+Exact architecture_replacements may reconcile an affected API while preserving
+unrelated decisions. Python validates and assembles the plan. Stop after a
+successful plan_store, never after merely staging a child.

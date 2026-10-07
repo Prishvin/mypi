@@ -4,15 +4,17 @@ Review the supplied pinned proposal; do not generate a new whole plan. The
 current tool schema determines the save format. The draft and current task in
 the review packet are reference contracts, not arguments to copy into plan_store.
 
-In task refinement, submit exactly one task_updates object for the selected ID.
-Combine all changes in it. Use context_overlay for changed context settings and
-add_files, add_tests, add_acceptance, add_coverage for additive changes. Omit
-unchanged values. A coverage link names an exact existing or newly added case ID
-and an actual zero-based test command index. Correct a contradictory unaccepted
-criterion only with exact old/new objects and a recorded evidence reason.
-Use replace_with within the selected update for a split; each child needs a full
-V3 contract. Preserve original tests/files/cases, prerequisites and the original
-ID as the final dependency gate. Do not silently weaken acceptance.
+In selected task refinement, pass changed fields directly to plan_store. Python
+supplies the selected ID; do not send task_updates, id or replace_with. Use
+context_overlay and add_files/add_tests/add_acceptance/add_coverage. Omit unchanged
+values. An unchanged review uses unchanged:true alone. Coverage links use exact
+case IDs and zero-based test command indices. Correct contradictory unaccepted
+criteria only with exact old/new objects and a recorded evidence reason.
+For a split, call plan_child_store separately for each full V3 child, then commit
+ordered child_refs with plan_store. Keep the original ID as the last child.
+Every child retains original prerequisites and all earlier children. Preserve
+original files, tests and cases across the split. Staging is not acceptance.
+For generic draft repair without a selected target, use the task_updates schema.
 
 In coverage review, submit only coverage_plan. Describe checks and missing cases;
 Python attaches them to the unchanged proposal. Do not submit task_updates.

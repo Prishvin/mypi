@@ -156,8 +156,10 @@ class ProfileTests(unittest.TestCase):
                         plan_draft=source,prompt='Exact review packet',**mode))
                     prompt=reviewed['command'][-1]
                     self.assertIn('Exact review packet',prompt)
+                    selected_tools=reviewed['command'][reviewed['command'].index('--tools')+1].split(',')
+                    self.assertEqual('plan_child_store' in selected_tools,bool(mode.get('refine_task')))
                     self.assertNotIn('Save exactly one object with plan_version: 3',prompt)
-                    self.assertIn('coverage_plan only' if mode.get('plan_coverage') else 'sparse task_updates',prompt)
+                    self.assertIn('coverage_plan only' if mode.get('plan_coverage') else 'flat changed fields' if mode.get('refine_task') else 'sparse task_updates',prompt)
 
     def test_profile_path_traversal_rejected(self):
         """Named profiles cannot read credentials or arbitrary files."""
