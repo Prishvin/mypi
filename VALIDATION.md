@@ -306,3 +306,12 @@ refinement skill clarifies nested array/object syntax. **46 Python tests and
 and unchanged preserved proposal data. All three actual rejected payloads were
 replayed read-only and now report their original error positions. Eleven accepted
 reviews and the source snapshot were preserved when stopping the failed T12 loop.
+
+The fresh mypi/Qwen T12 review (`review-12-attempt-14`, session `b4e36ae7a8b3`)
+passed its first plan_store call with no rejected calls in **329.292 seconds**.
+Native telemetry recorded 26,162 prompt tokens (2,048 cached), 1,709 generated
+tokens, 107.49 prompt tokens/s and 16.62 generation tokens/s. The pipeline moved
+to T13 with 12 original reviews accepted. The prior 11 reviews and source snapshot
+were verified unchanged. The model authored the successful proposal; Codex only
+changed mypi tooling. Replay and rerun evidence are retained in the pilot report
+as `t12-transport-replay.json` and `t12-transport-rerun-result.json`.
