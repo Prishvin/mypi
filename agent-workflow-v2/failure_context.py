@@ -19,6 +19,10 @@ def build(root,packet,provider):
     from token_budget import history_trigger
     if session:
         brief['execution_progress'] = read(session/'execution-progress.json').get('brief', {})
+        from recovery_controls import summarize as control_summary
+        launch = read(session/'launch.json')
+        if launch.get('project') == str(root.resolve()) and launch.get('role') == 'code':
+            brief.update(control_summary(launch, packet.get('metrics', {})))
     context = packet['failed_todo']['context']
     brief['context_pressure'] = {'task_input_cap': context['max_input_tokens'],
         'compaction_trigger': history_trigger(context['max_input_tokens']),

@@ -170,10 +170,14 @@ class RecoveryTests(unittest.TestCase):
         packet['session']=str(session)
         save(session/'execution-progress.json',{'brief':{'status':'stop','rounds_without_progress':5,
             'recent_errors':[{'error':'exact text mismatch'}]}})
+        save(session/'launch.json',{'project':str(self.root),'role':'code',
+            'effective_settings':{'reasoning_budget':2048},'command':['PRIVATE_LAUNCH_BODY']})
         prompt,_=build(self.root,packet,'qwen')
         for text in ('rounds_without_progress','exact text mismatch','compaction_trigger','task_input_cap'):
             self.assertIn(text,prompt)
         self.assertNotIn('PRIVATE_BODY_SENTINEL',prompt)
+        self.assertIn('effective_executor_controls',prompt);self.assertIn('reasoning_budget',prompt)
+        self.assertNotIn('PRIVATE_LAUNCH_BODY',prompt)
 
     def test_large_shadow_is_selected_for_qwen_and_fits_cloud_review(self):
         (self.root/'architecture.md').write_text('# Normalization\none.py\n'+'boundary '*35000)

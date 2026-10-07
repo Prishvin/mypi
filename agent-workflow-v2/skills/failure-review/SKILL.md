@@ -25,6 +25,10 @@ Do not prescribe the same read/reason loop again: preserve useful retrieved
 evidence, identify the next executable observation, and adjust context only from
 measured headroom. More time or thinking alone does not resolve no_progress.
 These diagnostics do not grant another repair allowance or relax acceptance.
+When provided, effective_executor_controls includes limits inherited from the
+profile that may not appear in the task. thinking_guard_observations distinguishes
+forced budget closes from missing telemetry. Consider this evidence when choosing
+a future reasoning cap; frequent cap hits alone do not justify increasing it.
 
 Save failure_analysis: concise observed cause/evidence, uncertainty, the smallest
 corrective approach and the tests that will demonstrate the fix. Use plan_store

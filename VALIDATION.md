@@ -649,3 +649,10 @@ Audit/watchdog summaries now retain up to three field-error lines and still omit
 received arguments and traceback source. **17 Python and 5 JavaScript targeted
 tests passed** (overlapping the suite above). Already-running sessions retain
 their pinned runtime; this reporting change applies to later sessions/reviews.
+
+Recovery context now includes effective profile-inherited input/output/thinking
+limits and native thinking-guard counts for completed requests. It excludes
+cancelled requests from that comparison and distinguishes missing telemetry from
+an uncapped setting. **22 Python tests passed** (overlapping prior recovery/runtime
+tests), including a real review-packet assembly with private launcher content
+omitted. The running worker's settings were not modified.
