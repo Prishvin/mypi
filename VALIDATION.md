@@ -674,3 +674,30 @@ The Qwen review had increased task input from 24,576 to 32,768 tokens and its
 client window to 98,304, preserving every acceptance object/test command and
 17 unrelated pending contracts. This was not an isolated watchdog benchmark.
 No game source, tests or corrective plan were authored by Codex.
+
+## Rejected edit evidence (2026-10-07)
+
+The final cleanup failure in `4b6a437b5988` submitted 36 lines of `oldText`
+containing one incorrect line. The preceding source retrieval matched the
+current file, so this was a copying error rather than a stale retrieval or tool
+schema rejection. The previous recovery helper recognized only named function
+declarations and supplied generic advice for this unnamed test callback.
+
+The replacement helper performs read-only Python retrieval using unique exact
+line anchors. It supports callbacks/data and both batched and legacy edit input,
+preserves CRLF/Unicode, bounds serialized evidence, and verifies frozen editable
+scope before reading. It never repairs strings or mutates source automatically.
+Private temporary payloads are deleted after success or subprocess failure.
+
+**31 Python and 15 JavaScript tests passed on macOS**, including the installed
+Pi edit implementation rejecting a guessed callback and accepting an exact
+fixture-only retry through the refresh hook. Checks cover ambiguous anchors,
+scope/symlink escapes, changed snapshots, serialized limits, malformed input,
+temporary-file cleanup and preservation of original errors. Existing retrieval,
+immutable-runtime and no-progress guard tests are included in these totals.
+
+A read-only replay against the recorded pilot failure returns the exact current
+36-line region (1,256 bytes), preserving file bytes and modification time. No
+Qwen request or game mutation was made for this replay. The stopped pilot retains
+its consumed repair allowance; this change has not yet demonstrated a successful
+live Qwen retry. No additional Linux run is claimed.

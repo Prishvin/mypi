@@ -7,6 +7,10 @@ never change Codex configuration.
 The bounded executor packet already contains selected architecture sections,
 prototypes, small editable files and pinned test pages. Use supplied evidence;
 retrieve only missing or changed spans. Source line labels are not edit text.
+After an exact-text edit fails, inspect its bounded current-source evidence.
+The source field has no line labels; anchors are context, not deletion boundaries.
+Use the smallest exact replacement. Never retype long oldText from memory or
+rewrite a whole passing file just to avoid a rejected replacement.
 Use source_query symbol/search for exact functions and literal rg in selected files.
 Inspect callers and state producers/consumers when behavior crosses module boundaries.
 Do not fetch whole repositories or repeatedly retrieve unchanged symbols.

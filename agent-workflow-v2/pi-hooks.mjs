@@ -318,7 +318,7 @@ export function installRefreshHooks(pi, python, cli, scopeArgs, mutations = new 
           details:{...(event.details||{}),shadow:summary,automaticTestsPassed:gate.tests_passed===true,
             gatePassed:gate.passed===true,acceptedCompletion:accepted}};
       }
-      const recovery=architectureEdit ? '' : await failedEditEvidence(pi,event,ctx,python,cli,scopeArgs);
+      const recovery=architectureEdit ? '' : await failedEditEvidence(pi,event,ctx,python,cli);
       return { content: [...event.content, { type: 'text', text: 'Shadow refreshed: ' + summary.snapshot + revisionNotice + recovery }],
         details: { ...(event.details || {}), shadow: summary } };
     } catch (error) {

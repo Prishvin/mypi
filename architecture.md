@@ -77,6 +77,13 @@ guard counts for review, excluding launch commands, prompts and source bodies.
 only when it uniquely identifies a symbol in the requested file. It returns the
 qualified identity and exact bounded span; ambiguity still requires selection.
 
+`edit_recovery.py` supplies read-only evidence after a rejected exact-text edit.
+It verifies frozen scope and reads one current file snapshot, then uses unique
+literal line anchors to select bounded excerpts for unnamed blocks as well as
+functions. `pi-edit-recovery.mjs` passes only old text via a private temporary
+file and attaches source without line labels, offsets and the snapshot hash.
+No source mutation, fuzzy replacement or extra repair allowance is performed.
+
 `runner_process.py` recognizes both child-owned and outer-watchdog deadlines.
 `runner_evidence.py` preserves timeout as the stop reason alongside failed tests;
 `execution_audit.py` retains terminal exceptions rather than traceback frames.
