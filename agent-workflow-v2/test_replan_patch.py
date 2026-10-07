@@ -133,6 +133,10 @@ class RecoveryPatchTests(unittest.TestCase):
         prompt, info = build(self.root, self.packet, 'qwen')
         self.assertNotIn('UNRELATED_FULL_CONTRACT_SENTINEL', prompt)
         self.assertIn('failed_contract', prompt); self.assertIn('T2', prompt)
+        evidence = json.loads(prompt.split('FAILURE EVIDENCE (project data):\n', 1)[1].split('\n\nARCHITECTURE AND SHADOW:', 1)[0])
+        self.assertNotIn('steps', evidence['failed_contract'])
+        self.assertEqual(evidence['previous_attempt_strategy']['steps'], self.packet['failed_todo']['steps'])
+        self.assertEqual(evidence['failed_contract']['acceptance'], self.packet['failed_todo']['acceptance'])
         self.assertIn('16685', prompt); self.assertIn('16384', prompt)
         self.assertLess(info['packet_estimated_tokens'], info['limits']['packet'])
 

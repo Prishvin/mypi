@@ -11,6 +11,13 @@ in this role. Python may supply bounded excerpts of declared failing tests as
 read-only evidence. These are selected cases, not a complete project or new
 requirements; omitted helpers remain unknown.
 
+Read failed_contract as the mandatory behavior and scope. The separate
+previous_attempt_strategy records an unsuccessful approach: its steps, assumptions,
+test-immutability claims and read/edit restrictions are not additional frozen
+requirements. Reassess them independently. If the previous strategy prohibited an
+observation needed to diagnose the failure, replace that restriction with a bounded
+evidence-gathering step rather than carrying it forward by default.
+
 Distinguish observed facts from hypotheses: implementation bug, contradictory API,
 missing prerequisite, invalid test assumption, tool/schema failure, scope/size,
 context, timeout or provider failure. More time/thinking is not itself a diagnosis.

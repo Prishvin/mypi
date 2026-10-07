@@ -5,6 +5,35 @@ from replan_brief import distill
 
 
 class ReplanBriefTests(unittest.TestCase):
+    def test_focused_contract_separates_prior_failed_hypotheses_without_data_loss(self):
+        task = {'id': 'T2', 'goal': 'Normalize input', 'files': ['normalize.py', 'test_normalize.py'],
+            'depends_on': [], 'acceptance': [{'id': 'A', 'given': 'input', 'when': 'normalize', 'then': 'valid'}],
+            'tests': [['python3', '-m', 'unittest', 'test_normalize']],
+            'coverage': [{'criterion': 'A', 'test': 0}], 'architecture_maintenance': True,
+            'steps': ['Never read the test again', 'Use the prior guessed diagnosis'],
+            'assumptions': ['All current fixtures are frozen'], 'test_strategy': 'Repeat the failed approach',
+            'estimated_changed_lines': 10, 'context': {'max_input_tokens': 32768},
+            'execution': {'timeout_seconds': 900}, 'status': 'failed', 'baseline': '/local/state'}
+        packet = {'failed_todo': task, 'remaining': [task],
+                  'acceptance_fixtures': {'/external/test.py': 'sha256'}, 'failed_tests': [{'exit_code': 1}]}
+        before = copy.deepcopy(packet)
+        for with_remaining in (True, False):
+            source = packet if with_remaining else {k: v for k, v in packet.items() if k != 'remaining'}
+            brief = distill(source, focused=True)
+            contract, strategy = brief['failed_contract'], brief['previous_attempt_strategy']
+            for key in ('id', 'goal', 'files', 'depends_on', 'acceptance', 'tests', 'coverage', 'architecture_maintenance'):
+                self.assertEqual(contract[key], task[key])
+            for key in ('steps', 'assumptions', 'test_strategy', 'estimated_changed_lines', 'context', 'execution'):
+                self.assertNotIn(key, contract)
+                self.assertEqual(strategy[key], task[key])
+            for key in ('status', 'baseline'):
+                self.assertNotIn(key, contract)
+                self.assertNotIn(key, strategy)
+            self.assertIn('not additional requirements', strategy['authority'])
+            self.assertEqual(brief['acceptance_fixtures'], packet['acceptance_fixtures'])
+            self.assertEqual(brief['failed_tests'], packet['failed_tests'])
+        self.assertEqual(packet, before)
+
     def test_exact_pending_contracts_and_untouched_original(self):
         task = {'id': 'T2', 'files': ['a.mjs'], 'acceptance': [
             {'id': 'A2', 'given': 'input', 'when': 'run', 'then': 'pass'}],

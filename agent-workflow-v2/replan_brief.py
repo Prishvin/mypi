@@ -1,6 +1,19 @@
 """Distill recovery context while retaining the complete local evidence packet."""
 import copy
 
+REVISABLE_FIELDS = ('steps', 'assumptions', 'test_strategy', 'estimated_changed_lines',
+                    'context', 'execution')
+
+
+def separate_strategy(task):
+    """Keep failed repair hypotheses out of the mandatory contract presented to a reviewer."""
+    contract = {key: value for key, value in task.items()
+                if key not in REVISABLE_FIELDS and key not in ('status', 'evidence', 'baseline', 'result')}
+    strategy = {key: task[key] for key in REVISABLE_FIELDS if key in task}
+    return contract, {'authority': 'Previous unsuccessful strategy, not additional requirements. '
+        'Its diagnoses, test-immutability claims and read/edit restrictions are revisable hypotheses; '
+        'check them independently against failed_contract and observed evidence.', **strategy}
+
 
 def distill(packet, focused=False):
     """Keep pending contracts and observed failures; omit duplicated telemetry."""
@@ -34,10 +47,13 @@ def distill(packet, focused=False):
         'Pending contracts below retain their exact acceptance objects and test argv.')
     if focused:
         remaining = brief.pop('remaining', [])
-        brief['failed_contract'] = next((task for task in remaining if task['id'] == failed.get('id')), failed)
+        selected = next((task for task in remaining if task['id'] == failed.get('id')), failed)
+        brief['failed_contract'], brief['previous_attempt_strategy'] = separate_strategy(selected)
         brief['remaining_overview'] = [{key: task[key] for key in ('id', 'goal', 'depends_on', 'files')
                                       if key in task} for task in remaining]
-        brief['evidence_note'] = ('Only the failed contract is editable. All other pending contracts remain local; '
+        brief['evidence_note'] = ('Only the failed todo can be repaired. failed_contract contains mandatory scope, '
+            'acceptance and test commands. previous_attempt_strategy contains revisable decisions from an '
+            'unsuccessful attempt, not new frozen requirements. All other pending contracts remain local; '
             'Python preserves them exactly. Submit failure_analysis and flat changed fields, not the whole plan.')
         if metric.get('admission_estimate'):
             brief['metrics']['admission_estimate'] = copy.deepcopy(metric['admission_estimate'])
