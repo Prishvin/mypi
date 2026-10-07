@@ -39,6 +39,7 @@ export function commandFor(action, paths, query, state, offset = 0, sectionOffse
   if (action === 'catalog') return ['catalog', '--offset', String(offset)];
   if (action === 'architecture') return ['architecture', '--offset', String(offset), '--section-offset', String(sectionOffset), ...(paths?.length ? ['--paths', ...paths] : [])];
   if (action === 'architecture-section' && query && sha256) return ['architecture-section', query, '--sha256', sha256, '--offset', String(offset)];
+  if (action === 'architecture-section') throw new Error('Supply query as a section ID returned by project_map architecture or architecture-search, and sha256 as its source_sha256. Pasted plan prose is not a section ID. If only reviewing a supplied draft, use its provided architecture directly.');
   if (action === 'architecture-search' && query) return ['architecture-search', query, '--offset', String(offset)];
   if (action === 'locate' && query) return ['locate', query, ...(paths?.length ? ['--paths', ...paths] : [])];
   if (action === 'inspect' && paths?.length) return ['context', ...paths, '--max-bytes', '24000', ...(query ? ['--symbol', query] : [])];

@@ -347,3 +347,10 @@ Restarted T15 through mypi after checking the canonical saved-plan digest, all 1
 accepted review IDs and the source snapshot against pre-interruption evidence.
 No game contract, game source or game acceptance tests were authored by Codex.
 Live rerun evidence is recorded under `t15-typed-*` in the pilot report directory.
+
+During the live typed retry, Qwen made an unrelated architecture-section lookup
+with pasted plan prose and no source hash. The adapter returned an irrelevant
+locate/inspect/gate hint. Its diagnostic now names the required section ID and
+source_sha256 and distinguishes supplied draft architecture from indexed source
+sections. Ten architecture/navigation JavaScript tests passed. The active review
+was allowed to recover by itself; no game-specific guidance was injected.
