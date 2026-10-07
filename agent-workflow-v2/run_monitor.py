@@ -95,6 +95,16 @@ def phase_rows(folder):
             for path in sorted(paths) if (data:=read(path))]
 
 
+def planning_limits(metadata):
+    """Expose only recorded launch limits, never the prompt or a guessed profile."""
+    fields={'max_input_tokens':'input_budget','max_output_tokens':'output_budget',
+            'window_tokens':'context','thinking':'thinking','reasoning_effort':'reasoning',
+            'reasoning_budget_tokens':'reasoning_budget_tokens'}
+    context={key:metadata[value] for key,value in fields.items() if metadata.get(value) is not None}
+    execution={'timeout_seconds':metadata['timeout_seconds']} if metadata.get('timeout_seconds') is not None else {}
+    return context,execution
+
+
 class RunMonitor:
     """Bind one run or an evidence folder that follows subsequent replanned runs."""
     def __init__(self,folder,backend=None):
@@ -173,6 +183,10 @@ class RunMonitor:
                 row['tools']=tools(Path(attempts[-1].get('log',str(run/'pi.log'))).parent,Path(attempts[-1]['session']))
             if active:row.update(tools=current_tools,test_results=frozen.get('evidence',{}).get('results',[]),tests_fresh=fresh,
                 elapsed_seconds=max(0,until-state.get('attempt_started_epoch',until)))
+            if active and state.get('workflow_phase')=='planning':
+                context,execution=planning_limits(metadata)
+                row['context']={**(row.get('context') or {}),**context} or None
+                row['execution']={**(row.get('execution') or {}),**execution} or None
             tasks.append(row)
         prefixes=[]
         for path in self.folder.rglob('session.json'):

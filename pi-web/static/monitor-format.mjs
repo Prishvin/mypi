@@ -33,7 +33,13 @@ export function currentStep(run){
  if(native){
   const reading=native.phase==='chunk',tokens=reading?native.prefill_done:native.output_tokens;
   const progress=tokens!=null?(reading?number(tokens)+' / '+number(native.prompt_tokens)+' prompt tokens':number(tokens)+' output tokens'):'';
-  return {title:phase(native.phase)+suffix,detail:[goal,progress].filter(Boolean).join(' — '),state:'running',todo:id};
+  const speed=reading?native.prefill_tok_s:native.decode_tok_s;
+  const rate=typeof speed==='number'&&Number.isFinite(speed)?number(speed)+' tok/s':'';
+  const drafting=run.workflow_phase==='planning'&&id==='DRAFT';
+  const title=drafting&&!reading?'Generating draft plan':phase(native.phase);
+  const note=drafting?'Implementation has not started. '+(native.phase==='tool_call'?
+   'Waiting for complete tool arguments before validation.':'The draft must pass validation and task review first.'):'';
+  return {title:title+suffix,detail:[goal,progress,rate,note].filter(Boolean).join(' — '),state:'running',todo:id};
  }
  if(run.native?.other_requests)return {title:'Waiting for the model'+suffix,detail:'The model is serving another request. '+goal,state:'waiting',todo:id};
  const last=task?.tools?.at(-1);

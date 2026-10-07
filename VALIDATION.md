@@ -141,3 +141,18 @@ Recovery fixtures verify one automatic evidence-reviewed repair, success/final-t
 The preceding UI/retrieval change passed actual Chrome checks for collapsible thinking, task/status/error copy buttons, safe rendering, retained expansion/scroll, mobile layout and both localhost clipboard and insecure-LAN fallback. The original missing-query fixture call was replayed successfully against the owned pilot source using bounded project-file retrieval. Live model output and game correctness remain separate from these workflow tests; the next pilot uses Qwen for every planning/review/execution stage.
 
 The fresh Qwen→Qwen pilot started in an isolated project after these checks. Its actual draft session is local MTPLX Quality, 98,304 context, 57,344 input ceiling, 32,768 output ceiling, medium effort and a 2,048-token thinking cap. Native telemetry reported a 9,905-token prompt; the 96k window was not filled artificially. Chrome verified the live planning title, distinct coverage task, LAN copy control, thinking expansion and mobile width without script errors. Coverage/refinement and final game acceptance were still pending at this observation; no completion or speed/quality improvement is claimed.
+
+### Long draft visibility — 2026-10-07
+
+The first local draft continued generating at about 19 tokens/s while Pi awaited
+complete tool arguments. The monitor now identifies draft generation, includes
+the live rate in its current-step summary, and explicitly states that implementation
+has not started. Active planning limits come from the recorded session launch;
+execution still displays its frozen contract. Missing measurements remain unknown.
+Focused verification passes 25 Python monitor/thinking checks and 11 JavaScript
+monitor checks. Chrome verified increasing live tokens, actual input/output/thinking
+limits, the 30-minute attempt deadline, desktop/mobile layout and no script errors.
+Only the monitor was restarted; the model and planning request continued unchanged.
+The initial draft still contains a complete V3 plan before coverage and per-task
+refinement. Its long generation time remains a planning efficiency issue, not a
+completed implementation or a measured percentage of game progress.

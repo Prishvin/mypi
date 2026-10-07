@@ -19,6 +19,16 @@ test('Current activity uses recorded model phase and actual tokens, never guesse
  const activity=currentStep(r);assert.equal(activity.todo,'T1');assert.match(activity.title,/Reading prompt/);
  assert.match(activity.detail,/100 \/ 200 prompt tokens/);assert.doesNotMatch(activity.detail,/Unrelated|step 1|step 2/i);
 });
+test('Long draft generation exposes live rate and validation boundary without claiming implementation progress',()=>{
+ const r={...run(),workflow_phase:'planning',current_todo:'DRAFT',tasks:[{id:'DRAFT',goal:'Create draft'}],
+  native:{requests:[{phase:'tool_call',output_tokens:18064,decode_tok_s:18.9}]}};
+ const activity=currentStep(r);assert.equal(activity.title,'Generating draft plan · DRAFT');
+ assert.match(activity.detail,/18.9 tok\/s/);assert.match(activity.detail,/Implementation has not started/);
+ assert.match(activity.detail,/complete tool arguments before validation/);assert.doesNotMatch(activity.detail,/%|remaining|complete plan/);
+ r.native.requests[0].decode_tok_s=null;assert.doesNotMatch(currentStep(r).detail,/tok\/s/);
+ r.native.requests[0].phase='chunk';assert.match(currentStep(r).title,/Reading prompt/);
+ r.workflow_phase='execution';assert.doesNotMatch(currentStep(r).detail,/Implementation has not started/);
+});
 test('A running tool identifies its real file instead of replaying a completed action',()=>{
  const r=run();r.tasks[0].tools=[{name:'write',target:'old.py',status:'Completed'},{name:'edit',target:'active.py',status:'Running'}];
  const activity=currentStep(r);assert.match(activity.title,/Editing file/);assert.match(activity.detail,/active.py/);assert.doesNotMatch(activity.detail,/old.py/);
