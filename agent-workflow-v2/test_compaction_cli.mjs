@@ -28,7 +28,7 @@ test('a short first tool turn previously prevented the coding handoff',()=>{
   assert.ok(prepareCompaction(entries,{...settings,keepRecentTokens:0}));
 });
 
-test('bundled CLI compacts before its second provider request without a summary model call', {timeout:30000},async t=>{
+test('bundled CLI compacts consecutive tool turns without summary calls or extra turns', {timeout:30000},async t=>{
   const root=mkdtempSync(join(tmpdir(),'mypi-cli-compaction-'));
   t.after(()=>rmSync(root,{recursive:true,force:true}));
   const config=join(root,'config'),project=join(root,'project');mkdirSync(project);
@@ -37,7 +37,7 @@ test('bundled CLI compacts before its second provider request without a summary 
   const server=createServer(async(req,res)=>{
     let body='';for await(const chunk of req)body+=chunk;
     requests.push(JSON.parse(body));
-    const first=requests.length===1;
+    const first=requests.length<=2;
     res.writeHead(200,{'Content-Type':'text/event-stream'});
     const emit=(choices,usage)=>res.write('data: '+JSON.stringify({id:'fixture',object:'chat.completion.chunk',created:1,model:'fixture',choices,...(usage?{usage}:{})})+'\n\n');
     emit([{index:0,delta:first?{role:'assistant',tool_calls:[{index:0,id:'probe1',type:'function',function:{name:'probe',arguments:'{}'}}]}:{role:'assistant',content:'Finished synthetic check.'},finish_reason:null}]);
@@ -52,21 +52,27 @@ test('bundled CLI compacts before its second provider request without a summary 
   models.providers['local-qwen-workflow'].models[0].reasoning=false;
   writeFileSync(join(config,'models.json'),JSON.stringify(models));
   const extension=join(root,'probe.mjs');
-  writeFileSync(extension,`export default function(pi){
+  writeFileSync(extension,`import {installCompactionBoundary} from ${JSON.stringify(join(home,'pi-compaction-fixed.mjs'))};
+  export default function(pi){
+    installCompactionBoundary(pi);
     pi.registerTool({name:'probe',label:'Probe',description:'Synthetic result',parameters:{type:'object',properties:{}},
       async execute(){return {content:[{type:'text',text:'OLD_TOOL_RESULT '+ 'x'.repeat(4000)}],details:{}};}});
-    pi.on('session_before_compact',async(e)=>({compaction:{summary:'COMPLETE_SYNTHETIC_HANDOFF',tokensBefore:e.preparation.tokensBefore,details:{modelCall:false}}}));
+    pi.on('session_before_compact',async(e)=>({compaction:{summary:'COMPLETE_SYNTHETIC_HANDOFF',tokensBefore:e.preparation.tokensBefore,details:{modelCall:false,fullContractPreserved:true,retainedConversationEntries:0}}}));
   }`);
   const env={...process.env,PI_CODING_AGENT_DIR:config};
   for(const key of Object.keys(env))if(key.startsWith('QWEN_WORKFLOW_'))delete env[key];
+  env.QWEN_WORKFLOW_ROLE='code';
   const child=spawn(process.execPath,[join(home,'../node_modules/.bin/pi'),'--provider','local-qwen-workflow','--model','qwen27b-q8','--thinking','off','--tools','probe','--no-extensions','--no-skills','--no-prompt-templates','--extension',extension,'--session-dir',join(root,'sessions'),'--offline','--mode','json','-p','SYNTHETIC_INITIAL_TASK '.repeat(900)],{cwd:project,env,stdio:['ignore','pipe','pipe']});
   t.after(()=>{if(child.exitCode===null)child.kill('SIGTERM');});
   let output='',errors='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>errors+=x);
   const [code]=await once(child,'exit');
   assert.equal(code,0,errors+'\n'+output.slice(-3000));
-  assert.equal(requests.length,2,'Compaction must not request an LLM summary: '+errors);
+  assert.equal(requests.length,3,'Compaction must not request an LLM summary or an extra turn: '+errors);
   assert.match(JSON.stringify(requests[0].messages),/SYNTHETIC_INITIAL_TASK/);
   assert.match(JSON.stringify(requests[1].messages),/COMPLETE_SYNTHETIC_HANDOFF/);
   assert.doesNotMatch(JSON.stringify(requests[1].messages),/SYNTHETIC_INITIAL_TASK|OLD_TOOL_RESULT/);
-  assert.match(output,/compaction/);
+  assert.match(JSON.stringify(requests[2].messages),/COMPLETE_SYNTHETIC_HANDOFF/);
+  assert.doesNotMatch(JSON.stringify(requests[2].messages),/SYNTHETIC_INITIAL_TASK|OLD_TOOL_RESULT/);
+  const events=output.split('\n').filter(x=>x.startsWith('{')).map(JSON.parse);
+  assert.equal(events.filter(e=>e.type==='compaction_end' && e.result).length,2);
 });

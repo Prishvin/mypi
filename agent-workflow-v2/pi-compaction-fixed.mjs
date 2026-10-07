@@ -37,7 +37,23 @@ export function compactSummary(task, gate, failures = [], investigation = null) 
   return summary;
 }
 
+export function installCompactionBoundary(pi) {
+  pi.on('session_compact', (event, ctx) => {
+    if (!active(ctx.model) || process.env.QWEN_WORKFLOW_ROLE !== 'code' ||
+        event.compactionEntry?.details?.fullContractPreserved !== true ||
+        event.compactionEntry?.details?.retainedConversationEntries !== 0) return;
+    // Pi excludes the previous summary when finding the next cut. Without a
+    // visible boundary, a single new assistant/tool turn has no summarizable
+    // prefix. This custom checkpoint is deferred safely until tool results are
+    // persisted, and never starts an extra model turn.
+    pi.sendMessage({customType:'workflow-handoff-boundary',display:false,
+      content:'Workflow checkpoint: continue the frozen task using current evidence.',
+      details:{compaction:event.compactionEntry.id}}, {triggerTurn:false});
+  });
+}
+
 export function installFixedCompactionHooks(pi, python, cli) {
+  installCompactionBoundary(pi);
   pi.on('session_before_compact', async (event, ctx) => {
     if (!active(ctx.model) || process.env.QWEN_WORKFLOW_ROLE !== 'code' || !process.env.QWEN_WORKFLOW_STATE) return;
     const session=process.env.QWEN_WORKFLOW_SESSION;

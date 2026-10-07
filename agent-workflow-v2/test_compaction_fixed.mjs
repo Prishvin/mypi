@@ -4,7 +4,7 @@ import test from 'node:test';
 import {readFileSync,writeFileSync,mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {compactSummary,failingNames,installFixedCompactionHooks} from './pi-compaction-fixed.mjs';
+import {compactSummary,failingNames,installFixedCompactionHooks,installCompactionBoundary} from './pi-compaction-fixed.mjs';
 import {taskSummary} from './pi-compaction.mjs';
 import {SessionManager} from '../node_modules/@earendil-works/pi-coding-agent/dist/core/session-manager.js';
 
@@ -15,6 +15,28 @@ const state={task:{id:'T1',goal:'Repair numeric parsing',files:['numbers.py'],ac
 writeFileSync(join(source,'task-state.json'),JSON.stringify(state));
 writeFileSync(join(source,'test.log'),log);
 process.on('exit',()=>rmSync(source,{recursive:true,force:true}));
+
+test('handoff boundary applies only to complete coding checkpoints and never starts a turn',()=>{
+  const old=process.env.QWEN_WORKFLOW_ROLE;
+  let handler;const sent=[];
+  installCompactionBoundary({on:(_,fn)=>handler=fn,sendMessage:(...args)=>sent.push(args)});
+  const ctx={model:{provider:'local-qwen-workflow'}};
+  const event={compactionEntry:{id:'c1',details:{fullContractPreserved:true,retainedConversationEntries:0}}};
+  try {
+    for(const role of ['architect','reviewer','chat','inspect']){
+      process.env.QWEN_WORKFLOW_ROLE=role;handler(event,ctx);
+    }
+    process.env.QWEN_WORKFLOW_ROLE='code';
+    handler({compactionEntry:{details:{}}},ctx);
+    handler(event,{model:{provider:'unrelated'}});
+    assert.equal(sent.length,0);
+    handler(event,ctx);
+    assert.equal(sent.length,1);assert.deepEqual(sent[0][1],{triggerTurn:false});
+    assert.equal(sent[0][0].details.compaction,'c1');
+  } finally {
+    if(old===undefined)delete process.env.QWEN_WORKFLOW_ROLE;else process.env.QWEN_WORKFLOW_ROLE=old;
+  }
+});
 
 test('recorded failing contract fits without losing acceptance or tests',()=>{
   const failure={argv:state.evidence.results[0].argv,exit_code:1,
