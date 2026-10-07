@@ -3,10 +3,15 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from execution_audit import summarize
+from execution_audit import summarize, error_brief
 
 
 class AuditTests(unittest.TestCase):
+    def test_traceback_retains_terminal_cause_without_frames_or_received_source(self):
+        text='Traceback (most recent call last):\n'+'  File /private/runtime.py:200\n    private_source()\n'*20
+        text+='ValueError: Use qualified candidates: factory.locate\nReceived arguments: PRIVATE_IMPLEMENTATION'
+        self.assertEqual(error_brief(text),'ValueError: Use qualified candidates: factory.locate')
+        self.assertEqual(error_brief('Text did not match\nShadow refreshed: stale-hash'),'Text did not match')
     def test_success_errors_compaction_and_repeated_content_without_bodies(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'pi.log'

@@ -112,6 +112,15 @@ class RunnerTests(unittest.TestCase):
             lambda *a: self.fake(*a, exit_code=124)), REPLAN_EXIT)
         self.assertEqual(read(self.folder/'replan-request.json')['reason'], 'timeout')
 
+    def test_deadline_remains_stop_reason_when_latest_tests_also_failed(self):
+        self.save()
+        self.assertEqual(execute(self.root,self.path,self.folder,
+            lambda *a:self.fake(*a,correct=False,exit_code=124)),REPLAN_EXIT)
+        packet=read(self.folder/'replan-request.json')
+        self.assertEqual(packet['reason'],'timeout')
+        self.assertTrue(packet['failed_tests'])
+        self.assertTrue(any('tests' in v.lower() for v in packet['violations']))
+
     def test_missing_evidence_cannot_finish_a_task(self):
         self.save()
         def empty(command, folder, timeout):

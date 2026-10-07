@@ -65,3 +65,7 @@ and diagnostics without implementation bodies or reasoning.
 `retrieval.read_symbol` prefers exact qualified locators and resolves a short name
 only when it uniquely identifies a symbol in the requested file. It returns the
 qualified identity and exact bounded span; ambiguity still requires selection.
+
+`runner_process.py` recognizes both child-owned and outer-watchdog deadlines.
+`runner_evidence.py` preserves timeout as the stop reason alongside failed tests;
+`execution_audit.py` retains terminal exceptions rather than traceback frames.

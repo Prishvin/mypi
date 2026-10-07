@@ -80,6 +80,7 @@ def invoke(command, folder, timeout):
         except BaseException:
             terminate(process, metadata)
             raise
+    timed_out = timed_out or process.returncode == 124
     result = {'exit_code': 124 if timed_out else process.returncode,
               'session': read(metadata).get('session'), 'log': str(folder / 'pi.log'),
               'wall_seconds': round(time.monotonic()-started, 3), 'timed_out': timed_out}

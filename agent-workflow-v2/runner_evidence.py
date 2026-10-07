@@ -19,7 +19,7 @@ def acceptance(result, task, root):
             state = read(session / 'task-state.json')
             if budget.get('passed') is False:
                 reason = 'context_budget_exceeded'
-            elif any(row['exit_code'] for row in state.get('evidence', {}).get('results', [])):
+            elif reason != 'timeout' and any(row['exit_code'] for row in state.get('evidence', {}).get('results', [])):
                 reason = 'acceptance_failed'
         violations=[]
         if session and (session/'task-state.json').exists():

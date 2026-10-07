@@ -1,7 +1,16 @@
 """Distill mechanical execution history for recovery without sending source or reasoning."""
 import hashlib
 import json
+import re
 from pathlib import Path
+
+
+def error_brief(text):
+    """Keep the terminal exception rather than spending the limit on traceback frames."""
+    diagnostic = text.split('Received arguments:', 1)[0]
+    lines = diagnostic.splitlines()
+    causes = [line.strip() for line in lines if re.match(r'^\s*(?:[\w.]*Error|Exception):', line)]
+    return (causes[-1] if causes else lines[0] if lines else '')[:240]
 
 
 def summarize(path, files):
@@ -32,7 +41,7 @@ def summarize(path, files):
             if event.get('isError'):
                 text = ' '.join(b.get('text', '') for b in event.get('result', {}).get('content', [])
                                 if b.get('type') == 'text')
-                errors.append({'tool': event.get('toolName'), 'error': text.split('Received arguments:')[0][:240]})
+                errors.append({'tool': event.get('toolName'), 'error': error_brief(text)})
                 errors = errors[-4:]
             elif mutation:
                 name, digest = mutation

@@ -585,3 +585,31 @@ Pagination, byte hashes and source span boundaries are unchanged.
 retrieval, exact Python-name precedence, ambiguity, wrong qualification, batch
 partial success, pinned fixtures, source limits and the Pi tool adapter. The
 current worker's immutable runtime was retained; future sessions receive the fix.
+
+### Repair-4 outcome and timeout evidence — 2026-10-07
+
+Worker `15a035ea4eb9` stopped at its 2,700.892-second attempt timer (launch epoch
+elapsed 3,046.208 seconds). It created the missing tests, ran them four times and
+ended with seven of eight passing. T03's exit-reachability assertion and required
+architecture note remain unresolved. T01/T02 remain accepted; no further worker
+was started after the explicitly authorized repair failed.
+
+There were 13 completed requests and one deadline cancellation, 27,743 output
+tokens including 23,906 reasoning tokens, nine compactions, two source mutations
+and two test-file mutations. Ten completed requests engaged the 2,048-token
+thinking guard. The median completed-request decode rate was 18.88 tokens/s,
+range 5.51–22.28; completed-request backend allocation was 35.40–38.63 GB. A late
+snapshot measured 47.85 GB physical process footprint, distinct from allocation
+or RSS. The late slowdown's cause is unconfirmed. Measurements and raw events
+remain in the pilot's results.md, supervision.jsonl and repair-4 evidence.
+
+The runner previously marked `timed_out=false` when the child enforced its own
+deadline and returned 124, and test failure evidence could overwrite the timeout
+stop reason. Both paths now preserve the deadline classification while retaining
+failed assertions. **32 Python tests passed**, including a real short-lived
+child returning 124 and a deadline alongside failing acceptance. Original pilot
+receipts were retained; corrected interpretation is recorded separately.
+
+The execution audit also now retains the terminal exception instead of truncating
+the start of a traceback. **Three audit tests passed**, including a long private
+traceback whose bounded summary retains the cause without implementation frames.
