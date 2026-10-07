@@ -33,6 +33,8 @@ test('draft, refinement and coverage use compatible system instructions for loca
         const text=await prompt(provider);
         assert.match(text,/ARCHITECT REVIEW MODE/);
         assert.match(text,/context_overlay/);
+        assert.match(text,/max\(1024, ceil\(E \* 0\.25\)\)/);
+        assert.match(text,/E \+ margin_tokens <= max_input_tokens/);
         assert.doesNotMatch(text,/Save a JSON object with exactly these required top-level field names/);
         assert.doesNotMatch(text,/Finish by calling plan_store with the architecture and ordered todos/);
         assert.doesNotMatch(text,/LOCAL QWEN CODING WORKFLOW|workflow_test\(\{\}\)/);

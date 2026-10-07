@@ -275,3 +275,14 @@ An additional system-prompt check found coding-only rules were prepended to all
 architect sessions. Architects now receive only their planning mode's rules;
 executors keep their coding rules, test-gate instructions and tools. The actual
 Pi hook regression covers both planner providers and unchanged executor rules.
+
+The rejected pickup review was interrupted through the planning CLI and resumed
+through mypi at the same checkpoint. Nine accepted reviews, the saved plan hash
+and source snapshot were preserved. Rerun `review-10-attempt-11` passed in 434.13
+seconds after Qwen corrected one context-margin rejection; ten task reviews were
+then accepted. The next live request was verified to contain review rules with
+neither full-plan creation directives nor coding-only rules. Review instructions
+and sparse context schema now state the exact 25% margin formula used by native
+validation. No model-authored values were filled in or adjusted by Codex.
+Supervision decisions and periodic metrics are retained in the pilot's
+`supervision.jsonl` alongside the original attempt evidence.

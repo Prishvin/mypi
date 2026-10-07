@@ -7,7 +7,7 @@ export function repairParameters(target) {
     estimated_changed_lines:Type.Optional(Type.Integer({minimum:1,maximum:300})),
     steps:Type.Optional(Type.Array(Type.String(),{minItems:2,maxItems:6})),
     test_strategy:Type.Optional(Type.String()), assumptions:Type.Optional(Type.Array(Type.String())),
-    context_overlay:Type.Optional(Type.Any({description:'Merge only changed context fields into this task; use context_overlay, not context.'})), execution:Type.Optional(Type.Any()),
+    context_overlay:Type.Optional(Type.Any({description:'Merge only changed context fields; use context_overlay, not context. After merging, margin_tokens must be at least max(1024, ceil(sum(estimate values) * 0.25)); estimate sum + margin must fit max_input_tokens.'})), execution:Type.Optional(Type.Any()),
     criterion_replacements:Type.Optional(Type.Array(Type.Object({old:Type.Any(),new:Type.Any(),reason:Type.String({minLength:16})}))),
     add_files:Type.Optional(Type.Array(Type.String())),
     add_tests:Type.Optional(Type.Array(Type.Array(Type.String()))),

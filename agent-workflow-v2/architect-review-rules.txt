@@ -25,7 +25,15 @@ The 32768-token shadow navigation threshold and measured session budgets apply.
 
 Keep changes atomic and testable. Preserve the draft's requirements and finite
 file limits. Budget instructions/tools, selected source, tests, history, margin
-and output. Thinking is inside output. Estimate only changes actually proposed;
+and output. Estimate fields are framework, shadow, source, tests and history;
+framework >=6144. Let E be their sum. margin_tokens >= max(1024, ceil(E * 0.25));
+E + margin_tokens <= max_input_tokens. Recalculate the margin when estimates
+change, using the merged current task context. Input is 512-57344 tokens and
+output 512-32768; input + output + 8192 <= window_tokens when specified.
+Thinking is inside output: a reasoning_budget_tokens cap must leave at least
+2048 tokens for tool arguments; omit it with thinking off. Execution timeout is
+30-2700 seconds, test timeout 1-300, on_failure is replan.
+Estimate only changes actually proposed;
 do not resend unrelated settings. Record uncertainty and observable verification.
 Source edits and test execution belong to the later coding phase. Stop after a
 successful save. After rejection, correct the specific tool error and preserve
