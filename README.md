@@ -159,6 +159,8 @@ The light-themed viewer refreshes every three seconds. A sticky **Current step**
 
 Live native telemetry shows actual prompt processing, cached/new prompt tokens, reasoning/tool/answer phase, generation speed and separate allocation/footprint/RSS measurements when available. Capacity is a limit; missing measurements appear as **—**. Process RSS requires a recorded sampler; the viewer does not inspect a remote PID. Planned steps are displayed as instructions, not invented completion checkmarks. Task acceptance reflects the runner's frozen test and scope gates, rather than a model's claim of success.
 
+**Model thinking** is collapsed by default and shows only reasoning explicitly emitted by Pi for the current attempt. It updates without inference requests, preserves reading position and labels previous/stopped output. Long text is bounded to its recent tail. Copy icons export task details, current status, individual tool failures, thinking, project brief and model activity; copying also works on ordinary HTTP LAN connections.
+
 ## Complete Pi workflow
 
 ### 1. Bind a workspace and classify intent

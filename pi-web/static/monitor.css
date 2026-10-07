@@ -14,6 +14,10 @@ header { position: sticky; top: 0; z-index: 3; background: #fffffff5; border-bot
 #connection { margin-left: auto; color: var(--muted); font-size: 12px; }
 button, select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid #d5dfea; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
 button:hover { background: #f0f5ff; border-color: #adc5f5; }
+.copy-button { padding: 2px 7px; margin-left: 8px; color: var(--muted); font-size: 17px; line-height: 1.4; vertical-align: middle; flex-shrink: 0; }
+.task-head h2 { margin-right: auto; }
+.tool.error > .copy-button { float: right; }
+.clipboard-buffer, .screen-reader-only { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; overflow: hidden; }
 button:focus-visible, select:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid #91b5ff; outline-offset: 3px; }
 .current-step { max-width: 1440px; margin: auto; display: flex; align-items: center; gap: 14px; padding: 13px 4vw 16px; border-top: 1px solid #eff3f8; }
 .step-indicator { height: 10px; width: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 5px #edf3ff; flex-shrink: 0; }
@@ -50,6 +54,12 @@ p { margin: 8px 0; overflow-wrap: anywhere; }
 .section-title span { color: var(--muted); font-size: 11px; }
 .subtle { font-size: 12px; color: var(--muted); }
 .live { margin-bottom: 22px; }
+.thinking { margin: 0 0 20px; }
+.thinking summary { font-weight: 600; }
+#thinking-status { color: var(--muted); font-size: 11px; font-weight: 400; margin-left: 14px; }
+.thinking[data-streaming='true'] #thinking-status { color: var(--blue); }
+#thinking-text { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+#thinking-detail { margin-top: 12px; }
 .native-grid { display: flex; flex-wrap: wrap; gap: 12px 30px; margin: 15px 0; }
 .native-grid strong { font-size: 15px; font-weight: 600; }
 .native-grid span { font-size: 11px; color: var(--muted); display: block; }

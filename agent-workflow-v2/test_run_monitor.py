@@ -113,6 +113,17 @@ class Artifacts(unittest.TestCase):
         self.assertEqual(row['tasks'][0]['elapsed_seconds'],400)
         self.assertIsNone(row['ended_epoch'])  # A paused run can still resume.
 
+    def test_thinking_follows_active_attempt_and_stops_streaming_with_run(self):
+        monitor=self.setup_run();log=self.root/'run-1/01-A/pi.log';log.parent.mkdir(parents=True)
+        log.write_text(json.dumps({'type':'message_update','assistantMessageEvent':{
+            'type':'thinking_delta','delta':'Inspect the boundary.'}})+'\n')
+        row=monitor.snapshot()['thinking']
+        self.assertEqual(row['text'],'Inspect the boundary.');self.assertEqual(row['todo'],'A')
+        self.assertTrue(row['streaming'])
+        state=read(self.root/'run-1/state.json');state['status']='needs_replan'
+        self.write('run-1/state.json',state)
+        self.assertFalse(monitor.snapshot()['thinking']['streaming'])
+
 
 class HTTPTests(unittest.TestCase):
     def setUp(self):

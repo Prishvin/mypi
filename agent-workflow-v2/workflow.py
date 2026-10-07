@@ -72,6 +72,9 @@ def arguments():
     fixture = sub.add_parser('read-fixture')
     fixture.add_argument('path')
     fixture.add_argument('--offset', type=int, default=0)
+    page=sub.add_parser('read-file')
+    page.add_argument('path');page.add_argument('--offset',type=int,default=0)
+    page.add_argument('--fixture-request',action='store_true')
     variables = sub.add_parser('variables')
     variables.add_argument('path')
     variables.add_argument('--query', default='')
@@ -180,6 +183,8 @@ def main() -> int:
         result = retrieval.read_symbol(root, args.path, args.name, args.offset)
     elif args.command == 'read-fixture':
         result = retrieval.read_fixture(root, args.path, args.offset)
+    elif args.command == 'read-file':
+        result = retrieval.read_page(root, args.path, args.offset, args.fixture_request)
     elif args.command == 'read-symbols':
         result = retrieval.read_symbols(root, args.path, args.names)
     elif args.command == 'variables':

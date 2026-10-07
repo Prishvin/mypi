@@ -7,6 +7,25 @@ import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {spawnSync} from 'node:child_process';
+
+test('source file reads accept the observed fixture call without query and preserve query validation', async()=>{
+ const folder=mkdtempSync(join(tmpdir(),'pi-source-page-')),keys=['QWEN_WORKFLOW_ROLE','QWEN_WORKFLOW_PROJECT'];
+ const old=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+ try{
+  Object.assign(process.env,{QWEN_WORKFLOW_ROLE:'code',QWEN_WORKFLOW_PROJECT:folder});
+  writeFileSync(join(folder,'levels.mjs'),'export const LEVELS = [1, 2, 3];\n');
+  const registered={};extension({on:()=>{},registerCommand:()=>{},registerTool:t=>{registered[t.name]=t;},
+   exec:async(binary,args)=>{const p=spawnSync(binary,args,{encoding:'utf8'});return {code:p.status,stdout:p.stdout,stderr:p.stderr};}});
+  const tool=registered.source_query,ctx={model:{provider:'local-qwen-workflow'},cwd:folder};
+  assert.equal(tool.parameters.required.includes('query'),false);
+  const response=await tool.execute('',{action:'fixture',paths:['levels.mjs']},null,null,ctx);
+  const data=JSON.parse(response.content[0].text);assert.equal(data.mode,'project-file');assert.match(data.source,/LEVELS/);
+  assert.match(data.note,/action=file/);
+  await assert.rejects(tool.execute('',{action:'search',paths:['levels.mjs']},null,null,ctx),/requires a nonempty query/);
+  await assert.rejects(tool.execute('',{action:'file',paths:['levels.mjs','other.mjs']},null,null,ctx),/exactly one file/);
+ }finally{rmSync(folder,{recursive:true,force:true});for(const k of keys)if(old[k]===undefined)delete process.env[k];else process.env[k]=old[k];}
+});
 
 test('native thinking budget is validated without sending unsupported llama.cpp fields', async () => {
   const keys=['QWEN_WORKFLOW_SESSION','QWEN_WORKFLOW_PROJECT','QWEN_WORKFLOW_ROLE','QWEN_WORKFLOW_THINKING','QWEN_WORKFLOW_REASONING_BUDGET_TOKENS','QWEN_WORKFLOW_INPUT_BUDGET','QWEN_WORKFLOW_REQUEST_LOG'];

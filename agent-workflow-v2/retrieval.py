@@ -64,6 +64,27 @@ def read_fixture(root: Path, relative: str, offset=0) -> dict:
             'next_offset': stop, 'more': stop < len(rows), 'readonly': True}
 
 
+def read_page(root: Path, relative: str, offset=0, fixture=False) -> dict:
+    """Read one bounded project page; external files still require a pinned fixture."""
+    path=source_path(root,relative)
+    if not path.is_relative_to(root.resolve()):return read_fixture(root,relative,offset)
+    if path.stat().st_size>1048576:raise ValueError('File exceeds 1 MiB; retrieve named symbols or search instead')
+    raw=path.read_bytes()
+    try:rows=raw.decode('utf-8').splitlines()
+    except UnicodeError:raise ValueError('Source pages require UTF-8 text') from None
+    start=max(0,offset);stop=start;lines=[];used=0
+    for index in range(start,min(len(rows),start+120)):
+        line=f'{index+1}: {rows[index]}'
+        size=len((line+'\n').encode())
+        if used+size>12000:break
+        lines.append(line);used+=size;stop=index+1
+    if stop==start and start<len(rows):raise ValueError('Source line exceeds page budget; use named symbols or search')
+    result={'path':relative,'sha256':hashlib.sha256(raw).hexdigest(),'source':'\n'.join(lines),
+            'next_offset':stop,'more':stop<len(rows),'mode':'project-file'}
+    if fixture:result['note']='This is project source, served as a bounded file page. Use action=file; fixture is for pinned acceptance tests.'
+    return result
+
+
 def read_symbols(root: Path, relative: str, names: list[str]) -> dict:
     """Preserve valid bounded spans when one requested symbol is missing."""
     source_path(root, relative)  # Validate scope before handling symbol errors.

@@ -6,6 +6,14 @@ export function phase(value){return ({chunk:'Reading prompt',reasoning:'Thinking
 export function completion(done,total){return typeof done==='number'&&total>0?Math.max(0,Math.min(100,done/total*100)):0;}
 export function testState(result,fresh){if(!result)return 'Not run';if(fresh===false)return 'Stale';return result.exit_code===0?'Passed':'Failed';}
 
+/** Label actual external-model reasoning, retaining clear empty and stopped states. */
+export function thinkingView(run){
+ const t=run.thinking||{},text=typeof t.text==='string'?t.text:'',streaming=run.status==='running'&&t.streaming===true;
+ const status=streaming?'Streaming':text?(run.status==='running'?(t.previous?'Previous response':'Latest recorded thinking'):(run.status==='complete'?'Run complete':'Run stopped')+' · last recorded thinking'):'No thinking text yet';
+ const detail=[t.todo||run.current_todo,t.attempt,'Recorded Pi reasoning; updates every 3 seconds.',t.truncated?'Earlier text omitted; showing the recent tail.':''].filter(Boolean).join(' · ');
+ return {status,detail,streaming,text:text||(streaming?'Waiting for the first thinking text…':'No thinking text is available in the recorded output for this attempt.')};
+}
+
 /** Describe recorded activity without guessing a numbered step from planned prose. */
 export function currentStep(run){
  const task=run.tasks?.find(t=>t.id===run.current_todo),id=run.current_todo;

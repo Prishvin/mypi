@@ -1,5 +1,11 @@
 # Release verification
 
+## Thinking panel, copy controls and source retrieval — 2026-10-07
+
+All **388 macOS checks pass** (287 workflow Python, 22 web, 11 host, 68 JavaScript). New reasoning-stream tests cover incremental deltas, duplicate final events, request/attempt transitions, stopped state, partial UTF-8/JSON, rotation, byte/text bounds and exclusion of prompts/tool arguments/answers. Real Chrome checks passed for collapsed/open state, refresh persistence, active-task binding, safe plain-text display, reading position, desktop/mobile layout and clipboard copy through the HTTP LAN fallback.
+
+The observed `source_query({action:"fixture",paths:["src/engine/levels.mjs"]})` failed because `query` was unnecessarily required and the caller used fixture mode for project source. Explicit bounded `file` reads now need no query; that legacy fixture request is served as a bounded project page with corrective guidance. An exact read against the actual pilot source succeeded. Tests prove external fixture pin/hash checks, path boundaries and byte limits remain enforced. The interrupted original task and rejected calls remain in its evidence history.
+
 ## Latest: local-Qwen efficiency and executable finalization — 2026-10-07
 
 | Check | macOS Apple Silicon | Linux ARM64 Docker |

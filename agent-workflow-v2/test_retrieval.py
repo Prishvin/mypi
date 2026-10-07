@@ -2,7 +2,7 @@
 from pathlib import Path
 import tempfile
 import unittest
-from retrieval import read_symbol, read_symbols, variables, search, source_path
+from retrieval import read_symbol, read_symbols, variables, search, source_path, read_page
 
 
 class RetrievalTests(unittest.TestCase):
@@ -20,6 +20,40 @@ class RetrievalTests(unittest.TestCase):
         self.assertIn('return x', result['source'])
         self.assertNotIn('do not include', result['source'])
         self.assertFalse(result['more'])
+
+    def test_project_page_supports_constants_and_legacy_fixture_without_query(self):
+        (self.root/'levels.mjs').write_text('\n'.join('const row'+str(i)+'="floor";' for i in range(150)))
+        first=read_page(self.root,'levels.mjs',fixture=True)
+        self.assertEqual(first['mode'],'project-file');self.assertIn('action=file',first['note'])
+        self.assertEqual(first['next_offset'],120);self.assertTrue(first['more'])
+        last=read_page(self.root,'levels.mjs',first['next_offset'])
+        self.assertTrue(last['source'].startswith('121:'));self.assertFalse(last['more'])
+        self.assertNotIn('const row0=',last['source'])
+
+    def test_file_pages_preserve_external_fixture_hash_guard(self):
+        import hashlib,json,os
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as folder:
+            external=Path(folder).resolve()/'accept.py';external.write_text('assert True\n')
+            state=self.root/'state.json';state.write_text(json.dumps({'readonly_tests':{
+                str(external):hashlib.sha256(external.read_bytes()).hexdigest()}}))
+            with patch.dict(os.environ,{'QWEN_WORKFLOW_STATE':str(state)}):
+                self.assertTrue(read_page(self.root,str(external),fixture=True)['readonly'])
+                external.write_text('assert False\n')
+                with self.assertRaisesRegex(ValueError,'pinned'):read_page(self.root,str(external),fixture=True)
+            (self.root/'escape').symlink_to(external)
+            with self.assertRaises(ValueError):read_page(self.root,'escape')
+
+    def test_file_page_bounds_binary_large_files_and_large_lines(self):
+        p=self.root/'data.txt';p.write_bytes(b'\xff')
+        with self.assertRaisesRegex(ValueError,'UTF-8'):read_page(self.root,'data.txt')
+        p.write_text('x'*1048577)
+        with self.assertRaisesRegex(ValueError,'1 MiB'):read_page(self.root,'data.txt')
+        p.write_text('x'*13000)
+        with self.assertRaisesRegex(ValueError,'line exceeds'):read_page(self.root,'data.txt')
+        p.write_text(('x'*1000+'\n')*20)
+        page=read_page(self.root,'data.txt');self.assertLess(len(page['source'].encode()),12000)
+        self.assertTrue(page['more']);self.assertGreater(page['next_offset'],0)
 
     def test_missing_batch_member_keeps_valid_source_and_boundaries(self):
         result = read_symbols(self.root, 'a.py', ['wanted', 'invented'])

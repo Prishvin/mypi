@@ -5,6 +5,7 @@ from pathlib import Path
 import threading
 import time
 import urllib.request
+from run_thinking import ThinkingFeed
 
 
 def read(path, limit=2097152):
@@ -98,6 +99,7 @@ class RunMonitor:
     """Bind one run or an evidence folder that follows subsequent replanned runs."""
     def __init__(self,folder,backend=None):
         self.folder=folder.resolve();self.backend=backend;self.lock=threading.Lock();self.native={};self.native_at=0
+        self.thinking=ThinkingFeed()
         if not self.folder.is_dir():raise ValueError('Choose an existing run or evidence folder')
 
     def selected(self):
@@ -185,6 +187,8 @@ class RunMonitor:
             'accepted':len([t for t in tasks if t['status']=='Accepted']),'total':len(tasks),'tasks':tasks,
             'reason':state.get('reason'),'started_epoch':state.get('started_epoch'),'ended_epoch':state.get('ended_epoch'),
             'elapsed_until_epoch':until if stopped else state.get('ended_epoch'),
+            'thinking':{**self.thinking.snapshot(current/'pi.log',state.get('status')=='running'),
+                        'todo':state.get('current_todo'),'attempt':current.name},
             'phases':phase_rows(self.folder),'native':self.telemetry(prefixes),'sampled_rss_bytes':rss,
             'rss_sample_epoch':sample.get('epoch'),
             'note':'Task acceptance proves frozen tests and gates passed; step completion is not inferred from model prose.'}
