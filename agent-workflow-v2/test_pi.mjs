@@ -227,6 +227,10 @@ test('tool requests are argv arrays, with no shell interpolation', () => {
   assert.equal(applies({ provider: 'local-qwen-workflow' }), true);
   assert.deepEqual(commandFor('locate', [], 'x; touch unsafe', ''), ['locate', 'x; touch unsafe']);
   assert.throws(() => commandFor('inspect', [], '', ''), /Supply/);
+  for (const query of [undefined, '', '   ']) {
+    assert.throws(() => commandFor('locate', ['module.mjs'], query), /locate requires a nonempty query.*action=inspect with paths/);
+  }
+  assert.deepEqual(commandFor('inspect', ['module.mjs']), ['context', 'module.mjs', '--max-bytes', '24000']);
 });
 
 test('repeated identical reads abort the local attempt', async () => {

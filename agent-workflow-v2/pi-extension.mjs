@@ -43,7 +43,10 @@ export function commandFor(action, paths, query, state, offset = 0, sectionOffse
   if (action === 'architecture-section' && query && sha256) return ['architecture-section', query, '--sha256', sha256, '--offset', String(offset)];
   if (action === 'architecture-section') throw new Error('Supply query as a section ID returned by project_map architecture or architecture-search, and sha256 as its source_sha256. Pasted plan prose is not a section ID. If only reviewing a supplied draft, use its provided architecture directly.');
   if (action === 'architecture-search' && query) return ['architecture-search', query, '--offset', String(offset)];
-  if (action === 'locate' && query) return ['locate', query, ...(paths?.length ? ['--paths', ...paths] : [])];
+  if (action === 'locate') {
+    if (!query?.trim()) throw new Error('project_map locate requires a nonempty query (symbol or filename keyword). To read prototypes for known files, use action=inspect with paths and no query.');
+    return ['locate', query, ...(paths?.length ? ['--paths', ...paths] : [])];
+  }
   if (action === 'inspect' && paths?.length) return ['context', ...paths, '--max-bytes', '24000', ...(query ? ['--symbol', query] : [])];
   if (action === 'gate' && state) return ['check', '--state', state];
   throw new Error('Supply paths for inspect, query for locate, or state for gate');
@@ -96,11 +99,11 @@ function registerMap(pi) {
   pi.registerTool({
     name: 'project_map',
     label: 'Project interfaces',
-    description: 'Brief architecture decisions and shadow links, symbol search, bounded prototypes, or atomic task gate. Planning size is measured at launch. Above 32768 shadow+architecture tokens, architecture is the only project-wide map: read its pages first, then inspect 1-5 relevant module paths already shown there (8192 text tokens maximum). locate must include those explicit paths; catalog is blocked. Architecture returns a compact section index and module page; offset pages modules, section_offset pages headings. architecture-search performs literal keyword/function/class map search (query, offset). architecture-section reads one section ID in query, current source sha256, and character offset. Reload relevant sections per todo, rather than full architecture prose. Read implementations before editing.',
+    description: 'Brief architecture decisions and shadow links, symbol search, bounded prototypes, or atomic task gate. inspect requires paths and returns their prototypes; query is optional. locate requires a nonempty query (symbol or filename keyword), with optional paths to narrow the search; do not use locate with paths alone. Planning size is measured at launch. Above 32768 shadow+architecture tokens, architecture is the only project-wide map: read its pages first, then inspect 1-5 relevant module paths already shown there (8192 text tokens maximum). locate must include those explicit paths; catalog is blocked. Architecture returns a compact section index and module page; offset pages modules, section_offset pages headings. architecture-search performs literal keyword/function/class map search (query, offset). architecture-section reads one section ID in query, current source sha256, and character offset. Reload relevant sections per todo, rather than full architecture prose. Read implementations before editing.',
     parameters: Type.Object({
       action: Type.Union(['architecture', 'architecture-section', 'architecture-search', 'sync-check', 'catalog', 'locate', 'inspect', 'gate'].map(x => Type.Literal(x))),
       paths: Type.Optional(Type.Array(Type.String())),
-      query: Type.Optional(Type.String()),
+      query: Type.Optional(Type.String({description:'Required for locate (symbol/filename keyword), architecture-search (keyword), and architecture-section (section ID). Optional symbol filter for inspect; omit to read all prototypes of its paths.'})),
       state: Type.Optional(Type.String()),
       section_offset: Type.Optional(Type.Integer({ minimum: 0 })),
       sha256: Type.Optional(Type.String()),

@@ -733,3 +733,11 @@ allowances, compaction and exact-edit recovery regressions. These overlap earlie
 suites. No Linux run or claim that the notice eliminates timeouts is included.
 Already-running sessions keep their immutable runtime; subsequent launches
 capture the tested notice implementation.
+
+The T06 reviewer called `project_map locate` with known file paths but no query.
+The rejection was correct, but the schema description did not clearly distinguish
+searching from prototype inspection. Tool/field descriptions and action-specific
+feedback now require a nonempty search query and point file-only requests to
+`inspect`. Whitespace-only queries are rejected. **29 JavaScript routing, scope,
+architecture-maintenance and provider-isolation checks passed**; this does not
+change the running review's pinned tools or silently reinterpret its request.
