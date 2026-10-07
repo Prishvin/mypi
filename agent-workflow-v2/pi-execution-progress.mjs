@@ -30,7 +30,8 @@ export function progressNotice(brief) {
   // Detailed observations already exist in tool results and the durable journal.
   // Keep this request-local addition small; Pi checks compaction before this hook.
   const status={status:brief.status,rounds_without_progress:brief.rounds_without_progress,
-    compactions_without_progress:brief.compactions_without_progress,repeated_read_count:brief.repeated_read_count};
+    compactions_without_progress:brief.compactions_without_progress,repeated_read_count:brief.repeated_read_count,
+    retrieval_grace_rounds:brief.retrieval_grace_rounds,no_progress_round_limit:brief.no_progress_round_limit};
   let text='Native progress checkpoint (observed tool evidence):\n'+JSON.stringify(status);
   if(brief.status==='warning')text+='\nNo measured progress in two model rounds. Use prior evidence for a scoped edit or test; avoid repeated reads. Preserve frozen acceptance. If blocked, report evidence. Further unchanged rounds stop for review.';
   if(brief.deadline?.near_deadline)text+='\nATTEMPT DEADLINE: '+brief.deadline.remaining_seconds+

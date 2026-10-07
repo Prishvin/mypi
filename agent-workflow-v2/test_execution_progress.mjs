@@ -68,6 +68,19 @@ test('tool journal excludes source/reasoning and retains relevant selectors/erro
   assert.doesNotMatch(readFileSync(join(session,'execution-events.jsonl'),'utf8'),/PRIVATE_/);
 });
 
+test('distinct successful reads have bounded grace through real Pi hooks',async t=>{
+  const {handlers:h,ctx,aborted}=setup(t);
+  await h.context({messages:[]},ctx);
+  for(let i=1;i<=8;i++) {
+    h.message_end({message:{role:'assistant'}},ctx);
+    h.tool_execution_start({toolCallId:String(i),args:{action:'file',paths:['source.py'],offset:i*20}},ctx);
+    h.tool_execution_end({toolCallId:String(i),toolName:'source_query',isError:false,result:{content:[]}},ctx);
+    if(i===8)await assert.rejects(h.context({messages:[]},ctx),/no_progress/);
+    else await h.context({messages:[]},ctx);
+  }
+  assert.equal(aborted(),1);
+});
+
 test('chat/reviewer/Codex sessions do not run this watchdog',async t=>{
   const x=setup(t);
   for(const role of ['chat','architect','reviewer','inspect']) {

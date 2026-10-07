@@ -16,10 +16,31 @@ class PolicyTests(unittest.TestCase):
         self.state = advance(self.state, self.evidence, [{'kind': 'round'}, *extras])
         return self.state['brief']
 
-    def test_warning_at_two_and_stop_at_four_even_with_different_reads(self):
+    def test_idle_rounds_warn_at_two_stop_at_four(self):
         for i in range(1, 5):
-            brief = self.round([{'kind': 'tool', 'tool': 'source_query', 'selector': {'offset': i}}])
+            brief = self.round()
             self.assertEqual(brief['status'], 'continue' if i < 2 else 'warning' if i < 4 else 'stop')
+
+    def test_distinct_successful_reads_get_bounded_grace_without_resetting_rounds(self):
+        for i in range(1, 9):
+            brief = self.round([{'kind': 'tool', 'tool': 'source_query', 'selector': {'offset': i}}])
+            self.assertEqual(brief['rounds_without_progress'], i)
+            self.assertEqual(brief['retrieval_grace_rounds'], min(i, 4))
+            self.assertEqual(brief['status'], 'continue' if i < 2 else 'warning' if i < 8 else 'stop')
+
+    def test_errors_or_empty_selectors_do_not_grant_retrieval_grace(self):
+        for i in range(1, 5):
+            brief = self.round([{'kind': 'tool', 'tool': 'source_query', 'selector': {'offset': i}, 'error': 'no such file'},
+                                {'kind': 'tool', 'tool': 'project_map', 'selector': {}}])
+        self.assertEqual(brief['status'], 'stop')
+        self.assertEqual(brief['retrieval_grace_rounds'], 0)
+
+    def test_content_change_resets_grace_but_does_not_remove_bounds(self):
+        self.round([{'kind': 'tool', 'tool': 'source_query', 'selector': {'path': 'source.py'}}])
+        self.evidence['files']['source.py'] = 'two'
+        brief = self.round()
+        self.assertEqual(brief['retrieval_grace_rounds'], 0)
+        self.assertEqual(brief['no_progress_round_limit'], 4)
 
     def test_repeated_compactions_stop_after_three_completed_unchanged_rounds(self):
         for _ in range(2):
