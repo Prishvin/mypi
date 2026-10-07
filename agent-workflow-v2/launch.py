@@ -145,7 +145,8 @@ def prepare(args) -> dict:
     output_tokens = effective['output_tokens']
     input_tokens = effective['input_tokens']
     configure(session / 'pi-config', args.model, min(args.context,CONTEXT_LIMITS[args.model]))
-    if not cloud:tune_context(session / 'pi-config', input_tokens, output_tokens)
+    if not cloud:tune_context(session / 'pi-config', input_tokens, output_tokens,
+                              complete_handoff=args.role == 'code' and os.environ.get('QWEN_WORKFLOW_COMPACTION_FIX', '1') == '1')
     tools = {'architect':'project_map,plan_store,web_research,skill_read,skill_use',
              'research':'project_map,web_research,skill_use,knowledge_store',
              'intake':'intake_store',
@@ -231,7 +232,7 @@ def prepare(args) -> dict:
     return result
 
 
-def tune_context(folder: Path, input_tokens: int, output_tokens: int) -> None:
+def tune_context(folder: Path, input_tokens: int, output_tokens: int, *, complete_handoff: bool = False) -> None:
     """Trigger Pi compaction at the todo budget and reserve its requested output."""
     models = json.loads((folder / 'models.json').read_text())
     descriptor = models['providers']['local-qwen-workflow']['models'][0]
@@ -244,8 +245,11 @@ def tune_context(folder: Path, input_tokens: int, output_tokens: int) -> None:
     # request-local notices, without subtracting the whole envelope twice.
     from token_budget import history_trigger
     trigger = history_trigger(input_tokens)
+    # A complete deterministic coding handoff replaces the recent turn. Keeping
+    # that turn can make Pi's prepareCompaction return None before our hook runs,
+    # even when provider usage has already crossed the input threshold.
     settings['compaction'].update(reserveTokens=descriptor['contextWindow'] - trigger,
-                                  keepRecentTokens=min(4000, input_tokens // 3))
+                                  keepRecentTokens=0 if complete_handoff else min(4000, input_tokens // 3))
     (folder / 'settings.json').write_text(json.dumps(settings, indent=2))
 
 

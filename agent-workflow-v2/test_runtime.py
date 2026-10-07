@@ -66,6 +66,19 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_model_context('27b', 131072)
 
+    def test_complete_handoff_changes_retention_only_for_opted_in_sessions(self):
+        with tempfile.TemporaryDirectory() as folder:
+            config = Path(folder)
+            configure(config, '27b', 32768)
+            tune_context(config, 16384, 8192)
+            original = json.loads((config / 'settings.json').read_text())
+            self.assertEqual(original['compaction']['keepRecentTokens'], 4000)
+            tune_context(config, 16384, 8192, complete_handoff=True)
+            updated = json.loads((config / 'settings.json').read_text())
+            self.assertEqual(updated['compaction']['keepRecentTokens'], 0)
+            original['compaction']['keepRecentTokens'] = 0
+            self.assertEqual(updated, original)
+
 
 if __name__ == '__main__':
     unittest.main()
