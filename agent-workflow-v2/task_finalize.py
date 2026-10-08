@@ -6,15 +6,17 @@ from pathlib import Path
 import tasks
 from architecture_maintenance import maintain
 from architecture_update import binding, update
+from failure_diagnostics import summarize
 
 
 def diagnostic(row):
     """Keep actionable failed-test observations bounded; full logs remain on disk."""
     path=Path(row['log']);text=path.read_text(errors='replace') if path.is_file() else ''
-    lines=[line[:240] for line in text.splitlines() if line.lstrip().startswith(
-        ('not ok','✖','×','AssertionError','Error:','TypeError:','ReferenceError:','SyntaxError:',
-         'FAIL:','ERROR:','error:','actual:','expected:'))]
-    return {'log':str(path),'exit_code':row['exit_code'],'failures':lines[:12], 'tail':text[-1000:]}
+    evidence=summarize(text)
+    return {'log':str(path),'exit_code':row['exit_code'],
+            'failures':evidence['observations'], 'tail':text[-1000:],
+            'test_summary':evidence['test_summary'],
+            'diagnostic_omissions':evidence['diagnostic_omissions']}
 
 
 def publish(session, result):
@@ -29,6 +31,10 @@ def publish(session, result):
     brief['diagnostics']=[dict(log=d['log'],exit_code=d['exit_code'],
         failures=[v[:120] for v in d['failures'][:3]],tail=d['tail'][-512:])
         for d in result.get('diagnostics',[])[:2]]
+    for short, full in zip(brief['diagnostics'], result.get('diagnostics', [])):
+        short['test_summary']=full.get('test_summary', {})
+        short['diagnostic_omissions']={**full.get('diagnostic_omissions', {}),
+            'feedback_observations':max(0,len(full['failures'])-3)}
     if len(json.dumps(brief).encode())>6500:
         brief={k:brief[k] for k in ('passed','tests_passed','artifact','next_action','violation_count')}
     brief['feedback_truncated']=True

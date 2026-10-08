@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 import tasks
-from task_finalize import finalize
+from task_finalize import finalize, diagnostic
 from skill_runner import prepare,run
 from verification_counts import count
 
@@ -77,7 +77,7 @@ class FinalizationTests(unittest.TestCase):
         self.state.write_text(json.dumps(state))
         test=self.root/'test_logic.py'
         test.write_text(test.read_text().replace('self.assertEqual(identity(2),2)',
-            'print(("Error: "+"x"*240+"\\n")*20)\n        self.assertEqual(identity(2),3)'))
+            'print("\\n".join("Error: "+str(i)+"x"*240 for i in range(20)))\n        self.assertEqual(identity(2),3)'))
         prepare(self.session,'task-finalize','code')
         result=run(self.session,'task-finalize',{},'code')['data']
         self.assertFalse(result['passed']);self.assertTrue(result['feedback_truncated'])
@@ -85,3 +85,22 @@ class FinalizationTests(unittest.TestCase):
         full=json.loads(Path(result['artifact']).read_text())
         self.assertEqual(len(full['diagnostics']),3)
         self.assertGreater(len(json.dumps(full)),8192)
+
+    def test_many_node_names_do_not_hide_individual_assertion_causes(self):
+        log=self.session/'node.log'
+        names=[f'✖ case {i} ({i}.01ms)' for i in range(6)]
+        details=[f'\n{name}\n  AssertionError [ERR_ASSERTION]: distinct cause {i}\n'
+                 '    actual: false,\n    expected: true,\n' for i,name in enumerate(names)]
+        log.write_text('\n'.join(names)+'\nℹ tests 12\nℹ pass 6\nℹ fail 6\n'+''.join(details))
+        result=diagnostic({'log':str(log),'exit_code':1})
+        self.assertEqual(result['test_summary'],{'tests':12,'pass':6,'fail':6})
+        for i in range(6):self.assertIn(f'AssertionError [ERR_ASSERTION]: distinct cause {i}',result['failures'])
+        self.assertEqual(sum(line.startswith('✖') for line in result['failures']),6)
+        self.assertEqual(result['diagnostic_omissions']['causes'],0)
+
+    def test_decorated_exception_and_omission_counts_survive_finalization(self):
+        log=self.session/'many.log'
+        log.write_text('\n'.join(f'\x1b[31mTypeError [E_TEST]: cause {i}\x1b[0m' for i in range(12)))
+        result=diagnostic({'log':str(log),'exit_code':1})
+        self.assertTrue(all(line.startswith('TypeError [E_TEST]:') for line in result['failures']))
+        self.assertEqual(result['diagnostic_omissions']['causes'],4)
