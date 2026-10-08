@@ -65,6 +65,28 @@ function boot() {
         self.assertEqual(symbol['description'], 'Return the next count.')
         self.assertNotIn('return x', symbol['contract'])
 
+    def test_explicit_single_object_member_documentation_is_preserved(self):
+        for member in ['sample: () => 7', 'sample() { return 7; }']:
+            with self.subTest(member=member):
+                parsed=parse_javascript('// FIXED.sample returns a repeatable value.\nexport const FIXED = {'+member+'};')
+                self.assertEqual(parsed['symbols'][0]['description'], 'FIXED.sample returns a repeatable value.')
+                self.assertNotIn('return 7',parsed['symbols'][0]['contract'])
+
+    def test_object_or_class_summary_does_not_document_unrelated_members(self):
+        samples=[
+            '// A fixed source.\nconst FIXED = { sample: () => 7 };',
+            '// OTHER.sample returns a value.\nconst FIXED = { sample: () => 7 };',
+            '// FIXED.sampleLater returns a value.\nconst FIXED = { sample: () => 7 };',
+            '// FIXED.sample returns a value.\nconst FIXED = { sample: () => 7, other: () => 8 };',
+            '// FIXED.sample returns a value.\nclass FIXED { sample() { return 7; } }',
+            '// FIXED.sample returns a value.\nconst FIXED = { nested: { sample: () => 7 } };',
+        ]
+        for source in samples:
+            with self.subTest(source=source):
+                methods=[s for s in parse_javascript(source)['symbols'] if s['kind']=='function']
+                self.assertTrue(methods)
+                self.assertTrue(all(s['description']=='[description missing]' for s in methods))
+
     def test_variables_keep_scope_and_types_without_copying_values(self):
         """Module and class declarations describe interfaces without leaking values."""
         parsed = parse_python('MAX: int = 3\nclass Worker:\n    state: str = "hidden value"\n')

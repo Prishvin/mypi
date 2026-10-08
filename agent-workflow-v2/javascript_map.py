@@ -11,6 +11,28 @@ FUNCTIONS = {'function_declaration', 'function_expression', 'generator_function_
 CLASSES = {'class_declaration', 'class'}
 
 
+def single_member_comment(member):
+    """Accept explicit owner.member documentation on a one-member object declaration."""
+    if member.type not in {'pair', 'method_definition'}:
+        return None
+    obj = member.parent
+    if obj is None or obj.type != 'object':
+        return None
+    fields = [child for child in obj.named_children if child.type != 'comment']
+    owner = obj.parent
+    if len(fields) != 1 or owner is None or owner.type != 'variable_declarator':
+        return None
+    name = owner.child_by_field_name('name')
+    key = member.child_by_field_name('key') or member.child_by_field_name('name')
+    if name is None or key is None or name.type != 'identifier' or key.type not in {'property_identifier', 'identifier'}:
+        return None
+    comment = preceding_comment(owner)
+    qualified = name.text.decode() + '.' + key.text.decode()
+    if comment is not None and re.search(r'(?<![\w$.])' + re.escape(qualified) + r'(?![\w$])', comment.text.decode()):
+        return comment
+    return None
+
+
 def preceding_comment(node):
     """Find documentation on a callable or its owning declaration/property."""
     previous = node.prev_named_sibling
@@ -25,7 +47,7 @@ def preceding_comment(node):
         if owner.type in {'pair', 'public_field_definition'}:
             break
     previous = owner.prev_named_sibling
-    return previous if previous is not None and previous.type == 'comment' else None
+    return previous if previous is not None and previous.type == 'comment' else single_member_comment(owner)
 
 
 def node_name(node) -> str:
