@@ -16,6 +16,8 @@ def diagnostic(row):
     return {'log':str(path),'exit_code':row['exit_code'],
             'failures':evidence['observations'], 'tail':text[-1000:],
             'test_summary':evidence['test_summary'],
+            'failure_cases':evidence['failure_cases'],
+            'case_value_policy':evidence['case_value_policy'],
             'diagnostic_omissions':evidence['diagnostic_omissions']}
 
 
@@ -33,8 +35,11 @@ def publish(session, result):
         for d in result.get('diagnostics',[])[:2]]
     for short, full in zip(brief['diagnostics'], result.get('diagnostics', [])):
         short['test_summary']=full.get('test_summary', {})
+        short['failure_cases']=full.get('failure_cases',[])[:3]
+        short['case_value_policy']=full.get('case_value_policy')
         short['diagnostic_omissions']={**full.get('diagnostic_omissions', {}),
-            'feedback_observations':max(0,len(full['failures'])-3)}
+            'feedback_observations':max(0,len(full['failures'])-3),
+            'feedback_cases':max(0,len(full.get('failure_cases',[]))-3)}
     if len(json.dumps(brief).encode())>6500:
         brief={k:brief[k] for k in ('passed','tests_passed','artifact','next_action','violation_count')}
     brief['feedback_truncated']=True
