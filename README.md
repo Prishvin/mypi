@@ -332,7 +332,22 @@ Recovery also receives effective executor limits inherited from the selected pro
 
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 
-Use **resume** for an interruption. **Replan** changes the repair strategy while preserving frozen scope, acceptance and test commands. For a stopped timeout/execution/acceptance failure with unchanged source and contracts, an explicit **retry** creates a new plan without asking an LLM to regenerate it. It preserves original baselines, completed tasks, files, criteria, tests and context budgets, and changes only task deadlines. Changed source or immutable fixtures block this retry.
+Use **resume** for an interruption. **Replan** changes the repair strategy while preserving frozen scope, acceptance and test commands. For a stopped timeout/execution/acceptance failure with unchanged source and contracts, an explicit **retry** creates a new plan without asking an LLM to regenerate it. It preserves original baselines, completed tasks, files, criteria, tests and context budgets, and changes only the failed task's deadline. Changed source or immutable fixtures block this retry.
+
+If measured compaction pressure stopped a task before useful edits, an operator
+can also give that failed task more input headroom with `--input-tokens` and an
+explicit `--reason`. A `no_progress` retry requires this increase and bound stop
+evidence. Output, thinking, client window and all other pending task controls stay
+unchanged; the new input + output + reserve must fit the existing window. The
+runner records both input caps and the reason, creates a fresh plan and performs
+no inference until execution is requested. This does not disable progress guards
+or erase earlier failed attempts.
+
+~~~sh
+./mypi retry /path/to/project --from-run /outside/stopped-run \
+  --out /outside/retry-plan.json --input-tokens 40960 --task-timeout 2700 \
+  --reason "Measured repeated compaction before a scoped edit; retain more working context."
+~~~
 
 If an unfinished generated criterion is contradictory, use **revision**. The planner proposes an explicit old/new criterion pair and reason. The proposal cannot execute until its exact printed `proposal_sha256` is approved. This path preserves project intent, architecture text, file scope, test commands, coverage IDs, other todos and accepted regression lineage; it cannot revise completed work or silently substitute a different test fixture for a frozen `given`.
 
