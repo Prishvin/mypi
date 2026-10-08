@@ -166,8 +166,9 @@ def task_rows(run, state, plan, root):
             row['tools']=tools(Path(attempts[-1].get('log',str(run/'pi.log'))).parent,Path(attempts[-1]['session']))
         if active:row.update(tools=current_tools,test_results=frozen.get('evidence',{}).get('results',[]),tests_fresh=fresh,
             elapsed_seconds=max(0,until-state.get('attempt_started_epoch',until)))
-        if active and state.get('workflow_phase')=='planning':
+        if active:
             context,execution=planning_limits(metadata)
+            if context:row['planned_context']=row.get('context')
             row['context']={**(row.get('context') or {}),**context} or None
             row['execution']={**(row.get('execution') or {}),**execution} or None
         tasks.append(row)

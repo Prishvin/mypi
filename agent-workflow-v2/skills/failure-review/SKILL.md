@@ -116,3 +116,8 @@ the native runner will ask the user instead of silently widening scope.
 Python validates the repair plan and allows ONE automatic repair attempt for the
 failed contract. A subsequent failure of that repair stops and asks the user.
 Passing model prose does not count: frozen acceptance and regressions must pass.
+
+Local Qwen repairs use thinking on and a minimum 8192-token thinking cap for both
+review and execution. Allow at least 2048 additional output tokens for tools.
+Python records and enforces this floor at launch; larger or explicitly uncapped
+budgets remain possible, and ordinary subsequent todos retain their own limits.

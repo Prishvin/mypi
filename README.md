@@ -332,6 +332,8 @@ Compaction follows Pi's full provider-usage estimate, which already includes sys
 
 Recovery also receives effective executor limits inherited from the selected profile, including its thinking cap, and counts of completed requests that hit the native thinking guard. Missing telemetry is marked unknown. Frequent cap hits are evidence to assess, not an automatic instruction to raise the cap.
 
+Local Qwen repair reviews and the selected repair todo run with thinking on and a minimum **8,192-token thinking cap**, plus at least **2,048 output tokens** for tools. This also applies when a saved task or project default requests less. Larger or explicitly uncapped thinking is retained. Python expands output/window reservations when needed without reducing input, and rejects budgets beyond the model ceiling. Subsequent ordinary todos keep their own settings. Session receipts and the monitor show effective limits while retaining the originally planned values.
+
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 
 Standalone `mypi replan` publishes the same running/completed/interrupted review stages as automatic recovery. The monitor binds its saved failure evidence back to the stopped implementation queue, preserving accepted todos and their results while the review runs.
@@ -419,7 +421,7 @@ Server preferences are in **~/.config/mypi/server.json**. **MYPI_SERVER_URL** an
 | Thinking cap | Separate backend guard threshold inside total output. |
 | Reasoning effort | Low/medium/etc. policy, independent of the thinking cap. |
 
-Explicit frozen task caps override project/profile defaults. Positive thinking caps must leave at least **2,048 tokens** for answers/tools; zero means uncapped thinking, not thinking off. Thinking is separately enabled/disabled. A threshold can be slightly exceeded by the model's closing bridge/batched decoding; total output remains bounded.
+Explicit frozen task caps override project/profile defaults, subject to the local repair minimum above. Positive thinking caps must leave at least **2,048 tokens** for answers/tools; zero means uncapped thinking, not thinking off. Thinking is separately enabled/disabled. A threshold can be slightly exceeded by the model's closing bridge/batched decoding; total output remains bounded.
 
 Admission uses the matching tokenizer on serialized payload, a **25% margin** and template allowance. It is an estimate, not the server's exact rendered token count. Native usage receipts report the actual count. Pi's compaction trigger subtracts that margin and 1,024 tokens of incremental trailing-message headroom, so history compacts before the admission cap. At 32768 input tokens the history trigger is 24985 tokens; server capacity and output limits stay unchanged. Each atomic worker starts fresh. A batch inspection stopped by admission or a provider abort reports failure, even if Pi's raw process exits zero.
 

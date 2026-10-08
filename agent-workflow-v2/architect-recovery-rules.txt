@@ -55,5 +55,10 @@ must fit input; margin is at least max(1024, ceil(sum * 0.25)).
 context.estimate.framework must be at least 6144 tokens for Pi instructions and
 tool schemas; do not reduce it below that floor when adjusting other estimates.
 
+Local Qwen repair review and repair execution use thinking on with a minimum
+8192-token thinking cap (larger or explicitly uncapped remains allowed).
+Plan at least 10240 total output tokens; Python applies the floor at launch and
+records the effective budgets. Ordinary subsequent tasks retain their own caps.
+
 Python validates the assembled V3 plan and allows one automatic repair attempt.
 Passing prose is not acceptance: the executor must pass frozen tests and gates.

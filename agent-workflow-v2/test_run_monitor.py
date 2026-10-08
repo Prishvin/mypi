@@ -111,13 +111,15 @@ class Artifacts(unittest.TestCase):
             'window_tokens':98304,'thinking':'on','reasoning_effort':'medium','reasoning_budget_tokens':2048})
         self.assertEqual(task['execution']['timeout_seconds'],1800)
         self.assertNotIn('SECRET',json.dumps(row))
-    def test_missing_planning_launch_retains_queue_budget_and_execution_keeps_frozen_contract(self):
+    def test_missing_launch_retains_plan_and_execution_reports_actual_limits(self):
         monitor=self.setup_run(state={'workflow_phase':'planning'})
         self.assertEqual(monitor.snapshot()['tasks'][0]['context']['max_input_tokens'],8192)
         self.write('run-1/01-A/session.json',{'input_budget':57344})
         state=read(self.root/'run-1/state.json');state['workflow_phase']='execution'
         self.write('run-1/state.json',state)
-        self.assertEqual(monitor.snapshot()['tasks'][0]['context']['max_input_tokens'],8192)
+        task=monitor.snapshot()['tasks'][0]
+        self.assertEqual(task['context']['max_input_tokens'],57344)
+        self.assertEqual(task['planned_context']['max_input_tokens'],8192)
     def test_tool_activity_excludes_prompt_source_and_argument_dump(self):
         events=[{'type':'tool_execution_start','toolCallId':'1','toolName':'write',
                  'args':{'path':'code.py','content':'SECRET IMPLEMENTATION'}},

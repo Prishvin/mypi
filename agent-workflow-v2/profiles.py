@@ -95,6 +95,8 @@ def resolve(args, task: dict, profile: dict) -> dict:
         if getattr(args, 'reasoning_budget', None) is not None:
             raise ValueError('Separate thinking caps require a local Qwen thinking-on role')
         result['reasoning_budget'] = None
+    from repair_budgets import apply as repair_budget
+    repair_budget(args, result, cloud)
     validate(result, args.model, cloud)
     return result
 

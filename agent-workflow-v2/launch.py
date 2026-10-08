@@ -136,7 +136,13 @@ def prepare(args) -> dict:
     if args.role == 'code':
         task = {**task, 'context': {**task.get('context', {}),
                 'max_input_tokens': effective['input_tokens'],
-                'max_output_tokens': effective['output_tokens']}}
+                'max_output_tokens': effective['output_tokens'],
+                'window_tokens': effective['context'], 'thinking': effective['thinking'],
+                'reasoning_effort': effective['reasoning']}}
+        if effective['reasoning_budget'] is None:
+            task['context'].pop('reasoning_budget_tokens', None)
+        else:
+            task['context']['reasoning_budget_tokens'] = effective['reasoning_budget']
         task = tasks.begin(root, prefixes, task, state, shadow_path)['task']
         if args.plan:
             plans.start_attempt(args.plan.resolve(), args.todo, state)
