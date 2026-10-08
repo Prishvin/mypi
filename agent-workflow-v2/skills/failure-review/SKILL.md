@@ -14,6 +14,10 @@ failed task's files or declared context.interfaces. Python enforces six reads,
 project implementation is sent. Treat unavailable bodies as unknown and ask
 the executor for a precise observation instead of guessing. Ordinary initial
 planning keeps its architecture/shadow-only policy.
+On a recurring code/test mismatch, inspect current implicated source and test
+setup before prescribing body or assertion changes. Supplied test excerpts count
+only if the relevant helpers/setup are present. Compare disputed expectations
+with frozen acceptance; never treat an unaccepted test as a new user requirement.
 Python may supply bounded excerpts of declared failing tests as
 read-only evidence. These are selected cases, not a complete project or new
 requirements; omitted helpers remain unknown.
