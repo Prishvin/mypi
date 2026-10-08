@@ -36,6 +36,14 @@ function show(row){
 async function refresh(){if(pending)return;pending=true;try{listing=await api('conversations');if(selected&&!listing.some(x=>x.id===selected)){selected=null;current=null;}
   if(selected)show(await api('conversations/'+selected));sidebar();globalBusy();}finally{pending=false;}}
 $('new').onclick=()=>attempt(create);$('search').oninput=sidebar;$('menu').onclick=()=>document.body.classList.toggle('sidebar-open');
+$('new-project').onclick=()=>{$('new-project-dialog').showModal();$('new-project-prompt').focus();};
+$('cancel-project').onclick=()=>$('new-project-dialog').close();
+$('new-project-form').onsubmit=e=>{e.preventDefault();attempt(async()=>{
+ const prompt=$('new-project-prompt').value.trim();if(!prompt)return;
+ $('create-project').disabled=true;
+ try{const project=await api('projects','POST',{prompt});$('new-project-dialog').close();$('new-project-prompt').value='';await select(project.id);}
+ finally{$('create-project').disabled=false;}
+});};
 $('rename').onclick=()=>attempt(async()=>{if(!current)return;const title=prompt('Conversation name',current.title);if(title)await action('rename',{title});});
 $('share').onclick=()=>attempt(async()=>{if(!selected)return;$('share-url').value=conversationLink(selected,location.origin,lanOrigin);$('share-dialog').showModal();$('share-url').select();});
 $('share-copy').onclick=()=>attempt(async()=>{const input=$('share-url');input.select();
@@ -57,4 +65,7 @@ await attempt(async()=>{try{lanOrigin=(await fetch('/network.json').then(r=>r.js
  if(new URL(location.href).searchParams.has('conversation')&&!listing.some(x=>x.id===selected)){selected=null;sidebar();globalBusy();$('title').textContent='Conversation unavailable';toast('This conversation link was deleted or is unavailable.');return;}
  if(!selected||!listing.some(x=>x.id===selected))selected=listing[0]?.id;
   if(!selected)await create();else await select(selected);});
+if(new URL(location.href).searchParams.has('new-project')){
+ const url=new URL(location.href);url.searchParams.delete('new-project');history.replaceState(null,'',url);$('new-project').click();
+}
 setInterval(()=>attempt(refresh),1200);

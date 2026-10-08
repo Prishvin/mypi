@@ -15,7 +15,11 @@ header { position: sticky; top: 0; z-index: 3; background: #fffffff5; border-bot
 button, select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid #d5dfea; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
 button:hover { background: #f0f5ff; border-color: #adc5f5; }
 .file-link { color: var(--blue); font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.topbar > .file-link { font: inherit; font-size: 12px; text-decoration: none; white-space: nowrap; }
 .source-preview { overflow: auto; max-height: 80vh; white-space: pre; font: 13px/1.65 ui-monospace, monospace; }
+.task-controls textarea, #task-prompt { display: block; width: 100%; margin: 12px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font: inherit; resize: vertical; }
+#task-prompt-dialog { width: min(800px, 94vw); max-height: 90vh; border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+dialog::backdrop { background: #142b4544; }
 .copy-button { padding: 2px 7px; margin-left: 8px; color: var(--muted); font-size: 17px; line-height: 1.4; vertical-align: middle; flex-shrink: 0; }
 .task-head h2 { margin-right: auto; }
 .tool.error > .copy-button { float: right; }

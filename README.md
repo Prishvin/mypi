@@ -153,9 +153,13 @@ mypi monitor /path/outside/project/evidence --port 8137
 mypi monitor /path/outside/project/evidence --listen 0.0.0.0 --allow-address UI_MACHINE_LAN_IP
 ~~~
 
-Open **http://localhost:8137/**, or **http://UI_MACHINE_LAN_IP:8137/**. The monitor is part of mypi, works on macOS/Linux and runs independently of the conversation UI. It reads run artifacts and polls the configured model's native metrics endpoint; it starts no model and generates no inference requests. Other compatible backends still show todos and evidence when native metrics are unavailable.
+Open **http://localhost:8137/**, or **http://UI_MACHINE_LAN_IP:8137/**. The monitor is part of mypi, works on macOS/Linux and runs independently of the conversation UI. Viewing reads run artifacts and polls native metrics without generating model requests. Submitted project and restart actions invoke the existing workflow. Other compatible backends still show todos and evidence when native metrics are unavailable.
 
 Expand a task's files and click a filename to open its current source in a separate read-only tab, with line numbers and a refresh button. Previews are limited to 256 KiB and to files declared in the displayed project; unavailable files get an explicit message. HTML is displayed as source, never executed.
+
+**New project** opens a prompt form in the built-in conversation workspace. Each submission gets a fresh folder and the existing clarification, research and granular planning flow. Review the resulting plan and choose **Run plan** to execute it. A standalone monitor keeps these conversations under its evidence folder's `.ui-workspace`; no second web server is needed.
+
+Inside **Model thinking**, use **Add instruction & restart** to append guidance to the current implementation task, or **Edit prompt & restart** to revise its strategy before restarting. The coordinator stops at a durable checkpoint; accepted tasks, partial files, original patch baselines and test history remain. The new attempt receives its original contract plus the recorded user instructions, which also survive context compaction. The browser binds an edit to the selected attempt and rejects a stale submission. Frozen file scope and acceptance remain enforced; incompatible instructions require replanning. Controls are available for the unfinished implementation task, not completed tasks or architectural planning stages. Restart status distinguishes stopping, starting, started and failure.
 
 Use the **Planning** and **Implementation** queue buttons to inspect both phases.
 During planning, implementation tasks are labeled **Awaiting planning**; their

@@ -99,6 +99,18 @@ class HTTP(unittest.TestCase):
             self.assertIs(instance,self.app.monitors[row['id']]);submit.assert_not_called()
         with urlopen(self.url+'/monitor?conversation='+row['id']) as response:
             self.assertIn(b'monitor.js',response.read())
+    def test_new_project_from_prompt_has_own_folder_and_uses_existing_workflow(self):
+        with patch.object(self.app.jobs,'submit') as submit:
+            one=self.call('/api/projects','POST',{'prompt':'Make a text utility'})
+            two=self.call('/api/projects','POST',{'prompt':'Make another utility'})
+            self.assertNotEqual(one['project'],two['project'])
+            self.assertTrue(Path(one['project']).is_dir())
+            self.assertEqual(submit.call_count,2)
+            self.assertIn('Make another utility',submit.call_args.args[2])
+        with self.assertRaises(HTTPError) as error:self.call('/api/projects','POST',{'prompt':'Hi'},False)
+        self.assertEqual(error.exception.code,403)
+        with urlopen(self.url+'/workspace?new-project=1') as response:
+            self.assertIn(b'new-project-prompt',response.read())
     def test_configured_lan_host_keeps_origin_and_mutation_token_checks(self):
         lan='192.168.1.34:'+str(self.server.server_port)
         self.call('/api/bootstrap',headers={'Host':lan,'Origin':'http://'+lan})

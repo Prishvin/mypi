@@ -98,7 +98,7 @@ def main(argv=None):
     starting.add_argument('--timeout', type=int, default=180)
     sub.add_parser('stop', help='Explain model ownership; clients cannot unload shared Qwen')
     sub.add_parser('status', help='Show actual server controls')
-    sub.add_parser('monitor', help='Read-only live todo/tool/test/model dashboard; see mypi monitor --help')
+    sub.add_parser('monitor', help='Live todo dashboard and explicit project/task controls; see mypi monitor --help')
     sub.add_parser('retry',help='Prepare a preserved-contract operational retry; see mypi retry --help')
     sub.add_parser('revision',help='Propose and explicitly approve an unfinished contract correction; see mypi revision --help')
     sub.add_parser('web', help='Open the combined Pi / raw Qwen web workspace')

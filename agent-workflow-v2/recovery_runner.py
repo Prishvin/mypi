@@ -57,6 +57,8 @@ def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None,retry_re
     with (folder/'recovery.lock').open('a') as lock:
         try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:raise ValueError('An execution/recovery coordinator already owns this run') from None
+        from run_owner import register
+        register(folder,root,plan)
         state=read(folder/'recovery-state.json')
         if state and (state['project']!=str(root) or state['original_plan']!=str(plan)):
             raise ValueError('Recovery checkpoint belongs to a different project or plan')

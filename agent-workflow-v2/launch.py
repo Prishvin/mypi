@@ -87,6 +87,14 @@ def prepare(args) -> dict:
     """Create a shadow and a fresh, provider-specific session outside the project."""
     profile = profiles.apply_identity(args)
     task = selected_task(args) if args.role == 'code' else {}
+    if getattr(args,'task_instructions_file',None):
+        instruction=json.loads(args.task_instructions_file.read_text())
+        if args.role!='code' or instruction.get('todo')!=task.get('id'):
+            raise ValueError('User instructions do not match the selected coding task')
+        text=instruction.get('prompt')
+        if not isinstance(text,str) or not text.strip() or len(text.encode())>24000:
+            raise ValueError('User task instructions must contain 1–24000 bytes')
+        task={**task,'user_instructions':text}
     effective = profiles.resolve(args, task, profile)
     args.context = effective['context']
     args.reasoning = effective['reasoning']
@@ -463,6 +471,7 @@ def main() -> int:
     parser.add_argument('--login-chatgpt', action='store_true')
     parser.add_argument('--prompt')
     parser.add_argument('--prompt-file', type=Path)
+    parser.add_argument('--task-instructions-file', type=Path,help='Recorded user instructions for this exact todo')
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--interactive', action='store_true', help='Open architecture chat without sending a startup task')
     parser.add_argument('--initial-stages',action=argparse.BooleanOptionalAction,default=True,

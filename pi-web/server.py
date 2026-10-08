@@ -19,6 +19,7 @@ class App:
     def __init__(self,data):
         self.store=Store(data);self.jobs=Jobs(self.store);self.token=secrets.token_urlsafe(32)
         self.monitors={}
+        self.run_controls={}
     def monitor(self,ident):
         return self.run_monitor(ident).snapshot()
     def run_monitor(self,ident):
@@ -29,6 +30,12 @@ class App:
         folder=Path(selected).resolve()
         item=self.monitors.get(ident)
         if item is None or item.folder!=folder:self.monitors[ident]=item=RunMonitor(folder)
+        return item
+    def controls(self,ident):
+        from run_controls import Controls
+        monitor=self.run_monitor(ident)
+        item=self.run_controls.get(ident)
+        if item is None or item.monitor is not monitor:self.run_controls[ident]=item=Controls(monitor)
         return item
     def view(self,ident):
         row=self.store.get(ident);project=Path(row['project'])
@@ -101,7 +108,7 @@ def handler(app,allowed_addresses=()):
             try:
                 self.security(method!='GET');parts=urlsplit(self.path).path.strip('/').split('/')
                 if method=='GET' and parts[0]!='api':
-                    name='index.html' if parts==[''] else 'monitor.html' if parts==['monitor'] else '/'.join(parts)
+                    name='index.html' if parts in ([''],['workspace']) else 'monitor.html' if parts==['monitor'] else '/'.join(parts)
                     file=(BASE/'static'/name).resolve()
                     if not file.is_relative_to(BASE/'static') or not file.is_file():raise KeyError('Page not found')
                     return self.reply(200,file.read_bytes(),mimetypes.guess_type(str(file))[0] or 'application/octet-stream')
@@ -116,12 +123,21 @@ def handler(app,allowed_addresses=()):
                     if not isinstance(data,dict):raise ValueError('JSON object required')
                 if parts==['api','conversations']:
                     return self.reply(200,app.store.create(data.get('settings')) if method=='POST' else app.store.listing())
+                if parts==['api','projects'] and method=='POST':
+                    prompt=data.get('prompt','')
+                    if not isinstance(prompt,str) or not prompt.strip() or len(prompt.encode())>24000:raise ValueError('Project prompt must contain 1–24000 bytes')
+                    row=app.store.create({'mode':'pi'})
+                    app.action(row['id'],'message',{'text':'Develop a new project from these requirements:\n'+prompt.strip(),'develop':True})
+                    return self.reply(202,{'id':row['id'],'project':row['project']})
                 if len(parts)>=3 and parts[:2]==['api','conversations']:
                     ident=parts[2]
                     if method=='GET' and len(parts)==4 and parts[3]=='monitor':return self.reply(200,app.monitor(ident))
                     if method=='GET' and len(parts)==5 and parts[3:]==['monitor','file']:
                         from monitor_files import preview
                         return self.reply(200,preview(app.run_monitor(ident),urlsplit(self.path).query))
+                    if len(parts)==5 and parts[3:]==['monitor','control']:
+                        return self.reply(202 if method=='POST' else 200,
+                            app.controls(ident).restart(data) if method=='POST' else app.controls(ident).view())
                     if method=='GET' and len(parts)==3:return self.reply(200,app.view(ident))
                     if method=='DELETE' and len(parts)==3:return self.reply(200,app.store.delete(ident))
                     if method=='POST' and len(parts)==4:return self.reply(200,app.action(ident,parts[3],data))

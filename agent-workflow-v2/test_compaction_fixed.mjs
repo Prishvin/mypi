@@ -58,6 +58,13 @@ test('large diagnostics are bounded and omissions are explicit',()=>{
   assert.deepEqual(data.task.acceptance,state.task.acceptance);
 });
 
+test('fresh user instructions survive compaction with the original frozen contract',()=>{
+  const task={...state.task,user_instructions:'Check empty input before changing the parser.'};
+  const data=JSON.parse(compactSummary(task,gate,[]).split('\n').slice(1).join('\n'));
+  assert.equal(data.task.user_instructions,task.user_instructions);
+  assert.deepEqual(data.task.acceptance,state.task.acceptance);
+});
+
 test('compaction preserves concrete missing files and prioritizes runnable evidence',()=>{
   const progress={files:[{path:'numbers.py',status:'new',sha256:'current'}],
     pending_files:['test_numbers.py'],tests_status:'not_run',next_action:'Create the missing declared files.'};

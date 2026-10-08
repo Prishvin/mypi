@@ -56,12 +56,13 @@ def validate(root, plan):
         known.add(task['id'])
 
 
-def command(root, plan_path, task, resume_prompt=None):
+def command(root, plan_path, task, resume_prompt=None, instructions=None):
     """Supply only one selected todo; scheduling never asks an LLM for its next action."""
     argv = [str(BASE / 'qwen-agent'), '--profile', 'mtplx-quality', '--project', str(root),
             '--role', 'code', '--batch', '--json', '--quiet', '--plan', str(plan_path),
             '--todo', task['id'], '--stop-after-pass']
-    return argv + (['--prompt-file', resume_prompt] if resume_prompt else [])
+    return argv + (['--prompt-file', resume_prompt] if resume_prompt else []) + (
+        ['--task-instructions-file',str(instructions)] if instructions else [])
 
 
 def checkpoint(folder, state, **changes):
@@ -180,7 +181,9 @@ def advance(root, path, plan, folder, state, invoke_fn):
                    attempt_folder=str(attempt_folder), attempt_started_epoch=time.time())
         try:
             brief = state.get('resume_prompt') if state.get('resume_todo') == task['id'] else None
-            result = invoke_fn(command(root, path, task, brief), attempt_folder, task['execution']['timeout_seconds'])
+            from task_instructions import prompt_file,instruction_file
+            brief = prompt_file(folder,task,brief)
+            result = invoke_fn(command(root, path, task, brief,instruction_file(folder,task)), attempt_folder, task['execution']['timeout_seconds'])
         except OSError as error:
             result = {'exit_code': 127,
                       'error': str(error), 'session': read(attempt_folder / 'session.json').get('session')}

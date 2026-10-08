@@ -19,7 +19,7 @@ class FilePreview(unittest.TestCase):
         self.run=self.base/'run-1';self.run.mkdir()
         (self.run/'state.json').write_text(json.dumps({'project':str(self.root)}))
         self.name='test/code #1.js';path=self.root/self.name;path.parent.mkdir();path.write_text('<script>alert(1)</script>\n')
-        self.monitor=Mock();self.monitor.selected.return_value=self.run
+        self.monitor=Mock();self.monitor.folder=self.base;self.monitor.selected.return_value=self.run
         self.monitor.snapshot.return_value={'run':'run-1','tasks':[{'files':[{'path':self.name}]}]}
 
     def read(self,name=None,run='run-1'):

@@ -11,6 +11,8 @@ def is_repair(args):
         return bool(getattr(args, 'replan_evidence', None) or (
             getattr(args, 'plan_draft', None) and not getattr(args, 'refine_task', None)
             and not getattr(args, 'plan_coverage', False)))
+    if args.role == 'code' and getattr(args,'task_instructions_file',None):
+        return True
     if args.role != 'code' or not getattr(args, 'plan', None):
         return False
     plan = json.loads(Path(args.plan).read_text())

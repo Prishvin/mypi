@@ -52,6 +52,8 @@ class RepairBudgets(unittest.TestCase):
         cloud = self.resolve(role='architect', planner='chatgpt', replan_evidence='evidence')
         self.assertIsNone(cloud['reasoning_budget'])
         self.assertNotIn('repair_budget_policy', cloud)
+        manual=self.resolve(task_instructions_file='user-request.json',thinking='off')
+        self.assertEqual((manual['thinking'],manual['reasoning_budget']),('on',8192))
 
     def test_draft_repair_but_not_regular_refinement_gets_floor(self):
         for flags, cap in [({},8192), ({'refine_task':'T1'},4096), ({'plan_coverage':True},4096)]:
@@ -71,17 +73,19 @@ class RepairBudgets(unittest.TestCase):
             'thinking':'on','reasoning_budget_tokens':1024})
         self.plan.write_text(json.dumps({'tasks':[task],'recovery_patch':{'todo':'failed'}}))
         project=self.root/'project';project.mkdir()
+        instruction=self.root/'instruction.json';instruction.write_text(json.dumps({'todo':'failed','prompt':'Include the empty-input boundary case.'}))
         with patch.object(launch,'BASE',self.root),patch('launch.server_config.load',return_value={
                 'url':'http://localhost:8000','model':'mtplx-quality'}):
             # Preserve actual runtime source while isolating generated sessions.
             original=launch.runtime.capture
             with patch('launch.runtime.capture',side_effect=lambda base,session:original(Path(launch.__file__).parent,session)):
                 result=launch.prepare(options(profile='mtplx-quality',project=project,
-                                              plan=self.plan,todo='failed'))
+                                              plan=self.plan,todo='failed',task_instructions_file=instruction))
         state=json.loads(Path(result['state']).read_text())
         self.assertEqual(result['reasoning_budget_tokens'],8192)
         self.assertEqual(state['task']['context']['reasoning_budget_tokens'],8192)
         self.assertEqual(result['output_budget'],10240)
+        self.assertEqual(state['task']['user_instructions'],'Include the empty-input boundary case.')
 
 
 if __name__ == '__main__': unittest.main()
