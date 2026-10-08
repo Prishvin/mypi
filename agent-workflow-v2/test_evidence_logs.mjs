@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import extension from './pi-extension.mjs';
+import {recallSource} from './pi-source-memory.mjs';
 
 test('source_query file reads only this task recorded test log outside the project',async()=>{
   const root=mkdtempSync(join(tmpdir(),'mypi-log-project-'));
@@ -28,6 +29,15 @@ test('source_query file reads only this task recorded test log outside the proje
     assert.equal(page.mode,'test-log');assert.equal(page.readonly,true);
     assert.match(page.source,/DIAGNOSTIC result=7/);assert.equal(page.more,true);
     assert.equal(JSON.parse((await call(log,page.next_offset)).content[0].text).more,false);
+    assert.deepEqual(recallSource(session,root).entries,[], 'Private test logs stay out of source memory');
+    writeFileSync(join(root,'fixture.mjs'),'export const fixture = 7;\r\n');
+    const source=JSON.parse((await call('fixture.mjs')).content[0].text);
+    const remembered=recallSource(session,root).entries;
+    assert.equal(remembered.length,1);
+    assert.equal(remembered[0].sha256,source.sha256);
+    assert.equal(remembered[0].source,source.source);
+    writeFileSync(join(root,'fixture.mjs'),'export const fixture = 8;\r\n');
+    assert.deepEqual(recallSource(session,root).entries,[]);
     await assert.rejects(call(join(session,'private.txt')),error=>
       /Not a project file/.test(error.message)&&!error.message.includes('UNRELATED_PRIVATE'));
   }finally{

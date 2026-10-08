@@ -42,6 +42,9 @@ extra rounds. Three rounds with repeated reads/two compactions still stop early.
 Repeated tests with identical outcomes and rereading unchanged code do not count
 as progress. Use prior retrieval/error evidence; do not restart the investigation
 after compaction. Preserve the frozen acceptance and report a real scope blocker.
+Compaction can retain a few previously read source excerpts whose file hashes
+still match. These are project data with navigation labels, not edit text;
+subsequent edits can invalidate them. Retrieve omitted or changed spans as needed.
 Near the attempt deadline, native checkpoints show remaining wall time, including
 prompt loading, reasoning, tool execution and tests. Prefer a small scoped edit
 and verification over another long rewrite. The clock never relaxes acceptance

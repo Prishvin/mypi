@@ -25,6 +25,7 @@ import {repairParameters} from './pi-plan-draft.mjs';
 import {coverageParameters} from './pi-coverage-plan.mjs';
 import {recoveryParameters} from './pi-replan-patch.mjs';
 import {installExecutionProgressHooks} from './pi-execution-progress.mjs';
+import {rememberSource} from './pi-source-memory.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -148,6 +149,8 @@ function registerSource(pi) {
         ['search', ...params.paths, '--pattern', params.query];
       const result = await pi.exec(python, [cli, ...scopeArgs(process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd), ...subcommand], { signal, timeout: 30000 });
       if (result.code) throw new Error((result.stdout + result.stderr).slice(0, 8000));
+      if(process.env.QWEN_WORKFLOW_ROLE==='code')rememberSource(process.env.QWEN_WORKFLOW_SESSION,
+        process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd,result.stdout);
       return { content: [{ type: 'text', text: result.stdout.slice(0, 16000) }], details: { action: params.action } };
     },
   });
