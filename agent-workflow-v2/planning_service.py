@@ -42,6 +42,8 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
         # pin the newly extracted observations separately for this review.
         output.parent.mkdir(parents=True, exist_ok=True)
         handoff = output.with_suffix('.evidence.json')
+        if handoff.exists():
+            raise ValueError('Choose a new plan path; this review already has pinned evidence')
         save(handoff, packet)
         from failure_context import build
         request,selection=build(project,packet,planner)

@@ -109,6 +109,18 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(pinned,output.with_suffix('.evidence.json').resolve())
         self.assertEqual(json.loads(pinned.read_text()),prompt_packet)
 
+    def test_existing_review_evidence_is_not_overwritten_on_retry(self):
+        from planning_service import create_draft
+        source = self.base/'original-evidence.json'
+        source.write_text(json.dumps({**self.packet,'current_snapshot':'snapshot'}))
+        output = self.base/'corrected.json'; pinned = output.with_suffix('.evidence.json')
+        pinned.write_text('EXISTING REVIEW EVIDENCE')
+        with patch('planning_service.scan',return_value={'snapshot':'snapshot'}), \
+             patch('planning_service.invoke') as invoke, self.assertRaisesRegex(ValueError,'pinned evidence'):
+            create_draft(self.project,'Review',output,'qwen',600,source)
+        invoke.assert_not_called()
+        self.assertEqual(pinned.read_text(),'EXISTING REVIEW EVIDENCE')
+
 
 if __name__ == '__main__':
     unittest.main()
