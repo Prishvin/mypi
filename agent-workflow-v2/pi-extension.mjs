@@ -30,6 +30,8 @@ import {recoverySourceEnabled} from './pi-hooks.mjs';
 import {sectionLookup,navigationReply} from './pi-map-navigation.mjs';
 import {installPlanningFinish} from './pi-planning-finish.mjs';
 import {registerRecoveryReport} from './pi-recovery-report.mjs';
+import {recoverySourceScope} from './pi-recovery-capabilities.mjs';
+import {installRecoveryCompaction} from './pi-recovery-compaction.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -72,6 +74,7 @@ export default function (pi) {
   (process.env.QWEN_WORKFLOW_COMPACTION_FIX === '1' ? installFixedCompactionHooks : installCompactionHooks)(pi, python, cli);
   installTimingHooks(pi);
   installPlanningFinish(pi);
+  installRecoveryCompaction(pi,python,cli);
   registerRecoveryReport(pi,python,process.env.QWEN_WORKFLOW_RUNTIME || home);
   registerMap(pi);
   pi.registerCommand('rebuild', {description:'Rebuild this session architecture/shadow/map after an explicit user request',
@@ -147,12 +150,16 @@ function registerMap(pi) {
 
 function registerSource(pi) {
   /** Retrieve one symbol or bounded references for the local executor. */
+  const recovery=recoverySourceEnabled(),allowed=recoverySourceScope();
   pi.registerTool({
     name: 'source_query', label: 'Targeted source',
-    description: 'Read qualified functions/classes or variable/constant definitions including initializers with symbol (short names must match uniquely within each file). Symbol accepts 1-5 explicit file paths and returns all matching names with path labels under one combined 12 KB budget; filenames and names are never paired by position. For paging, select one file and one symbol. variables returns declaration metadata only and defaults to all. Also supports literal rg matches or one bounded source page. symbol/search require query. file reads one exact project file OR the exact test-log path reported by this current task, with optional line offset and no query. Test logs are read-only evidence; other session files are inaccessible. fixture reads an exact absolute pinned test file from frozen tests argv, with no query; project source passed as fixture is served as a bounded file page. Never pass a directory or test index. Symbol batches accept 1-8 whitespace-separated names. Line prefixes are navigation labels, not edit text. Read supplied spans first; use next_offset only when more=true.',
+    description: (recovery ? 'FAILURE RECOVERY: read only the declared task files/interfaces enumerated in paths. Six successful reads maximum, 12 KB per call and 24 KB total. No fixture files or session logs. Use project_map for another dependency prototype; this tool cannot expand its source scope. ' : '')+
+      'Read qualified functions/classes or variable/constant definitions including initializers with symbol (short names must match uniquely within each file). Symbol accepts 1-5 explicit file paths and returns all matching names with path labels under one combined 12 KB budget; filenames and names are never paired by position. For paging, select one file and one symbol. variables returns declaration metadata only and defaults to all. Also supports literal rg matches or one bounded source page. symbol/search require query. '+
+      (recovery ? 'file reads one declared project file with optional line offset and no query. ' : 'file reads one exact project file OR the exact test-log path reported by this current task, with optional line offset and no query. Test logs are read-only evidence; other session files are inaccessible. fixture reads an exact absolute pinned test file from frozen tests argv, with no query; project source passed as fixture is served as a bounded file page. ')+
+      'Never pass a directory or test index. Symbol batches accept 1-8 whitespace-separated names. Line prefixes are navigation labels, not edit text. Read supplied spans first; use next_offset only when more=true.',
     parameters: Type.Object({
-      action: Type.Union(['symbol', 'variables', 'search', 'file', 'fixture'].map(x => Type.Literal(x))),
-      paths: Type.Array(Type.String(), { minItems: 1, maxItems: 5 }),
+      action: Type.Union((recovery?['symbol','variables','search','file']:['symbol','variables','search','file','fixture']).map(x => Type.Literal(x))),
+      paths: Type.Array(Type.String(allowed?{enum:allowed}:{}), { minItems: 1, maxItems: 5 }),
       query: Type.Optional(Type.String()), offset: Type.Optional(Type.Integer({ minimum: 0 })),
     }),
     async execute(_id, params, signal, _update, ctx) {
@@ -170,7 +177,7 @@ function registerSource(pi) {
         ['search', ...params.paths, '--pattern', params.query];
       const result = await pi.exec(python, [cli, ...scopeArgs(process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd), ...subcommand], { signal, timeout: 30000 });
       if (result.code) throw new Error((result.stdout + result.stderr).slice(0, 8000));
-      if(process.env.QWEN_WORKFLOW_ROLE==='code')rememberSource(process.env.QWEN_WORKFLOW_SESSION,
+      if(process.env.QWEN_WORKFLOW_ROLE==='code'||recoverySourceEnabled())rememberSource(process.env.QWEN_WORKFLOW_SESSION,
         process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd,result.stdout);
       return { content: [{ type: 'text', text: result.stdout.slice(0, 16000) }], details: { action: params.action } };
     },

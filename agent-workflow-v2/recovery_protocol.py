@@ -64,6 +64,7 @@ def manifest(launch, packet, tools):
             'environment_fix': 'recovery_report: identify the missing/unhealthy dependency; stop for operator.'},
         'native_automation': ['After-edit architecture/shadow/map refresh', 'Frozen tests and task gate',
             'Regression checks before next todo', 'Publication verification and planner shutdown',
+            'Deterministic recovery handoff with measured context and hash-checked source recall; no model summary',
             'One automatic corrective execution per failed contract; further attempts need authorization'],
         'operator_only': ['Change model server or installed dependencies', 'Change mypi code or tool schemas',
             'Accept a saved review after failed handoff (--accept-review)',

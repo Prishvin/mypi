@@ -1,7 +1,7 @@
 /** Preserve the full frozen contract without falling through to model summaries. */
 import {readFileSync, writeFileSync,existsSync} from 'node:fs';
 import {join,dirname} from 'node:path';
-import {active} from './pi-hooks.mjs';
+import {active,recoverySourceEnabled} from './pi-hooks.mjs';
 import {executionProgress} from './pi-execution-progress.mjs';
 import {recallSource,attachSourceMemory,sourceHandoffLimit} from './pi-source-memory.mjs';
 
@@ -40,7 +40,7 @@ export function compactSummary(task, gate, failures = [], investigation = null, 
 
 export function installCompactionBoundary(pi) {
   pi.on('session_compact', (event, ctx) => {
-    if (!active(ctx.model) || process.env.QWEN_WORKFLOW_ROLE !== 'code' ||
+    if (!active(ctx.model) || (process.env.QWEN_WORKFLOW_ROLE !== 'code' && !recoverySourceEnabled()) ||
         event.compactionEntry?.details?.fullContractPreserved !== true ||
         event.compactionEntry?.details?.retainedConversationEntries !== 0) return;
     // Pi excludes the previous summary when finding the next cut. Without a

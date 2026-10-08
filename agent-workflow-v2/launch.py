@@ -164,7 +164,7 @@ def prepare(args) -> dict:
     input_tokens = effective['input_tokens']
     configure(session / 'pi-config', args.model, min(args.context,CONTEXT_LIMITS[args.model]))
     if not cloud:tune_context(session / 'pi-config', input_tokens, output_tokens,
-                              complete_handoff=args.role == 'code' and os.environ.get('QWEN_WORKFLOW_COMPACTION_FIX', '1') == '1')
+                              complete_handoff=bool(evidence_path) or (args.role == 'code' and os.environ.get('QWEN_WORKFLOW_COMPACTION_FIX', '1') == '1'))
     tools = {'architect':'project_map,plan_store,web_research,skill_read,skill_use',
              'research':'project_map,web_research,skill_use,knowledge_store',
              'intake':'intake_store',

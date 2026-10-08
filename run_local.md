@@ -42,6 +42,8 @@ Planning now performs draft → test-coverage review → per-task refinement/spl
 
 Execution automatically requests a fresh architecture/shadow/failure review after a failed todo, then applies one validated repair. Another failure of that repair asks you in the main chat or terminal. Logs and the repair allowance persist across resume; no silent retry loop. The failure-recovery agent uses your selected planner (ChatGPT or Qwen), with a generated capability/budget inventory. It can publish a focused repair or a structured framework/environment/requirement escalation; the executor stays unchanged.
 
+Recovery history is compacted by Python without a model-summary request. It retains the contract, measured evidence and current source excerpts that fit; compaction never resets read limits or grants another repair attempt.
+
 Review granular todos and acceptance before execution. For one todo:
 
 ```sh

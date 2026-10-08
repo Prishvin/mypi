@@ -13,7 +13,8 @@ def fit(candidate, payload, input_limit, counter):
     """Keep actual system/tools, bound history headroom, and omit optional source whole."""
     if type(input_limit) is not int or input_limit < 512:
         raise ValueError('Compaction requires a valid effective input token limit')
-    if not isinstance(payload.get('messages'), list) or not isinstance(payload.get('tools'), list):
+    field = 'messages' if isinstance(payload.get('messages'), list) else 'input'
+    if not isinstance(payload.get(field), list) or not isinstance(payload.get('tools'), list):
         raise ValueError('Missing recorded request envelope for compaction measurement')
     prefix, raw = candidate['summary'].split('\n', 1)
     data = json.loads(raw)
@@ -21,14 +22,20 @@ def fit(candidate, payload, input_limit, counter):
     stats = copy.deepcopy(candidate['stats'])
     budget = max(512, math.floor(input_limit * .75) - REQUEST_TRANSFORM_RESERVE)
     projected = copy.deepcopy(payload)
-    system = [message for message in projected['messages'] if message.get('role') == 'system']
-    if not system:
+    system = [message for message in projected[field]
+              if isinstance(message, dict) and message.get('role') in ('system', 'developer')]
+    if not system and not (field == 'input' and isinstance(projected.get('instructions'), str)
+                           and projected['instructions'].strip()):
         raise ValueError('Recorded compaction envelope has no system instructions')
+    # Responses may otherwise replay server-side history in addition to the handoff.
+    projected.pop('previous_response_id', None)
+    projected.pop('conversation', None)
 
     def measure():
         summary = prefix+'\n'+json.dumps(data, ensure_ascii=False, separators=(',', ':'))
-        projected['messages'] = system + [{'role': 'user', 'content': [
-            {'type': 'text', 'text': 'Continue using the complete frozen task and current evidence.\n<summary>\n'+summary+'\n</summary>'}]}]
+        projected[field] = system + [{'role': 'user', 'content': [
+            {'type': 'text' if field == 'messages' else 'input_text',
+             'text': 'Continue using the complete frozen task and current evidence.\n<summary>\n'+summary+'\n</summary>'}]}]
         tokens = counter(json.dumps(projected, ensure_ascii=False, separators=(',', ':')))
         admitted = math.ceil(tokens * ADMISSION_FACTOR) + TEMPLATE_RESERVE
         return summary, tokens, admitted

@@ -51,6 +51,30 @@ class CompactionBudgetTests(unittest.TestCase):
         self.assertTrue(all(len(row['source'])==4000 for row in data['retrieved_sources']['entries']))
         self.assertEqual(item,before)
 
+    def test_responses_projection_preserves_instructions_tools_and_developer_messages(self):
+        payload={'instructions':'Required recovery instructions', 'input':[
+            {'role':'developer','content':'Keep scope'}, {'role':'user','content':'OLD_HISTORY'}],
+            'tools':[{'type':'function','name':'plan_store'}], 'previous_response_id':'old-response',
+            'conversation':'old-history', 'reasoning':{'effort':'xhigh'}, 'max_output_tokens':32768}
+        observed=[];original=copy.deepcopy(payload)
+        result=fit(candidate({'goal':'current recovery'}),payload,196608,
+                   lambda text:observed.append(json.loads(text)) or len(text))
+        projected=observed[0]
+        self.assertEqual(projected['instructions'],payload['instructions'])
+        self.assertEqual(projected['input'][0],payload['input'][0])
+        self.assertEqual(projected['input'][1]['content'][0]['type'],'input_text')
+        self.assertEqual(projected['tools'],payload['tools'])
+        self.assertEqual(projected['reasoning'],{'effort':'xhigh'})
+        self.assertNotIn('OLD_HISTORY',json.dumps(projected))
+        self.assertNotIn('previous_response_id',projected);self.assertNotIn('conversation',projected)
+        self.assertEqual(payload,original);self.assertTrue(result['budget']['passed'])
+
+    def test_responses_top_level_instructions_alone_are_sufficient(self):
+        result=fit(candidate({'goal':'task'}),{'instructions':'Keep scope','input':[], 'tools':[]},8192,len)
+        self.assertTrue(result['budget']['passed'])
+        with self.assertRaisesRegex(ValueError,'no system instructions'):
+            fit(candidate({'goal':'task'}),{'input':[], 'tools':[]},8192,len)
+
     def test_oversized_contract_and_missing_envelope_fail_without_repairing_values(self):
         item=candidate({'goal':'x'*20000});before=copy.deepcopy(item)
         with self.assertRaisesRegex(ValueError,'no contract fields were removed'):fit(item,self.payload,8192,len)

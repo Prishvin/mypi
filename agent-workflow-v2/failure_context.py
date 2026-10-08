@@ -7,11 +7,16 @@ from planning_limits import limits
 from replan_brief import distill
 
 
-def build(root,packet,provider):
+def build(root,packet,provider,*,packet_limit=None):
     """Prefer complete interfaces when they fit; otherwise retain bounded relevant sections."""
     data=scan(root,['.'])
     if data['snapshot']!=packet['current_snapshot']:raise ValueError('Failure evidence is stale; source changed')
-    budget=limits(provider,'recovery');brief=distill(packet,focused=True)
+    budget=limits(provider,'recovery')
+    if packet_limit is not None:
+        if type(packet_limit) is not int or packet_limit < 2048:
+            raise ValueError('Recovery packet limit must be at least 2048 tokens')
+        budget={**budget,'packet':min(budget['packet'],packet_limit)}
+    brief=distill(packet,focused=True)
     from failure_test_context import collect as test_context
     brief['selected_failing_test_evidence'] = test_context(root, packet)
     from execution_audit import summarize

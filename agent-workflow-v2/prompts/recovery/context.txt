@@ -24,3 +24,8 @@ within its supported window when those necessary items still do not fit. Splitti
 an executed contract requires escalation. Never silently omit an acceptance case.
 Save a concise decision and stop once native publication succeeds; no extra summary
 generation or compaction request is needed after the published artifact.
+
+If history approaches its limit, Python reconstructs the recovery contract and
+measures it with actual system/tool schemas. The handoff keeps verified source
+observations when they fit, drops duplicated reasoning and never resets read or
+repair allowances. Use its remaining budget; do not request a model summary.
