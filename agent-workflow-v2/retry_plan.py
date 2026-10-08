@@ -15,7 +15,7 @@ def create(root,run_folder,output,timeout=2700,*,input_tokens=None,reason=None):
     root,run_folder,output=root.resolve(),run_folder.resolve(),output.resolve()
     state=read(run_folder/'state.json')
     if state.get('status')!='needs_replan':raise ValueError('Retry requires a stopped failure checkpoint')
-    if state.get('reason') not in {'timeout','execution_failed','acceptance_failed','no_progress'}:
+    if state.get('reason') not in {'timeout','execution_failed','acceptance_failed','no_progress','compaction_failed'}:
         raise ValueError('This failure needs architectural replanning, not an operational retry')
     if input_tokens is not None:
         if type(input_tokens) is not int or input_tokens<512:

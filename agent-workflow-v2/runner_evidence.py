@@ -22,6 +22,14 @@ def acceptance(result, task, root):
     if monitor_error:
         return {'passed': False, 'reason': 'progress_monitor_failed',
                 'violations': [str(monitor_error.get('error', 'Progress monitor failed'))[:500]]}
+    compaction_error = read(session / 'compaction-error.json') if session else {}
+    if compaction_error:
+        bound = read(session / 'task-state.json')
+        if (bound.get('task', {}).get('id') == task.get('id') and
+                Path(bound.get('before', {}).get('root', '')).resolve() == root.resolve()):
+            return {'passed': False, 'reason': 'compaction_failed',
+                    'violations': [str(compaction_error.get('error', 'Compaction failed'))[:1800]],
+                    'compaction': compaction_error}
     if result['exit_code'] or session is None:
         reason = 'timeout' if result['exit_code'] == 124 else 'execution_failed'
         if session:

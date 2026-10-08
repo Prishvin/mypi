@@ -1,5 +1,5 @@
 /** Preserve the full frozen contract without falling through to model summaries. */
-import {readFileSync, writeFileSync} from 'node:fs';
+import {readFileSync, writeFileSync,existsSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {active} from './pi-hooks.mjs';
 import {executionProgress} from './pi-execution-progress.mjs';
@@ -10,7 +10,7 @@ export function failingNames(text) {
     .map(line => line.slice(2).trim().replace(/\s+\([^)]*ms\)\s*$/, '')))];
 }
 
-export function compactSummary(task, gate, failures = [], investigation = null) {
+export function compactSummary(task, gate, failures = [], investigation = null, limit=12000) {
   const data = {task, current_gate:{passed:gate.passed === true, shadow_snapshot:gate.shadow_snapshot,
     violations:(gate.violations || []).slice(0,6).map(value => String(value).slice(0,160)),
     omitted_violations:Math.max(0,(gate.violations || []).length-6),
@@ -26,7 +26,7 @@ export function compactSummary(task, gate, failures = [], investigation = null) 
     evidence_rule:'Every acceptance case and declared test below is preserved. Any later edit invalidates this gate. Truncated diagnostics are marked; project_map gate retrieves current violations.',
     retrieval_rule:'Use current shadow and bounded source_query, including pinned acceptance fixture pages. Discard old implementation assumptions.'};
   let summary='FROZEN ATOMIC TASK HANDOFF\n'+JSON.stringify(data);
-  if (summary.length>12000) {
+  if (summary.length>limit) {
     if(data.investigation) data.investigation={...data.investigation,recent_tools:[],
       omitted_recent_tools:data.investigation.recent_tools?.length || 0,
       local_evidence:'execution-progress.json retains all bounded investigation metadata'};
@@ -34,7 +34,7 @@ export function compactSummary(task, gate, failures = [], investigation = null) 
       omitted_failed_names:row.failed_names.length}));
     summary='FROZEN ATOMIC TASK HANDOFF\n'+JSON.stringify(data);
   }
-  if (summary.length>12000) throw new Error('Frozen contract itself needs a smaller task; deterministic compaction cancelled.');
+  if (summary.length>limit) throw new Error('Frozen contract itself needs a smaller task; deterministic compaction cancelled.');
   return summary;
 }
 
@@ -74,13 +74,25 @@ export function installFixedCompactionHooks(pi, python, cli) {
       // SessionManager use the new compaction entry as the boundary; all old
       // entries remain in the journal, but no partial tool turn is replayed.
       const memory=recallSource(session,state.before?.root || process.env.QWEN_WORKFLOW_PROJECT);
-      const handoffLimit=sourceHandoffLimit(state.task);
-      const handoff=attachSourceMemory(compactSummary(state.task,gate,failures,investigation),memory,handoffLimit);
+      const measured=existsSync(join(session,'request-budget.json'));
+      const handoffLimit=measured?100000:sourceHandoffLimit(state.task);
+      let handoff=attachSourceMemory(compactSummary(state.task,gate,failures,investigation,
+        measured?100000:12000),memory,handoffLimit);
+      if(measured) {
+        const candidate=join(session,'compaction-candidate.json');writeFileSync(candidate,JSON.stringify(handoff));
+        const limit=Number(process.env.QWEN_WORKFLOW_INPUT_BUDGET||state.task.context?.max_input_tokens);
+        const fitted=await pi.exec(python,[join(dirname(cli),'compaction_budget.py'),'--session',session,
+          '--candidate',candidate,'--limit',String(limit)],{signal:event.signal,timeout:30000});
+        if(fitted.code)throw new Error((fitted.stdout+fitted.stderr).slice(-1800));
+        handoff=JSON.parse(fitted.stdout);
+        if(handoff.budget?.passed!==true||typeof handoff.summary!=='string')throw new Error('Invalid measured compaction result');
+      }
       const compaction={summary:handoff.summary,
         tokensBefore:event.preparation.tokensBefore,
         details:{method:'complete frozen task plus bounded fresh diagnostics',modelCall:false,
           shadow:gate.shadow_snapshot,fullContractPreserved:true,retainedConversationEntries:0,
-          sourceMemory:{...handoff.stats,handoffCharacterLimit:handoffLimit},
+          sourceMemory:{...handoff.stats,...(!measured?{handoffCharacterLimit:handoffLimit}:{})},
+          ...(handoff.budget?{tokenBudget:handoff.budget}:{}),
           previousRecentBoundary:event.preparation.firstKeptEntryId,
           historyPolicy:'Complete deterministic handoff; retrieve current source as needed. Original journal preserved.'}};
       writeFileSync(join(session,'compaction-latest.json'),JSON.stringify(compaction,null,2));

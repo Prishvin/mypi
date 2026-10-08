@@ -91,6 +91,19 @@ class RunnerTests(unittest.TestCase):
             lambda *a: self.fake(*a, exit_code=1)), REPLAN_EXIT)
         self.assertEqual(read(self.folder/'replan-request.json')['reason'], 'execution_failed')
 
+    def test_compaction_failure_is_distinct_from_the_underlying_test_failure(self):
+        self.save()
+        def failed_compaction(*args):
+            result=self.fake(*args,correct=False,exit_code=1)
+            (Path(result['session'])/'compaction-error.json').write_text(json.dumps({
+                'error':'Complete handoff exceeded measured headroom','modelFallbackAllowed':False}))
+            return result
+        self.assertEqual(execute(self.root,self.path,self.folder,failed_compaction),REPLAN_EXIT)
+        packet=read(self.folder/'replan-request.json')
+        self.assertEqual(packet['reason'],'compaction_failed')
+        self.assertTrue(packet['failed_tests'])
+        self.assertIn('measured headroom',packet['violations'][0])
+
     def test_node_failure_handoff_carries_assertion_without_trace_source(self):
         """JavaScript failures provide planner observations without implementation lines."""
         from runner_evidence import failed_tests
