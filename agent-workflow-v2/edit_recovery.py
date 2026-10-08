@@ -84,6 +84,11 @@ def collect(root, state, request):
               'readonly': True, 'excerpts': [], 'omitted_edits': 0}
     for index, old in enumerate(edits):
         row = {'edit_index': index, **current_span(text, old)}
+        if row['status'] == 'no_unique_anchor':
+            from edit_symbol_evidence import locate
+            symbol = locate(text, old, path.suffix)
+            if symbol:
+                row = {'edit_index': index, **symbol}
         candidate = {**result, 'excerpts': [*result['excerpts'], row]}
         if encoded_size(candidate) > MAX_RESULT:
             result['omitted_edits'] += 1

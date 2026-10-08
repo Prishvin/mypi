@@ -27,7 +27,7 @@ export async function failedEditEvidence(pi,event,ctx,python,cli) {
     const evidence=JSON.parse(result.stdout);
     if(evidence.readonly!==true||!Array.isArray(evidence.excerpts))throw Error('Invalid evidence response');
     return '\nCURRENT SOURCE EVIDENCE FOR FAILED EDIT (read-only, no replacement applied):\n'+result.stdout+
-      '\nThe source fields contain exact current text without line labels. Unique anchors identify context, not approved edit boundaries. '+
+      '\nThe source fields contain exact current text without line labels. Unique anchors or parsed declaration names identify context, not approved edit boundaries. '+
       'Inspect the excerpt and choose the smallest uniquely matching exact replacement; do not delete unrelated surrounding lines. '+
       'sha256 identifies this snapshot; retrieve again after intervening edits. No fuzzy repair was applied.';
   } catch {
