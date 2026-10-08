@@ -157,6 +157,8 @@ def prepare(args) -> dict:
              'code':'project_map,source_query,edit,write,workflow_test,web_research,skill_read,skill_use'}[args.role]
     if args.role == 'architect' and getattr(args,'refine_task',None):
         tools += ',plan_child_store'
+    if args.role == 'architect' and evidence_path:
+        tools += ',source_query'
     phase_output = getattr(args, 'phase_output', None)
     if args.role in ('research', 'intake','reviewer','memory') and (not phase_output or phase_output.resolve().is_relative_to(root)):
         raise ValueError('Research/intake requires --phase-output outside the project')
