@@ -76,3 +76,11 @@ export function attachSourceMemory(summary,memory,limit=12000) {
     data.retrieved_sources.omitted=stats.omitted;result=prefix+JSON.stringify(data);}
   return {summary:result.length<=limit?result:summary,stats};
 }
+
+export function sourceHandoffLimit(task) {
+  // A verbose complete contract can consume the original 12k-character cap.
+  // Keep source memory separately bounded for 24k+ input tasks. Full-payload
+  // tokenizer admission still checks the actual next request before sending.
+  const input=task?.context?.max_input_tokens;
+  return Number.isInteger(input)&&input>=24576 ? 18000 : 12000;
+}

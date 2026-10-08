@@ -5,7 +5,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,symlinkSync} fro
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {rememberSource,recallSource,attachSourceMemory} from './pi-source-memory.mjs';
+import {rememberSource,recallSource,attachSourceMemory,sourceHandoffLimit} from './pi-source-memory.mjs';
 import {compactSummary,installFixedCompactionHooks} from './pi-compaction-fixed.mjs';
 
 function setup(t) {
@@ -77,7 +77,7 @@ test('handoff retains the complete frozen contract and fits its original cap',t=
 test('actual compaction hook preserves retrieved interfaces without old conversation turns',async t=>{
   const x=setup(t),old={...process.env},handlers={};
   t.after(()=>{for(const key of Object.keys(process.env))if(!(key in old))delete process.env[key];Object.assign(process.env,old);});
-  const state=join(x.session,'state.json');writeFileSync(state,JSON.stringify({before:{root:x.project},task:{id:'T1',goal:'Synthetic task'}}));
+  const state=join(x.session,'state.json');writeFileSync(state,JSON.stringify({before:{root:x.project},task:{id:'T1',goal:'Synthetic task',context:{max_input_tokens:24576}}}));
   Object.assign(process.env,{QWEN_WORKFLOW_ROLE:'code',QWEN_WORKFLOW_SESSION:x.session,QWEN_WORKFLOW_STATE:state});
   rememberSource(x.session,x.project,JSON.stringify(x.row));
   installFixedCompactionHooks({on:(event,fn)=>handlers[event]=fn,
@@ -87,5 +87,24 @@ test('actual compaction hook preserves retrieved interfaces without old conversa
     {model:{provider:'local-qwen-workflow'},abort:()=>assert.fail('Unexpected abort')});
   assert.match(result.compaction.summary,/sample/);
   assert.equal(result.compaction.details.sourceMemory.retained,1);
+  assert.equal(result.compaction.details.sourceMemory.handoffCharacterLimit,18000);
   assert.equal(result.compaction.details.retainedConversationEntries,0);
+});
+
+test('verbose contracts retain a bounded whole source excerpt with sufficient input headroom',t=>{
+  const x=setup(t),task={goal:'Synthetic task',steps:['instruction '.repeat(730)],
+    context:{max_input_tokens:24576},acceptance:[{id:'A',then:'preserve contract'}]};
+  const summary=compactSummary(task,{passed:false,violations:[]});
+  const row={...x.row,source:'source observation '.repeat(270)};
+  const memory={entries:[row],omitted:0,invalidated:0};
+  assert.equal(attachSourceMemory(summary,memory).stats.retained,0);
+  const extended=attachSourceMemory(summary,memory,sourceHandoffLimit(task));
+  assert.equal(extended.stats.retained,1);
+  assert.ok(extended.summary.length<=18000);
+  const data=JSON.parse(extended.summary.slice(extended.summary.indexOf('\n')+1));
+  assert.deepEqual(data.task,task);assert.deepEqual(data.retrieved_sources.entries,[row]);
+  for(const cap of [undefined,null,8192,16384,24575,'24576',NaN])
+    assert.equal(sourceHandoffLimit({context:{max_input_tokens:cap}}),12000);
+  for(const cap of [24576,32768,57344])
+    assert.equal(sourceHandoffLimit({context:{max_input_tokens:cap}}),18000);
 });

@@ -3,7 +3,7 @@ import {readFileSync, writeFileSync} from 'node:fs';
 import {join,dirname} from 'node:path';
 import {active} from './pi-hooks.mjs';
 import {executionProgress} from './pi-execution-progress.mjs';
-import {recallSource,attachSourceMemory} from './pi-source-memory.mjs';
+import {recallSource,attachSourceMemory,sourceHandoffLimit} from './pi-source-memory.mjs';
 
 export function failingNames(text) {
   return [...new Set(text.split('\n').filter(line => line.startsWith('✖ ') && line !== '✖ failing tests:')
@@ -74,12 +74,13 @@ export function installFixedCompactionHooks(pi, python, cli) {
       // SessionManager use the new compaction entry as the boundary; all old
       // entries remain in the journal, but no partial tool turn is replayed.
       const memory=recallSource(session,state.before?.root || process.env.QWEN_WORKFLOW_PROJECT);
-      const handoff=attachSourceMemory(compactSummary(state.task,gate,failures,investigation),memory);
+      const handoffLimit=sourceHandoffLimit(state.task);
+      const handoff=attachSourceMemory(compactSummary(state.task,gate,failures,investigation),memory,handoffLimit);
       const compaction={summary:handoff.summary,
         tokensBefore:event.preparation.tokensBefore,
         details:{method:'complete frozen task plus bounded fresh diagnostics',modelCall:false,
           shadow:gate.shadow_snapshot,fullContractPreserved:true,retainedConversationEntries:0,
-          sourceMemory:handoff.stats,
+          sourceMemory:{...handoff.stats,handoffCharacterLimit:handoffLimit},
           previousRecentBoundary:event.preparation.firstKeptEntryId,
           historyPolicy:'Complete deterministic handoff; retrieve current source as needed. Original journal preserved.'}};
       writeFileSync(join(session,'compaction-latest.json'),JSON.stringify(compaction,null,2));
