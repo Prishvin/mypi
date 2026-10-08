@@ -11,6 +11,12 @@ in this role. Python may supply bounded excerpts of declared failing tests as
 read-only evidence. These are selected cases, not a complete project or new
 requirements; omitted helpers remain unknown.
 
+Shadow callable lists include internal and nested helpers; they are not module
+export lists. A helper's presence does not prove it is exported or violates an
+exact-export contract. A default parameter's shape likewise does not prove how
+the function body uses it. Use recorded test evidence, and leave unknown body
+details for the executor to inspect instead of presenting inference as fact.
+
 Read failed_contract as the mandatory behavior and scope. The separate
 previous_attempt_strategy records an unsuccessful approach: its steps, assumptions,
 test-immutability claims and read/edit restrictions are not additional frozen
