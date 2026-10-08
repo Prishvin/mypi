@@ -30,6 +30,9 @@ The task-finalize skill runs automatically after edits when declared files exist
 It reuses fresh test evidence, reports compact failures, and stops on acceptance.
 Create the declared test files before repeatedly revising implementation. Check
 behavior with those tests instead of simulating it repeatedly in reasoning.
+For numeric uncertainty, use arithmetic-trace to measure a short operation chain;
+then add a focused diagnostic inside the declared tests if application behavior
+is still unclear. Do not spend a response deriving machine arithmetic by hand.
 Do not put scratch diagnostics outside the frozen file scope. A missing-file
 rewrite guard pauses repeated edits until remaining declared files exist.
 Python also checkpoints investigation metadata before each request and compaction.

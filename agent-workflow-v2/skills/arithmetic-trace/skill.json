@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "name": "arithmetic-trace",
+  "purpose": "Measure repeated JavaScript binary64 arithmetic and exact displayed precision instead of hand-simulating numeric boundaries.",
+  "roles": ["architect", "code", "reviewer", "research", "chat", "inspect"],
+  "side_effects": "session-artifacts",
+  "pre_prompt": "Supply initial, operations and optional repeat (default 1). Operations run in order, then repeat on the previous result. Use a concrete arithmetic hypothesis, not project paths or code. At most 32 operation results are allowed. This uses JavaScript Number arithmetic, not exact decimal/rational arithmetic.",
+  "post_prompt": "Treat these as measured numeric values. A tiny positive residual is not zero. This trace does not execute the application's branching or timing behavior. Verify any application hypothesis with a focused diagnostic in the declared test scope, preserving acceptance. Do not conclude that source is stale merely because a mental calculation disagrees.",
+  "input_schema": {
+    "type": "object", "additionalProperties": false,
+    "required": ["initial", "operations"],
+    "properties": {
+      "initial": {"type": "number", "minimum": -1e100, "maximum": 1e100},
+      "repeat": {"type": "integer", "minimum": 1, "maximum": 32},
+      "operations": {
+        "type": "array", "minItems": 1, "maxItems": 8,
+        "items": {
+          "type": "object", "additionalProperties": false, "required": ["op", "value"],
+          "properties": {
+            "op": {"enum": ["add", "subtract", "multiply", "divide", "min", "max"]},
+            "value": {"type": "number", "minimum": -1e100, "maximum": 1e100}
+          }
+        }
+      }
+    }
+  },
+  "binaries": {"node": "node"},
+  "steps": [{"argv": ["{node}", "{skill}/scripts/trace.mjs", "{input}"], "timeout_seconds": 5, "max_output_bytes": 8192}]
+}

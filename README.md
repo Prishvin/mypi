@@ -214,6 +214,7 @@ Built-in executable skills:
 | task-finalize | Insert an optional task decision, refresh navigation, reuse fresh frozen tests and enforce acceptance in one call. |
 | browser-interaction-review | Load browser lifecycle/input/visibility checks for UI tasks; its checklist does not claim tests ran. |
 | text-metrics | Example deterministic multi-step script with typed output. |
+| arithmetic-trace | Measure bounded JavaScript numeric operations and precision; no project execution or edits. |
 
 Skills have fixed input/output contracts, purposes, native scripts and pre/post-processing instructions. Coding sessions load scoped retrieval and finalization instructions; architects load granular planning, architecture navigation and research. Relevant task procedures load with the selected packet, and other skills remain available through the bounded catalog. This keeps unrelated procedures out of each Qwen request. Optional electronics/KiCad bundles remain external, selected with **MYPI_DOMAIN_SKILLS**.
 
