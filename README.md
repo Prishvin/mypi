@@ -272,7 +272,7 @@ Each worker receives only:
 4. Relevant immutable fixtures and selected knowledge.
 5. Bounded failure/resume evidence when applicable.
 
-Scoped **source_query** tools locate symbols and read focused functions, variables or test pages instead of dumping the repository. Small files may be prefetched in full when explicitly selected. Symbol queries can span 1–5 explicit files and up to 8 names, with path-labelled results under one combined 12 KB response budget; Python resolves the names rather than asking the model to split a clear request into extra turns. Ambiguities within a file remain errors and paging requires one file/symbol. Source retrieval stays with the local Qwen worker.
+Scoped **source_query** tools locate symbols and read focused functions, variables or test pages instead of dumping the repository. Small files may be prefetched in full when explicitly selected. An explicit file read returns a complete project file of up to 300 lines when it fits the 12 KB source budget; larger files and recorded logs use 120-line pages. Symbol queries can span 1–5 explicit files and up to 8 names, with path-labelled results under one combined 12 KB response budget; Python resolves the names rather than asking the model to split a clear request into extra turns. Ambiguities within a file remain errors and paging requires one file/symbol. Ordinary planning uses prototypes; failure recovery can retrieve bounded source observations as described below.
 
 The worker uses native tools to edit and run the declared tests. Test results, scope checks and a fresh shadow gate determine acceptance; a model's claim that work is complete is insufficient.
 

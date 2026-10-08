@@ -25,10 +25,30 @@ class RetrievalTests(unittest.TestCase):
         (self.root/'levels.mjs').write_text('\n'.join('const row'+str(i)+'="floor";' for i in range(150)))
         first=read_page(self.root,'levels.mjs',fixture=True)
         self.assertEqual(first['mode'],'project-file');self.assertIn('action=file',first['note'])
-        self.assertEqual(first['next_offset'],120);self.assertTrue(first['more'])
-        last=read_page(self.root,'levels.mjs',first['next_offset'])
+        self.assertEqual(first['next_offset'],150);self.assertFalse(first['more'])
+        self.assertIn('const row149=',first['source'])
+        self.assertLess(len(first['source'].encode()),12000)
+        last=read_page(self.root,'levels.mjs',120)
         self.assertTrue(last['source'].startswith('121:'));self.assertFalse(last['more'])
         self.assertNotIn('const row0=',last['source'])
+
+    def test_large_legacy_files_keep_explicit_line_paging(self):
+        (self.root/'legacy.py').write_text('value = 1\n'*310)
+        first=read_page(self.root,'legacy.py')
+        self.assertEqual(first['next_offset'],120);self.assertTrue(first['more'])
+        second=read_page(self.root,'legacy.py',first['next_offset'])
+        self.assertEqual(second['next_offset'],240);self.assertTrue(second['more'])
+        last=read_page(self.root,'legacy.py',second['next_offset'])
+        self.assertEqual(last['next_offset'],310);self.assertFalse(last['more'])
+
+    def test_atomic_file_line_boundary_never_overrides_byte_boundary(self):
+        (self.root/'atomic.py').write_text('value = 1\n'*300)
+        full=read_page(self.root,'atomic.py')
+        self.assertEqual(full['next_offset'],300);self.assertFalse(full['more'])
+        (self.root/'atomic.py').write_text(('value = "'+'x'*200+'"\n')*176)
+        partial=read_page(self.root,'atomic.py')
+        self.assertTrue(partial['more']);self.assertLess(partial['next_offset'],176)
+        self.assertLess(len(partial['source'].encode()),12000)
 
     def test_file_pages_preserve_external_fixture_hash_guard(self):
         import hashlib,json,os

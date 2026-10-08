@@ -90,7 +90,9 @@ def read_page(root: Path, relative: str, offset=0, fixture=False) -> dict:
     try:rows=raw.decode('utf-8').splitlines()
     except UnicodeError:raise ValueError('Source pages require UTF-8 text') from None
     start=max(0,offset);stop=start;lines=[];used=0
-    for index in range(start,min(len(rows),start+120)):
+    # Atomic project files can fit in one observation; keep logs/legacy files paged.
+    line_limit = 300 if log is None and len(rows) <= 300 else 120
+    for index in range(start,min(len(rows),start+line_limit)):
         line=f'{index+1}: {rows[index]}'
         size=len((line+'\n').encode())
         if used+size>12000:break
