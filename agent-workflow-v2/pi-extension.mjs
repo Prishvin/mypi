@@ -29,6 +29,7 @@ import {rememberSource} from './pi-source-memory.mjs';
 import {recoverySourceEnabled} from './pi-hooks.mjs';
 import {sectionLookup,navigationReply} from './pi-map-navigation.mjs';
 import {installPlanningFinish} from './pi-planning-finish.mjs';
+import {registerRecoveryReport} from './pi-recovery-report.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -71,6 +72,7 @@ export default function (pi) {
   (process.env.QWEN_WORKFLOW_COMPACTION_FIX === '1' ? installFixedCompactionHooks : installCompactionHooks)(pi, python, cli);
   installTimingHooks(pi);
   installPlanningFinish(pi);
+  registerRecoveryReport(pi,python,process.env.QWEN_WORKFLOW_RUNTIME || home);
   registerMap(pi);
   pi.registerCommand('rebuild', {description:'Rebuild this session architecture/shadow/map after an explicit user request',
     handler:async (_args,ctx)=>{
@@ -214,7 +216,7 @@ function registerPlan(pi) {
   const refinement=target ? 'Refine only '+target+': pass changed fields DIRECTLY (steps, context_overlay, add_tests, add_coverage, etc). Python supplies the target ID. Do not send task_updates, id, tasks or replace_with. For a split, stage each full child with plan_child_store and submit its ordered child_refs here. Use unchanged:true only if no changes are needed. Every save starts from the pinned draft; rejected saves do not accumulate edits.' : '';
   pi.registerTool({
     name: 'plan_store', label: 'Save architecture and todos',
-    description: recovery ? 'Repair only the failed todo: provide failure_analysis, strategy_review and changed steps beginning with the exact first_check; context_overlay is optional. Python preserves all unchanged tasks, exact acceptance, tests and dependency order. Do not send tasks, task_updates, goal, IDs or a whole replacement plan. Source edits belong to the executor.' : process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? 'Attach coverage_plan to the unchanged pinned draft. Map every acceptance case and request requirement to observable checks, and assign missing cases to tasks. Does not implement tests.' : target ? refinement : draft ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.'+refinement : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
+    description: recovery ? 'Repair only the failed todo: provide recovery_decision(action=repair), failure_analysis, strategy_review and changed steps beginning with the exact first_check; context_overlay is optional. Python preserves all unchanged tasks, exact acceptance, tests and dependency order. Do not send tasks, task_updates, goal, IDs or a whole replacement plan. Source edits belong to the executor.' : process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? 'Attach coverage_plan to the unchanged pinned draft. Map every acceptance case and request requirement to observable checks, and assign missing cases to tasks. Does not implement tests.' : target ? refinement : draft ? 'Repair the pinned unaccepted proposal with sparse task_updates and exact architecture_replacements. Python preserves unchanged tasks, criteria and tests, then validates and saves the complete V3 plan. Never resend the entire draft.'+refinement : 'Save one detailed plan with ordered atomic todos. Does not edit source or execute tasks.',
     parameters: recovery ? recoveryParameters() : process.env.QWEN_WORKFLOW_PLAN_COVERAGE === '1' ? coverageParameters() : draft ? repairParameters(target) : Type.Object({ plan_version: Type.Optional(Type.Literal(3)),
       goal: Type.String(), architecture: Type.String(),
       failure_analysis: Type.Optional(Type.String({minLength:40,description:'For evidence-bound recovery: observed failure, cause/hypothesis, corrective approach and validation.'})),

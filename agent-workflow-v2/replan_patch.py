@@ -13,13 +13,15 @@ def restore(root, prefixes, packet, fields):
     """Validate the evidence binding and assemble only explicitly supplied task changes."""
     if packet['project'] != str(root.resolve()) or packet['current_snapshot'] != scan(root, prefixes)['snapshot']:
         raise ValueError('Failure evidence became stale or belongs to another project')
-    if not isinstance(fields, dict) or set(fields) - FIELDS - {'failure_analysis', 'architecture_replacements', 'strategy_review'}:
+    if not isinstance(fields, dict) or set(fields) - FIELDS - {'failure_analysis', 'architecture_replacements', 'strategy_review', 'recovery_decision'}:
         raise ValueError('Recovery accepts flat failed-task changes, not tasks, IDs or a replacement plan')
     analysis = fields.get('failure_analysis')
     if not isinstance(analysis, str) or len(analysis.strip()) < 40:
         raise ValueError('Explain failure evidence, cause, corrective approach and validation in failure_analysis')
     from strategy_review import validate as validate_strategy
     strategy = validate_strategy(packet, fields)
+    from recovery_protocol import validate as validate_decision
+    decision = validate_decision(fields.get('recovery_decision'), packet, action='repair')
     original = json.loads(Path(packet['plan']).read_text())
     if original.get('project') != str(root.resolve()):
         raise ValueError('Original plan belongs to another project')
@@ -45,6 +47,8 @@ def restore(root, prefixes, packet, fields):
     result = apply(plan, patch)
     result.pop('draft_repair', None)
     result['failure_analysis'] = analysis
+    if decision is not None:
+        result['recovery_decision'] = decision
     if strategy is not None:
         next(task for task in result['tasks'] if task['id'] == failed)['repair_strategy_review'] = strategy
     result['recovery_patch'] = {'todo': failed, 'evidence_sha256': digest(packet),

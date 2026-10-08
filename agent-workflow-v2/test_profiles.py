@@ -165,7 +165,7 @@ class ProfileTests(unittest.TestCase):
                 original=json.loads(source.read_text());original['project']=str(repo.resolve())
                 source.write_text(json.dumps(original))
                 evidence.write_text(json.dumps({'project':str(repo.resolve()),'plan':str(source),
-                    'current_snapshot':scan(repo,['.'])['snapshot']}))
+                    'current_snapshot':scan(repo,['.'])['snapshot'],'failed_todo':original['tasks'][0]}))
                 recovered=launch.prepare(options(profile='local-flash',project=repo,role='architect',
                     replan_evidence=evidence,prompt='Measured failure packet'))
                 prompt=recovered['command'][-1]
@@ -176,6 +176,9 @@ class ProfileTests(unittest.TestCase):
                 from plan_draft import digest
                 self.assertEqual(pinned['recovery_plan_sha256'],digest(original))
                 self.assertTrue((Path(recovered['runtime'])/'architect-recovery-rules.txt').is_file())
+                capabilities=json.loads(Path(recovered['recovery_capabilities']).read_text())
+                self.assertEqual(capabilities['review_limits']['context'],recovered['context'])
+                self.assertEqual(capabilities['tools'],recovered['command'][recovered['command'].index('--tools')+1].split(','))
 
 
     def test_profile_path_traversal_rejected(self):

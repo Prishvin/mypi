@@ -6,7 +6,7 @@ from planning_limits import arguments, limits
 class RecoveryThinkingTests(unittest.TestCase):
     def test_qwen_recovery_has_bounded_extra_reasoning_and_sufficient_output_space(self):
         budget = limits('qwen', 'recovery'); argv = arguments('qwen', 'recovery')
-        self.assertEqual(argv[argv.index('--reasoning-budget') + 1], '4096')
+        self.assertEqual(argv[argv.index('--reasoning-budget') + 1], '8192')
         self.assertEqual(budget['reasoning'], 'medium')
         self.assertGreaterEqual(budget['output'] - budget['reasoning_budget'], 2048)
         self.assertLessEqual(budget['input'] + budget['output'] + 8192, budget['context'])

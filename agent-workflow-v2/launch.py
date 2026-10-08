@@ -129,6 +129,8 @@ def prepare(args) -> dict:
         from plan_draft import digest
         from strategy_review import POLICY
         evidence['strategy_review_policy'] = dict(POLICY)
+        from recovery_protocol import POLICY as RECOVERY_POLICY
+        evidence['failure_recovery_policy'] = dict(RECOVERY_POLICY)
         evidence['recovery_plan_sha256']=digest(json.loads(Path(evidence['plan']).read_text()))
         evidence_path=str(session/'replan-evidence.json');Path(evidence_path).write_text(json.dumps(evidence))
     if getattr(args, 'plan_draft', None):
@@ -174,7 +176,7 @@ def prepare(args) -> dict:
     if args.role == 'architect' and getattr(args,'refine_task',None):
         tools += ',plan_child_store'
     if args.role == 'architect' and evidence_path:
-        tools += ',source_query'
+        tools += ',source_query,recovery_report'
     phase_output = getattr(args, 'phase_output', None)
     if args.role in ('research', 'intake','reviewer','memory') and (not phase_output or phase_output.resolve().is_relative_to(root)):
         raise ValueError('Research/intake requires --phase-output outside the project')
@@ -194,7 +196,7 @@ def prepare(args) -> dict:
         mode='recovery' if evidence_path else 'coverage' if getattr(args,'plan_coverage',False) else 'refine' if getattr(args,'refine_task',None) else 'repair' if draft_path else 'draft'
         prompt = task_prompts.planning(prompt, effective, mode)
         if evidence_path:
-            prompt += '\n\nFOCUSED FAILURE REVIEW: plan_store accepts failure_analysis, strategy_review and changed steps beginning with its exact first_check. Python preserves the remaining plan. Do not send tasks, IDs, goal or the entire architecture. Current review limits apply to this call only; choose future executor budgets from measured failure evidence.'
+            prompt += '\n\nFOCUSED FAILURE REVIEW: plan_store accepts failure_analysis, strategy_review and changed steps beginning with its exact first_check, plus recovery_decision(action=repair). Use recovery_report for evidence-backed escalation. Python preserves the remaining plan. Do not send tasks, IDs, goal or the entire architecture. Current review limits apply to this call only; choose future executor budgets from measured failure evidence.'
         elif getattr(args,'plan_coverage',False):
             prompt += '\n\nCOVERAGE REVIEW MODE: plan_store accepts only coverage_plan. Review the draft and map requirements to observable checks; record missing cases as gaps. Do not rewrite the plan or implement tests. Python attaches your coverage plan to the unchanged draft.'
         elif draft_path and getattr(args,'refine_task',None):
@@ -246,6 +248,10 @@ def prepare(args) -> dict:
                   plan_draft=draft_path,require_refinement=getattr(args,'require_refinement',False),
                   plan_coverage=getattr(args,'plan_coverage',False))
     result['replan_evidence']=evidence_path
+    if evidence_path:
+        from recovery_protocol import write_manifest
+        result['local_model_context_ceiling']=CONTEXT_LIMITS[args.model]
+        result['recovery_capabilities']=write_manifest(session,result,evidence,tools)
     (session / 'launch.json').write_text(json.dumps(result, indent=2))
     return result
 

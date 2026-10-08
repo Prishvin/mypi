@@ -8,6 +8,11 @@ export function planningFinished(){
  const plan=process.env.QWEN_WORKFLOW_PLAN,session=process.env.QWEN_WORKFLOW_SESSION;
  if(!plan||!session)return false;
  try{
+  const report=JSON.parse(readFileSync(join(session,'recovery-report.json'),'utf8'));
+  if(process.env.QWEN_WORKFLOW_REPLAN_EVIDENCE&&report.project===process.env.QWEN_WORKFLOW_PROJECT&&
+     ['needs_user','framework_fix','environment_fix'].includes(report.decision?.action)&&Number.isFinite(report.finished_epoch))return true;
+ }catch{}
+ try{
   const marker=JSON.parse(readFileSync(join(session,'planning-stop.json'),'utf8'));
   return resolve(marker.plan)===resolve(plan)&&marker.sha256===createHash('sha256').update(readFileSync(plan)).digest('hex');
  }catch{return false;}

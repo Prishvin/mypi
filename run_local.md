@@ -40,7 +40,7 @@ mypi execute /path/to/project /path/outside/project/plan.json \
 
 Planning now performs draft → test-coverage review → per-task refinement/splitting before publishing an executable plan. Both planner and refiner default to local Qwen; use `--planner chatgpt --refiner qwen` for a mixed workflow. Repeat the same plan command/output path after an interruption to resume completed stages. A valid interactive draft can be reviewed with `mypi plan PROJECT --request-file REQUEST --review-draft DRAFT --out FINAL` (request and plan files outside the project).
 
-Execution automatically requests a fresh architecture/shadow/failure review after a failed todo, then applies one validated repair. Another failure of that repair asks you in the main chat or terminal. Logs and the repair allowance persist across resume; no silent retry loop.
+Execution automatically requests a fresh architecture/shadow/failure review after a failed todo, then applies one validated repair. Another failure of that repair asks you in the main chat or terminal. Logs and the repair allowance persist across resume; no silent retry loop. The failure-recovery agent uses your selected planner (ChatGPT or Qwen), with a generated capability/budget inventory. It can publish a focused repair or a structured framework/environment/requirement escalation; the executor stays unchanged.
 
 Review granular todos and acceptance before execution. For one todo:
 

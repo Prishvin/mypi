@@ -133,7 +133,12 @@ export function installPromptHooks(pi, home) {
     const planningNavigation=['architect','reviewer'].includes(role) && existsSync(navigationPath)?
       '\n'+readFileSync(navigationPath,'utf8'):'';
     const controls = sessionLimits(role);
-    return { systemPrompt: event.systemPrompt + '\n\n' + readFileSync(join(runtime, roleRules), 'utf8') + '\n' + skills + workspace + state + controls + knowledge + planningNavigation + (phase && role!=='chat'?'':domainInstructions()) };
+    const capabilities=join(process.env.QWEN_WORKFLOW_SESSION||'.','recovery-capabilities.json');
+    const recoveryPrompt=recoverySourceEnabled()&&existsSync(capabilities)?
+      '\n'+readFileSync(join(runtime,'prompts/recovery/triage.txt'),'utf8')+
+      '\n'+readFileSync(join(runtime,'prompts/recovery/context.txt'),'utf8')+
+      '\nGENERATED CAPABILITIES FOR THIS REVIEW:\n'+readFileSync(capabilities,'utf8'):'';
+    return { systemPrompt: event.systemPrompt + '\n\n' + readFileSync(join(runtime, roleRules), 'utf8') + '\n' + skills + workspace + state + controls + knowledge + planningNavigation + recoveryPrompt + (phase && role!=='chat'?'':domainInstructions()) };
   });
 }
 
@@ -159,7 +164,7 @@ export function installToolHooks(pi, mutations = new Map()) {
       const coding = process.env.QWEN_WORKFLOW_ROLE === 'code' && process.env.QWEN_WORKFLOW_STATE;
       const role = process.env.QWEN_WORKFLOW_ROLE;
       pi.setActiveTools(role==='chat'?['project_map','skill_use','skill_read']:role==='inspect'?['project_map','source_query','skill_use','skill_read']:role==='memory'?['memory_store']:role==='intake'?['intake_store']:role==='reviewer'?['project_map','plan_store','review_store']:role==='research'?['project_map','web_research','skill_use','knowledge_store']:
-        coding ? ['project_map', 'source_query', 'edit', 'write', 'workflow_test', 'web_research', 'skill_read','skill_use'] : ['project_map', 'plan_store', ...(recoverySourceEnabled()?['source_query']:[]), ...(refinementTarget()?['plan_child_store']:[]), 'web_research', 'skill_read','skill_use']);
+        coding ? ['project_map', 'source_query', 'edit', 'write', 'workflow_test', 'web_research', 'skill_read','skill_use'] : ['project_map', 'plan_store', ...(recoverySourceEnabled()?['source_query','recovery_report']:[]), ...(refinementTarget()?['plan_child_store']:[]), 'web_research', 'skill_read','skill_use']);
     }
   });
   pi.on('tool_call', async (event, ctx) => {
@@ -208,7 +213,7 @@ export function installToolHooks(pi, mutations = new Map()) {
         return { block: true, reason: 'Repeated identical retrieval detected. Stop, review evidence, then resume a focused task.' };
       }
     }
-    if (process.env.QWEN_WORKFLOW_ROLE === 'architect' && !['project_map', 'plan_store', 'web_research', 'skill_read','skill_use', ...(recoverySourceEnabled()?['source_query']:[])].includes(event.toolName)) {
+    if (process.env.QWEN_WORKFLOW_ROLE === 'architect' && !['project_map', 'plan_store', 'web_research', 'skill_read','skill_use', ...(recoverySourceEnabled()?['source_query','recovery_report']:[])].includes(event.toolName)) {
       return { block: true, reason: 'Architect mode can inspect interfaces and save plans only' };
     }
     const architectureEdit = event.toolName === 'skill_use' && event.input?.name === 'architecture-update' && event.input?.action === 'run';

@@ -15,7 +15,7 @@ def limits(provider,stage='review'):
     # budget. Even recovery's 32k output plus 8k reserve fits the 96k model window.
     return {'context':98304,'input':57344,'output':32768 if stage=='recovery' else 16384,'packet':32768,
             'shadow':32768,'reasoning':'medium',
-            'reasoning_budget':4096 if stage=='recovery' else 1024}
+            'reasoning_budget':8192 if stage=='recovery' else 1024}
 
 
 def arguments(provider,stage='review'):

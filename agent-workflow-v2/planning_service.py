@@ -40,6 +40,8 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
         packet = refresh_diagnostics(packet)
         from strategy_review import POLICY
         packet['strategy_review_policy'] = dict(POLICY)
+        from recovery_protocol import POLICY as RECOVERY_POLICY
+        packet['failure_recovery_policy'] = dict(RECOVERY_POLICY)
         # Historical packets can predate a reporter fix. Keep them immutable and
         # pin the newly extracted observations separately for this review.
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -49,7 +51,7 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
         save(handoff, packet)
         from failure_context import build
         request,selection=build(project,packet,planner)
-        request += '\nRECOVERY MODE: submit failure_analysis, strategy_review and changed steps for the failed todo via plan_store. Begin steps with the exact strategy_review.first_check. Python preserves every untouched contract, acceptance case and test command. Do not reproduce the full plan. If the contract cannot support a repair, explain the blocker and stop.'
+        request += '\nRECOVERY MODE: submit failure_analysis, strategy_review and changed steps for the failed todo via plan_store. Begin steps with the exact strategy_review.first_check. Include recovery_decision(action=repair); use recovery_report for escalation. Python preserves every untouched contract, acceptance case and test command. Do not reproduce the full plan.'
         lineage = packet
     output.parent.mkdir(parents=True, exist_ok=True)
     pipeline = None
@@ -79,6 +81,11 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
     from run_metrics import collect
     result['metrics'] = collect(result, output.with_suffix('.planning'))
     result.update(planner=planner, plan=str(output))
+    if handoff and result.get('session'):
+        from recovery_report import verified as recovery_report
+        report = recovery_report(result['session'])
+        if report:
+            result['recovery_decision'] = report['decision']
     if pipeline:
         result['pipeline'] = pipeline
     if result['exit_code'] == 0 and output.exists():

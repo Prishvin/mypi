@@ -6,10 +6,12 @@ from pathlib import Path
 from runner_process import BASE,read,save
 
 
-def ask(folder,state,reason):
+def ask(folder,state,reason,decision=None):
     """Expose an inline/CLI question; rerunning cannot reset the spent repair allowance."""
     question={'reason':reason,'question':'The automatic repair did not resolve this todo. Should we revise its requirements/architecture, allow another repair, or stop?',
               'plan':state['current_plan'],'run_dir':state['current_run'],'repairs':state['repairs']}
+    if decision:
+        question.update(question=decision['summary'],recovery_decision=decision)
     save(folder/'user-question.json',question);state.update(status='awaiting_user',reason=reason)
     save(folder/'recovery-state.json',state)
     print(question['question']+' Evidence: '+str(folder/'user-question.json'),flush=True)
@@ -39,7 +41,10 @@ def review(root,packet_path,destination,provider,timeout):
         with exclusive(root,BASE):result=create_draft(root,'Diagnose and repair the failed todo.',destination,provider,timeout,packet_path)
     finally:
         state.update(status='interrupted',updated_epoch=time.time());save(folder/'state.json',state)
-    state.update(status='complete' if result.get('passed') else 'needs_replan',reason=result.get('validation_error'),updated_epoch=time.time())
+    decision=result.get('recovery_decision')
+    state.update(status='complete' if result.get('passed') else 'awaiting_user' if decision else 'needs_replan',
+                 reason=decision['summary'] if decision else result.get('validation_error'),updated_epoch=time.time())
+    if decision:state['recovery_decision']=decision
     if result.get('passed'):
         data=read(queue);data['tasks'][0]['status']='done';save(queue,data)
     save(folder/'state.json',state)
@@ -106,7 +111,10 @@ def advance(root,folder,state,resume,executor,reviewer,provider):
         try:result=reviewer(root,packet_path,destination,provider,1800)
         except (OSError,ValueError) as error:return ask(folder,state,'Failure review could not produce a safe plan: '+str(error))
         state['repairs'][-1]['review_result']=result
-        if not result.get('passed'):return ask(folder,state,'Failure review did not produce a validated corrective plan')
+        if not result.get('passed'):
+            decision=result.get('recovery_decision')
+            return ask(folder,state,'Recovery requested '+decision['action'] if decision else
+                       'Failure review did not produce a validated corrective plan',decision)
         from plan_runner import validate
         from plans import require_review
         replacement=read(destination)

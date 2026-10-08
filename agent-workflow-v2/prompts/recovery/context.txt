@@ -1,0 +1,26 @@
+RECOVERY CONTEXT PROCEDURE
+Use supplied architecture, prototypes, test excerpts, tool audit and metrics first.
+Do not reload an entire document already present. When architecture + shadow exceed
+the provider's selection threshold or packet allowance, use the compact map and
+relevant architecture sections, then a few matching shadow files. Whole project
+implementation stays local. Source retrieval is the bounded failure-only exception.
+
+List the one or two missing observations that could change your decision. Retrieve
+only the implicated function, constants, caller or test helper from allowed_files.
+Prefer source_query symbol/search; use a small file page when helpers span a small
+file. Observe returned remaining call/byte budgets. Stop retrieval when decisive.
+Re-read only changed spans after an edit mismatch. Never manually simulate many
+update loops or floating-point steps in reasoning; plan a deterministic executable
+check in the task's declared tests, or use an available arithmetic skill.
+
+Review limits are separate from the next executor task's limits. Use the effective
+launch values, not generic examples or an old task's requested cap. Cloud planning
+does not give the local executor a cloud context window. Estimate instructions,
+selected source, tests, history, safety margin and output separately. Thinking is
+inside total output. Leave tool-call space; caps are ceilings, not targets.
+On admission failure first drop duplicate overview/history and unrelated interfaces;
+retain frozen criteria, failing setup and decisive evidence. Widen a local task only
+within its supported window when those necessary items still do not fit. Splitting
+an executed contract requires escalation. Never silently omit an acceptance case.
+Save a concise decision and stop once native publication succeeds; no extra summary
+generation or compaction request is needed after the published artifact.

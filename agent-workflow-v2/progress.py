@@ -44,6 +44,17 @@ def run(command, cwd, env, prepared):
         state.update(pid=process.pid, process_group=process.pid, owner_pid=os.getpid(), status='running')
         save(session/'process.json', state)
         while True:
+            if prepared['role']=='architect' and (session/'recovery-report.json').exists():
+                from recovery_report import verified as verified_report
+                report=verified_report(session)
+                if (report and report['finished_epoch']>=state['started_epoch'] and
+                        (prepared.get('timeout_seconds') is None or
+                         report['finished_epoch']<=state['started_epoch']+prepared['timeout_seconds'])):
+                    stop(process)
+                    state.update(status='recovery_stopped',reason=report['decision']['action'],
+                                 process_exit_code=process.returncode,exit_code=20,ended_epoch=time.time())
+                    process.returncode=20
+                    return process
             if prepared['role']=='architect' and prepared.get('plan') and not prepared.get('interactive'):
                 from planner_stop import verified
                 try: published=json.loads((session/'planning-stop.json').read_text()).get('finished_epoch')
