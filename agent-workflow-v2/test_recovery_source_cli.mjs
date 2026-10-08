@@ -10,7 +10,7 @@ import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 
 const home=dirname(fileURLToPath(import.meta.url));
-test('prepared recovery sends source_query to the fake provider and returns real bounded source', {timeout:30000},async t=>{
+for(const compact of [false,true])test(`prepared recovery retrieves source${compact?' and compacts without a summary request':''}`, {timeout:30000},async t=>{
   const base=realpathSync(mkdtempSync(join(tmpdir(),'mypi-recovery-cli-'))),project=join(base,'project');mkdirSync(project);
   t.after(()=>rmSync(base,{recursive:true,force:true}));
   writeFileSync(join(project,'fixture.py'),'def sample():\n    """Synthetic source evidence."""\n    return 42\n');
@@ -19,14 +19,17 @@ test('prepared recovery sends source_query to the fake provider and returns real
 import sys,json
 from unittest.mock import patch
 from test_profiles import options
+from test_plan_runner import todo
 import launch
 from project_map import scan
 base=Path(sys.argv[1]);root=base/'project'
-plan=base/'original.json';plan.write_text(json.dumps({'project':str(root),'tasks':[]}))
+task=todo(filename='fixture.py')
+plan=base/'original.json';plan.write_text(json.dumps({'project':str(root),'tasks':[task]}))
 packet=base/'failure.json';packet.write_text(json.dumps({'project':str(root),'plan':str(plan),
- 'current_snapshot':scan(root,['.'])['snapshot'],'failed_todo':{'files':['fixture.py'],'context':{'interfaces':[]}}}))
+ 'current_snapshot':scan(root,['.'])['snapshot'],'failed_todo':task,'remaining':[task],
+ 'completed':[],'metrics':{},'reason':'acceptance_failed','failed_tests':[]}))
 p=launch.prepare(options(profile='local-27b',project=root,role='architect',replan_evidence=packet,
- prompt='Synthetic recovery observation only.',batch=True,thinking='off',output_tokens=8192))
+ prompt='Synthetic recovery observation only.',batch=True,thinking='off',output_tokens=8192,input_tokens=57344))
 with patch('launch.check_server'):
  e=launch.environment(p)
 e={k:v for k,v in e.items() if k.startswith('QWEN_WORKFLOW_') or k=='PI_CODING_AGENT_DIR'}
@@ -43,7 +46,8 @@ e={k:v for k,v in e.items() if k.startswith('QWEN_WORKFLOW_') or k=='PI_CODING_A
     const emit=(choices,usage)=>res.write('data: '+JSON.stringify({id:'fixture',object:'chat.completion.chunk',created:1,model:'fixture',choices,...(usage?{usage}:{})})+'\n\n');
     emit([{index:0,delta:first?{role:'assistant',tool_calls:[{index:0,id:'read1',type:'function',function:{name:'source_query',arguments:JSON.stringify({action:'symbol',paths:['fixture.py'],query:'sample'})}}]}:{role:'assistant',content:'Observation collected.'},finish_reason:null}]);
     emit([{index:0,delta:{},finish_reason:first?'tool_calls':'stop'}]);
-    emit([],{prompt_tokens:1000,completion_tokens:50,total_tokens:1050});res.end('data: [DONE]\n\n');
+    const promptTokens=compact&&first?48000:1000;
+    emit([],{prompt_tokens:promptTokens,completion_tokens:50,total_tokens:promptTokens+50});res.end('data: [DONE]\n\n');
   });
   server.listen(0,'127.0.0.1');await once(server,'listening');t.after(()=>server.close());
   const config=join(prepared.session,'pi-config/models.json'),models=JSON.parse(readFileSync(config));
@@ -61,9 +65,18 @@ e={k:v for k,v in e.items() if k.startswith('QWEN_WORKFLOW_') or k=='PI_CODING_A
   assert.ok(!sourceSchema.properties.paths.items.enum.includes('unrelated.py'));
   assert.ok(!JSON.stringify(sourceSchema.properties.action).includes('fixture'));
   for(const name of ['edit','write','bash','workflow_test'])assert.ok(!names.includes(name));
-  const result=requests[1].messages.find(m=>m.role==='tool');assert.ok(result);
-  const text=typeof result.content==='string'?result.content:JSON.stringify(result.content);
-  assert.match(text,/return 42/);assert.match(text,/readonly/);
+  const text=JSON.stringify(requests[1].messages);
+  assert.match(text,/return 42/);
+  if(compact){
+    assert.match(text,/FAILURE RECOVERY HANDOFF/);
+    assert.match(text,/Immutable|slugify/);
+    const receipt=JSON.parse(readFileSync(join(prepared.session,'compaction-latest.json')));
+    assert.equal(receipt.details.modelCall,false);
+    assert.equal(receipt.details.fullContractPreserved,true);
+    assert.equal(receipt.details.sourceMemory.retained,1);
+    assert.equal(receipt.details.tokenBudget.passed,true);
+    assert.ok(!requests[1].messages.some(m=>m.role==='tool'));
+  }else assert.match(text,/readonly/);
   const audit=JSON.parse(readFileSync(join(prepared.session,'recovery-source-reads.json')));
   assert.equal(audit.calls.length,1);assert.deepEqual(audit.calls[0].paths,['fixture.py']);
   const memory=JSON.parse(readFileSync(join(prepared.session,'retrieved-source-memory.json')));
