@@ -1,5 +1,5 @@
 /** Granular evidence dashboard shared by CLI monitor and conversation UI. */
-import {number,duration,gib,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask,queueSelection,queueNote} from './monitor-format.mjs';
+import {number,duration,gib,phase,completion,testState,currentStep,thinkingView,thinkingCounter,queueGroups,taskKey,selectedTask,queueSelection,queueNote} from './monitor-format.mjs';
 const $=id=>document.getElementById(id);
 const el=(tag,text,cls)=>{const node=document.createElement(tag);if(text!==undefined)node.textContent=String(text);if(cls)node.className=cls;return node;};
 const badge=value=>el('span',value,'badge '+value.toLowerCase());
@@ -30,6 +30,8 @@ function renderThinking(d){
  const view=thinkingView(d),area=$('thinking-text');
  const atEnd=area.scrollHeight-area.scrollTop-area.clientHeight<40;
  $('thinking-status').textContent=view.status;$('thinking-detail').textContent=view.detail;
+ const counter=thinkingCounter(d),counterNode=$('thinking-tokens');
+ if(counterNode){counterNode.textContent=counter.text;counterNode.title=counter.title;}
  $('thinking-panel').dataset.streaming=String(view.streaming);
  if(area.textContent!==view.text){const position=area.scrollTop;area.textContent=view.text;area.scrollTop=atEnd?area.scrollHeight:position;}
 }

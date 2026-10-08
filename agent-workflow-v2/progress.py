@@ -44,6 +44,18 @@ def run(command, cwd, env, prepared):
         state.update(pid=process.pid, process_group=process.pid, owner_pid=os.getpid(), status='running')
         save(session/'process.json', state)
         while True:
+            if prepared['role']=='architect' and prepared.get('plan') and not prepared.get('interactive'):
+                from planner_stop import verified
+                try: published=json.loads((session/'planning-stop.json').read_text()).get('finished_epoch')
+                except (OSError,ValueError):published=None
+                in_time=(isinstance(published,(int,float)) and published>=state['started_epoch'] and
+                         (prepared.get('timeout_seconds') is None or published<=state['started_epoch']+prepared['timeout_seconds']))
+                if in_time and verified(prepared['project'],prepared['plan'],session,current_source=True):
+                    stop(process)
+                    state.update(status='accepted',reason='validated_plan_saved',
+                                 process_exit_code=process.returncode,exit_code=0,ended_epoch=time.time())
+                    process.returncode=0
+                    return process
             remaining = prepared.get('timeout_seconds')
             if remaining is not None:
                 remaining -= time.monotonic() - started
@@ -53,10 +65,14 @@ def run(command, cwd, env, prepared):
                     state.update(status='timed_out', exit_code=124, ended_epoch=time.time())
                     return process
             try:
-                process.wait(timeout=min(interval, remaining) if remaining is not None else interval)
+                poll=min(interval,1) if prepared['role']=='architect' else interval
+                process.wait(timeout=min(poll, remaining) if remaining is not None else poll)
                 state.update(status='finished',exit_code=process.returncode,ended_epoch=time.time())
                 return process
             except subprocess.TimeoutExpired:
+                if prepared['role']=='architect' and time.monotonic()-started < state.get('next_report',interval):
+                    continue
+                state['next_report']=time.monotonic()-started+interval
                 try: activity = json.loads((session/'last-activity.json').read_text())
                 except (OSError, ValueError): activity = {}
                 report = {'elapsed_seconds': round(time.monotonic()-started), 'role': prepared['role'],

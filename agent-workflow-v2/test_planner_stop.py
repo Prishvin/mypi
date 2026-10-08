@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 import unittest
 import plans
-from planner_stop import exit_code
+from planner_stop import exit_code,verified
 from test_plan_runner import todo
 
 
@@ -41,6 +41,24 @@ class PlannerStopTests(unittest.TestCase):
         plan=json.loads(self.path.read_text());plan['tasks'][0]['coverage']=[]
         self.path.write_text(json.dumps(plan));self.mark()
         self.assertEqual(exit_code(1,self.root,self.path,self.session),1)
+
+    def test_current_source_binding_rejects_stale_plan(self):
+        self.assertTrue(verified(self.root,self.path,self.session,current_source=True))
+        (self.root/'slug.py').write_text('changed=1\n')
+        self.assertFalse(verified(self.root,self.path,self.session,current_source=True))
+
+    def test_owned_planner_stops_after_publication_even_if_child_keeps_running(self):
+        import os,time,progress
+        (self.session/'planning-stop.json').unlink()
+        marker={'plan':str(self.path),'sha256':hashlib.sha256(self.path.read_bytes()).hexdigest()}
+        script='import json,time; from pathlib import Path; marker='+repr(marker)+'; marker["finished_epoch"]=time.time(); Path('+repr(str(self.session/'planning-stop.json'))+').write_text(json.dumps(marker)); time.sleep(30)'
+        started=time.monotonic()
+        child=progress.run([sys.executable,'-c',script],self.root,os.environ.copy(),
+            {'session':str(self.session),'project':str(self.root),'plan':str(self.path),
+             'role':'architect','timeout_seconds':5,'progress_seconds':.1})
+        self.assertEqual(child.returncode,0);self.assertLess(time.monotonic()-started,4)
+        state=json.loads((self.session/'process.json').read_text())
+        self.assertEqual(state['reason'],'validated_plan_saved');self.assertIn('process_exit_code',state)
 
 
 if __name__=='__main__':unittest.main()

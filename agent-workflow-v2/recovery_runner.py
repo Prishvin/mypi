@@ -46,14 +46,14 @@ def review(root,packet_path,destination,provider,timeout):
     return result
 
 
-def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None,retry_review=False,allow_repair=False):
+def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None,retry_review=False,allow_repair=False,accept_review=False):
     """Coordinate execution and bounded repairs without sending a project to the scheduler."""
     from plan_runner import execute as run
     from role_selection import load
     from runner_resume import interruption_signals
     executor=executor or run;reviewer=reviewer or review
     root,plan,folder=root.resolve(),plan.resolve(),folder.resolve()
-    if retry_review and allow_repair:raise ValueError('Choose retry-review or allow-repair, not both')
+    if sum([retry_review,allow_repair,accept_review])>1:raise ValueError('Choose one recovery action')
     if folder.is_relative_to(root):raise ValueError('Recovery evidence must be outside the project')
     folder.mkdir(parents=True,exist_ok=True)
     with (folder/'recovery.lock').open('a') as lock:
@@ -66,7 +66,10 @@ def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None,retry_re
             raise ValueError('Recovery checkpoint belongs to a different project or plan')
         if not state:state={'project':str(root),'original_plan':str(plan),'current_plan':str(plan),
             'current_run':str(folder),'spent_ids':[],'spent_cases':[],'repairs':[],'status':'executing'}
-        if allow_repair:
+        if accept_review:
+            from recovery_accept import accept
+            accept(root,folder,state);resume=False
+        elif allow_repair:
             from recovery_retry import authorize_repair
             authorize_repair(root,folder,state)
         elif retry_review:

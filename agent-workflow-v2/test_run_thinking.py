@@ -76,3 +76,38 @@ class ThinkingTests(unittest.TestCase):
         with self.path.open('a') as out:out.write('y'*400+'\n[]\n{"broken":\n')
         self.append(update('thinking_delta',delta='Recovered'))
         self.assertEqual(self.feed.snapshot(self.path,True)['text'],'Recovered')
+
+    def test_token_estimate_is_for_visible_tail_and_cached_until_text_changes(self):
+        calls=[]
+        self.feed=ThinkingFeed(text_limit=8,counter=lambda text:calls.append(text) or len(text))
+        self.append(update('thinking_delta',delta='abcdefghijk'))
+        row=self.feed.snapshot(self.path,True)
+        self.assertEqual(row['text'],'defghijk');self.assertEqual(row['visible_tokens_estimate'],8)
+        self.assertTrue(row['truncated']);self.assertIsNone(row['reported_reasoning_tokens'])
+        self.feed.snapshot(self.path,True);self.assertEqual(calls,['defghijk'])
+
+    def test_completed_usage_keeps_actual_cap_overshoot_and_resets_for_new_thinking(self):
+        self.append({'type':'message_end','message':{'role':'assistant','responseId':'r1',
+            'content':[{'type':'thinking','thinking':'Observed reasoning'}],
+            'usage':{'reasoning':8206,'output':9000}}})
+        row=self.feed.snapshot(self.path,True)
+        self.assertEqual(row['reported_reasoning_tokens'],8206);self.assertEqual(row['reported_output_tokens'],9000)
+        self.assertEqual(row['response_id'],'r1')
+        self.append({'type':'message_start','message':{'role':'assistant'}},
+            {'type':'message_end','message':{'role':'assistant','responseId':'r2',
+             'content':[{'type':'text','text':'Answer only'}],'usage':{'reasoning':0,'output':100}}})
+        row=self.feed.snapshot(self.path,True)
+        self.assertTrue(row['previous']);self.assertEqual(row['reported_reasoning_tokens'],8206)
+        self.assertEqual(row['response_id'],'r1')
+        self.append(update('thinking_start'),update('thinking_delta',delta='New'))
+        row=self.feed.snapshot(self.path,True)
+        self.assertIsNone(row['reported_reasoning_tokens']);self.assertIsNone(row['response_id'])
+
+    def test_unavailable_tokenizer_and_invalid_usage_remain_unknown(self):
+        def unavailable(text):raise OSError('fixture missing tokenizer')
+        self.feed=ThinkingFeed(counter=unavailable)
+        self.append({'type':'message_end','message':{'role':'assistant',
+            'content':[{'type':'thinking','thinking':'Recorded'}],'usage':{'reasoning':True,'output':-1}}})
+        row=self.feed.snapshot(self.path,True)
+        self.assertIsNone(row['visible_tokens_estimate']);self.assertIsNone(row['reported_reasoning_tokens'])
+        self.assertIsNone(row['reported_output_tokens'])

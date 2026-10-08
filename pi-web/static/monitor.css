@@ -61,11 +61,13 @@ p { margin: 8px 0; overflow-wrap: anywhere; }
 .subtle { font-size: 12px; color: var(--muted); }
 .live { margin-bottom: 22px; }
 .thinking { margin: 0 0 20px; }
-.thinking summary { font-weight: 600; }
+.thinking summary { font-weight: 600; position: relative; padding-right: 38px; }
+.thinking summary > .copy-button { position: absolute; right: 0; top: 0; }
 #thinking-status { color: var(--muted); font-size: 11px; font-weight: 400; margin-left: 14px; }
 .thinking[data-streaming='true'] #thinking-status { color: var(--blue); }
 #thinking-text { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 #thinking-detail { margin-top: 12px; }
+#thinking-tokens { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.6; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .native-grid { display: flex; flex-wrap: wrap; gap: 12px 30px; margin: 15px 0; }
 .native-grid strong { font-size: 15px; font-weight: 600; }
 .native-grid span { font-size: 11px; color: var(--muted); display: block; }

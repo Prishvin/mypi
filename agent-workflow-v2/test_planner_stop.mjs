@@ -34,3 +34,21 @@ test('only the selected architect stops on a successful persisted plan',async()=
     rmSync(dir,{recursive:true,force:true});
   }
 });
+
+test('published plan cancels later compaction; changed output and unrelated providers do not',async()=>{
+ const {installPlanningFinish}=await import('./pi-planning-finish.mjs');
+ const {createHash}=await import('node:crypto');
+ const keys=['QWEN_WORKFLOW_ROLE','QWEN_WORKFLOW_PLAN','QWEN_WORKFLOW_SESSION'];
+ const old=Object.fromEntries(keys.map(k=>[k,process.env[k]])),dir=mkdtempSync(join(tmpdir(),'pi-compact-stop-'));
+ try{
+  const plan=join(dir,'plan.json');writeFileSync(plan,'validated fixture');
+  Object.assign(process.env,{QWEN_WORKFLOW_ROLE:'architect',QWEN_WORKFLOW_PLAN:plan,QWEN_WORKFLOW_SESSION:dir});
+  const hooks={};let aborts=0;installPlanningFinish({on:(name,fn)=>{hooks[name]=fn;}});
+  const ctx={model:{provider:'local-qwen-workflow'},abort:()=>{aborts++;}};
+  assert.equal(await hooks.session_before_compact({},ctx),undefined);
+  writeFileSync(join(dir,'planning-stop.json'),JSON.stringify({plan,sha256:createHash('sha256').update(readFileSync(plan)).digest('hex')}));
+  assert.equal(await hooks.session_before_compact({},{...ctx,model:{provider:'unrelated'}}),undefined);
+  assert.deepEqual(await hooks.session_before_compact({},ctx),{cancel:true});assert.equal(aborts,1);
+  writeFileSync(plan,'changed');assert.equal(await hooks.session_before_compact({},ctx),undefined);
+ }finally{for(const key of keys)if(old[key]===undefined)delete process.env[key];else process.env[key]=old[key];rmSync(dir,{recursive:true,force:true});}
+});

@@ -194,7 +194,7 @@ def prepare(args) -> dict:
         mode='recovery' if evidence_path else 'coverage' if getattr(args,'plan_coverage',False) else 'refine' if getattr(args,'refine_task',None) else 'repair' if draft_path else 'draft'
         prompt = task_prompts.planning(prompt, effective, mode)
         if evidence_path:
-            prompt += '\n\nFOCUSED FAILURE REVIEW: plan_store accepts failure_analysis plus flat failed-task changes. Python preserves the remaining plan. Do not send tasks, IDs, goal or the entire architecture. Current review limits apply to this call only; choose future executor budgets from measured failure evidence.'
+            prompt += '\n\nFOCUSED FAILURE REVIEW: plan_store accepts failure_analysis, strategy_review and changed steps beginning with its exact first_check. Python preserves the remaining plan. Do not send tasks, IDs, goal or the entire architecture. Current review limits apply to this call only; choose future executor budgets from measured failure evidence.'
         elif getattr(args,'plan_coverage',False):
             prompt += '\n\nCOVERAGE REVIEW MODE: plan_store accepts only coverage_plan. Review the draft and map requirements to observable checks; record missing cases as gaps. Do not rewrite the plan or implement tests. Python attaches your coverage plan to the unchanged draft.'
         elif draft_path and getattr(args,'refine_task',None):

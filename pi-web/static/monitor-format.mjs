@@ -49,6 +49,21 @@ export function queueNote(run,group){
 }
 
 /** Label actual external-model reasoning, retaining clear empty and stopped states. */
+export function thinkingCounter(run){
+ const t=run.thinking||{},n=run.native?.requests?.[0],context=run.tasks?.find(x=>x.id===run.current_todo)?.context||{};
+ const valid=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0;
+ const parts=[];
+ if(valid(t.reported_reasoning_tokens))parts.push((t.previous?'Previous response thinking: ':'Response thinking: ')+number(t.reported_reasoning_tokens)+' tokens');
+ else if(!t.previous&&n?.phase==='reasoning'&&valid(n.reasoning_phase_tokens))parts.push('Current thinking phase: '+number(n.reasoning_phase_tokens)+' tokens');
+ if(t.text&&valid(t.visible_tokens_estimate))parts.push('Shown'+(t.truncated?' tail':' text')+': ≈'+number(t.visible_tokens_estimate)+' tokens');
+ if(!parts.length)parts.push(t.text?'Thinking tokens unavailable':'Thinking: waiting');
+ if(context.thinking==='off')parts.push('thinking disabled');
+ else if(context.reasoning_budget_tokens===0)parts.push('cap uncapped');
+ else if(valid(context.reasoning_budget_tokens))parts.push('cap '+number(context.reasoning_budget_tokens));
+ if(n&&valid(n.output_tokens))parts.push('Current response: '+number(n.output_tokens)+' total output tokens');
+ return {text:parts.join(' · '),title:'Thinking is part of total output. Shown-text counts use the bundled tokenizer and are estimates, especially for cloud models. A shown tail is not the full response. Backend phase and completed usage counts are reported separately.'};
+}
+
 export function thinkingView(run){
  const t=run.thinking||{},text=typeof t.text==='string'?t.text:'';
  const native=run.native?.requests?.[0],movedOn=native?.phase&&native.phase!=='reasoning';

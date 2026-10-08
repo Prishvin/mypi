@@ -1,7 +1,25 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {number,gib,duration,phase,completion,testState,currentStep,thinkingView,queueGroups,taskKey,selectedTask,queueSelection,queueNote} from '../pi-web/static/monitor-format.mjs';
+import {number,gib,duration,phase,completion,testState,currentStep,thinkingView,thinkingCounter,queueGroups,taskKey,selectedTask,queueSelection,queueNote} from '../pi-web/static/monitor-format.mjs';
 test('Unavailable measurements remain unavailable, zero stays zero',()=>{for(const x of [undefined,null,NaN,'3']){assert.equal(number(x),'—');assert.equal(gib(x),'—');assert.equal(duration(x),'—');}assert.equal(number(0),'0');assert.equal(gib(1024**3),'1.00 GiB');});
+test('Thinking counts distinguish live phases, visible tails and total output',()=>{
+ const r={current_todo:'T',tasks:[{id:'T',context:{reasoning_budget_tokens:8192}}],
+  thinking:{text:'Tail',truncated:true,visible_tokens_estimate:1000},
+  native:{requests:[{phase:'reasoning',reasoning_phase_tokens:7000,output_tokens:7040}]}};
+ let text=thinkingCounter(r).text;
+ for(const part of ['Current thinking phase: 7,000','Shown tail: ≈1,000','cap 8,192','7,040 total output'])assert.ok(text.includes(part),text);
+ r.native.requests[0].phase='tool_call';text=thinkingCounter(r).text;
+ assert.doesNotMatch(text,/Current thinking phase/);assert.match(text,/Shown tail/);
+ r.thinking.reported_reasoning_tokens=8206;assert.match(thinkingCounter(r).text,/Response thinking: 8,206/);
+ r.thinking.previous=true;assert.match(thinkingCounter(r).text,/Previous response thinking: 8,206/);
+});
+test('Thinking counter preserves zero, unknown, off and uncapped without byte approximations',()=>{
+ const r={current_todo:'T',tasks:[{id:'T',context:{reasoning_budget_tokens:0}}],thinking:{text:'Text'}};
+ assert.match(thinkingCounter(r).text,/unavailable.*uncapped/);
+ r.thinking.reported_reasoning_tokens=0;assert.match(thinkingCounter(r).text,/Response thinking: 0 tokens/);
+ r.tasks[0].context.thinking='off';assert.match(thinkingCounter(r).text,/thinking disabled/);
+ assert.match(thinkingCounter({}).text,/waiting/);
+});
 test('Thinking labels distinguish live, previous and stopped output without manufacturing text',()=>{
  const r={status:'running',thinking:{text:'Recorded thought',streaming:true,todo:'T2',truncated:true}};
  assert.equal(thinkingView(r).status,'Streaming');assert.match(thinkingView(r).detail,/T2.*Earlier text omitted/);

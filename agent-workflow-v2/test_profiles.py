@@ -170,7 +170,7 @@ class ProfileTests(unittest.TestCase):
                     replan_evidence=evidence,prompt='Measured failure packet'))
                 prompt=recovered['command'][-1]
                 self.assertIn('source_query', recovered['command'][recovered['command'].index('--tools')+1].split(','))
-                self.assertIn('failure_analysis and flat changed fields',prompt)
+                self.assertIn('failure_analysis, strategy_review and changed steps',prompt)
                 self.assertNotIn('Save exactly one object with plan_version: 3',prompt)
                 pinned=json.loads(Path(recovered['replan_evidence']).read_text())
                 from plan_draft import digest

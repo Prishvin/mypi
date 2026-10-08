@@ -54,7 +54,7 @@ def distill(packet, focused=False):
         brief['evidence_note'] = ('Only the failed todo can be repaired. failed_contract contains mandatory scope, '
             'acceptance and test commands. previous_attempt_strategy contains revisable decisions from an '
             'unsuccessful attempt, not new frozen requirements. All other pending contracts remain local; '
-            'Python preserves them exactly. Submit failure_analysis and flat changed fields, not the whole plan.')
+            'Python preserves them exactly. Submit failure_analysis, strategy_review and changed steps, not the whole plan.')
         if metric.get('admission_estimate'):
             brief['metrics']['admission_estimate'] = copy.deepcopy(metric['admission_estimate'])
     return brief

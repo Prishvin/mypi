@@ -214,6 +214,8 @@ class RunMonitor:
                         'cached_tokens':prefill.get('cached_tokens'),'new_prefill_tokens':prefill.get('new_prefill_tokens'),
                         'prefill_tok_s':prefill.get('prefill_tok_s'),'phase':progress.get('decode_phase') or prefill.get('phase'),
                         'output_tokens':progress.get('completion_tokens'),'decode_tok_s':progress.get('decode_tok_s')})
+                    if progress.get('decode_phase')=='reasoning':
+                        rows[-1]['reasoning_phase_tokens']=progress.get('phase_tokens')
                 self.native={'available':True,'model':data.get('model_id'),'context_window':data.get('context_window'),
                     'requests':rows,'other_requests':max(0,data.get('active_requests',0)-len(rows)),
                     'memory':{key:value for key,value in data.get('mem',{}).items() if key.endswith('_bytes')},

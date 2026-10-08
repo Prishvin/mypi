@@ -148,6 +148,7 @@ def main(argv=None):
         recovery_choice=runner_parser.add_mutually_exclusive_group()
         recovery_choice.add_argument('--retry-review',action='store_true',help='Explicitly retry a failed review generation; preserves the one execution-repair allowance')
         recovery_choice.add_argument('--allow-repair',action='store_true',help='Explicitly authorize one further review and corrective execution after a failed repair')
+        recovery_choice.add_argument('--accept-review',action='store_true',help='Validate and accept an unchanged saved review after its process failed; preserves the original failure and repair allowance')
     reviewing=sub.add_parser('review',help='Review a completed run and save granular follow-up tests/fixes')
     reviewing.add_argument('project',type=Path)
     reviewing.add_argument('plan',type=Path)
@@ -215,7 +216,7 @@ def main(argv=None):
             if args.action!='review':
                 from recovery_runner import execute
                 start()
-                outcome=execute(args.project,args.plan,args.run_dir,resume=args.action=='resume',retry_review=args.retry_review,allow_repair=args.allow_repair)
+                outcome=execute(args.project,args.plan,args.run_dir,resume=args.action=='resume',retry_review=args.retry_review,allow_repair=args.allow_repair,accept_review=args.accept_review)
                 if outcome['code']:return outcome['code']
                 args.plan,args.run_dir=outcome['plan'],outcome['run_dir']
             if selected=='qwen':start()
