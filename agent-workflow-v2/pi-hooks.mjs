@@ -13,6 +13,10 @@ import {mutationProgress} from './pi-progress-guard.mjs';
 
 export function applies(model) { return model?.provider === 'local-qwen-workflow'; }
 
+export function recoverySourceEnabled() {
+  return process.env.QWEN_WORKFLOW_ROLE === 'architect' && Boolean(process.env.QWEN_WORKFLOW_REPLAN_EVIDENCE);
+}
+
 function architectureRevisionNotice(summary) {
   const hash=summary.architecture_sha256;
   if (typeof hash!=='string') return '';
@@ -155,7 +159,7 @@ export function installToolHooks(pi, mutations = new Map()) {
       const coding = process.env.QWEN_WORKFLOW_ROLE === 'code' && process.env.QWEN_WORKFLOW_STATE;
       const role = process.env.QWEN_WORKFLOW_ROLE;
       pi.setActiveTools(role==='chat'?['project_map','skill_use','skill_read']:role==='inspect'?['project_map','source_query','skill_use','skill_read']:role==='memory'?['memory_store']:role==='intake'?['intake_store']:role==='reviewer'?['project_map','plan_store','review_store']:role==='research'?['project_map','web_research','skill_use','knowledge_store']:
-        coding ? ['project_map', 'source_query', 'edit', 'write', 'workflow_test', 'web_research', 'skill_read','skill_use'] : ['project_map', 'plan_store', ...(refinementTarget()?['plan_child_store']:[]), 'web_research', 'skill_read','skill_use']);
+        coding ? ['project_map', 'source_query', 'edit', 'write', 'workflow_test', 'web_research', 'skill_read','skill_use'] : ['project_map', 'plan_store', ...(recoverySourceEnabled()?['source_query']:[]), ...(refinementTarget()?['plan_child_store']:[]), 'web_research', 'skill_read','skill_use']);
     }
   });
   pi.on('tool_call', async (event, ctx) => {
@@ -204,7 +208,7 @@ export function installToolHooks(pi, mutations = new Map()) {
         return { block: true, reason: 'Repeated identical retrieval detected. Stop, review evidence, then resume a focused task.' };
       }
     }
-    if (process.env.QWEN_WORKFLOW_ROLE === 'architect' && !['project_map', 'plan_store', 'web_research', 'skill_read','skill_use'].includes(event.toolName)) {
+    if (process.env.QWEN_WORKFLOW_ROLE === 'architect' && !['project_map', 'plan_store', 'web_research', 'skill_read','skill_use', ...(recoverySourceEnabled()?['source_query']:[])].includes(event.toolName)) {
       return { block: true, reason: 'Architect mode can inspect interfaces and save plans only' };
     }
     const architectureEdit = event.toolName === 'skill_use' && event.input?.name === 'architecture-update' && event.input?.action === 'run';

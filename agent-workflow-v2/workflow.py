@@ -98,6 +98,13 @@ def main() -> int:
         os.environ['QWEN_WORKFLOW_BRIEFS'] = str(args.briefs.resolve())
     root = args.root.resolve()
     prefixes = args.prefix or ['.']
+    import os
+    from recovery_source import COMMANDS as recovery_reads
+    if os.environ.get('QWEN_WORKFLOW_ROLE') == 'architect' and args.command in recovery_reads:
+        from recovery_source import read as read_recovery_source
+        result = read_recovery_source(root, args)
+        print(json.dumps(result, indent=2))
+        return int(result.get('passed') is False)
     import shadow_navigation
     navigation = shadow_navigation.planning_context(args, root, prefixes)
     mapped = navigation[0] if navigation else None

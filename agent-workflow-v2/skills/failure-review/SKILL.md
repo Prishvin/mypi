@@ -6,8 +6,15 @@ description: Diagnose a failed atomic task against evidence, architecture, shado
 Review the failed todo before prescribing a repair. Inspect the supplied failure
 evidence, architecture, prototypes and original plan overview. If context selection
 omitted a needed contract, retrieve only relevant architecture sections/prototypes.
-Do not read or upload application implementation bodies and do not edit source
-in this role. Python may supply bounded excerpts of declared failing tests as
+Do not edit source or run project commands in this role. Start from architecture
+and prototypes. If they cannot establish a cause, use source_query to inspect
+only the current implicated symbols/constants or a bounded file page in the
+failed task's files or declared context.interfaces. Python enforces six reads,
+12 KB per call and 24 KB total against the pinned source snapshot. No whole
+project implementation is sent. Treat unavailable bodies as unknown and ask
+the executor for a precise observation instead of guessing. Ordinary initial
+planning keeps its architecture/shadow-only policy.
+Python may supply bounded excerpts of declared failing tests as
 read-only evidence. These are selected cases, not a complete project or new
 requirements; omitted helpers remain unknown.
 

@@ -1,10 +1,15 @@
 FOCUSED FAILURE REVIEW
 
 Review the supplied failed task, observed failures, architecture, prototypes and
-brief plan overview. Source edits and application implementation bodies are
-unavailable. Python may supply bounded failing-test excerpts as read-only
-evidence; compare their setup with frozen acceptance before assigning blame.
-Use project_map only for relevant architecture sections or prototypes you need.
+brief plan overview. Source edits and project commands are unavailable.
+Python may supply bounded failing-test excerpts as read-only evidence; compare
+their setup with frozen acceptance before assigning blame. Use project_map for
+relevant architecture/prototypes first. When those cannot establish a failure's
+cause, source_query can read exact functions, constants or small file pages from
+failed_contract.files and previous_attempt_strategy.context.interfaces only.
+Prefer a named symbol to a file page. This recovery-only allowance is six calls,
+12 KB per call and 24 KB total; no whole-project scan or implementation upload.
+Check current source before treating an implementation hypothesis as a fact.
 failed_contract contains mandatory requirements; previous_attempt_strategy contains
 revisable hypotheses and controls from a failed attempt. Its added restrictions
 are not frozen acceptance. Reassess them against the supplied evidence.

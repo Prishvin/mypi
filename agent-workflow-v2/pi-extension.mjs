@@ -26,6 +26,7 @@ import {coverageParameters} from './pi-coverage-plan.mjs';
 import {recoveryParameters} from './pi-replan-patch.mjs';
 import {installExecutionProgressHooks} from './pi-execution-progress.mjs';
 import {rememberSource} from './pi-source-memory.mjs';
+import {recoverySourceEnabled} from './pi-hooks.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -148,7 +149,7 @@ function registerSource(pi) {
       query: Type.Optional(Type.String()), offset: Type.Optional(Type.Integer({ minimum: 0 })),
     }),
     async execute(_id, params, signal, _update, ctx) {
-      if (!active(ctx.model) || !['code','inspect'].includes(process.env.QWEN_WORKFLOW_ROLE)) throw new Error('Coding or read-only inspection phase only');
+      if (!active(ctx.model) || (!['code','inspect'].includes(process.env.QWEN_WORKFLOW_ROLE) && !recoverySourceEnabled())) throw new Error('Coding, read-only inspection or bound failure recovery only');
       if(['symbol','search'].includes(params.action)&&!params.query?.trim())throw new Error('source_query '+params.action+' requires a nonempty query. To read a project file page, use action=file and paths=[exact filename], with no query.');
       if(!['search','symbol'].includes(params.action)&&params.paths.length!==1)throw new Error('Select exactly one file for '+params.action+'; symbol/search accept multiple paths.');
       const names = params.action === 'symbol' ? params.query.trim().split(/\s+/) : [];
