@@ -5,7 +5,6 @@ from pathlib import Path
 import re
 import threading
 import time
-import urllib.request
 from run_thinking import ThinkingFeed
 
 
@@ -199,12 +198,8 @@ class RunMonitor:
                     endpoint=server_config.load()['url'].removesuffix('/v1')
                     headers=server_config.headers()
                 else:endpoint=self.backend.removesuffix('/v1');headers={}
-                request=urllib.request.Request(endpoint+'/v1/mtplx/metrics/stream',headers=headers)
-                with urllib.request.urlopen(request,timeout=2) as response:
-                    for _ in range(10):
-                        line=response.readline(2097152)
-                        if line.startswith(b'data:'):data=json.loads(line[5:]);break
-                    else:raise ValueError('No native metrics snapshot')
+                from remote_metrics import snapshot
+                data=snapshot(endpoint,headers)
                 rows=[]
                 for item in data.get('in_flight',[]):
                     if not any(item.get('request_id','').startswith(p) for p in prefixes):continue

@@ -46,13 +46,8 @@ def terminate(process, metadata):
 
 def memory_sample():
     """Keep native allocation and process RSS separate in progress evidence."""
-    try:
-        health = server_config.get('/health', timeout=2)
-        return {'epoch': time.time(), 'server_rss_bytes': health.get('server_rss_bytes'),
-                'native_memory': {k: v for k, v in health.items() if k in
-                    ('active_memory_bytes', 'peak_memory_bytes', 'cache_memory_bytes')}}
-    except (OSError, ValueError, KeyError, subprocess.CalledProcessError):
-        return {'epoch': time.time(), 'server_rss_bytes': None}
+    from memory_metrics import sample
+    return sample()
 
 
 def invoke(command, folder, timeout):

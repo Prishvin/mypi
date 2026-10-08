@@ -25,11 +25,16 @@ class MetricsTests(unittest.TestCase):
             self.assertTrue(result['native_requests'][1]['request_cancelled'])
             self.assertEqual(result['native_requests'][1]['cancellation_reason'],'client_disconnect')
             self.assertFalse(result['server_rss_available'])
-            (folder/'memory.jsonl').write_text(json.dumps({'server_rss_bytes':1234})+'\n')
+            (folder/'memory.jsonl').write_text(json.dumps({'server_rss_bytes':1234,
+                'native_memory':{'phys_footprint_bytes':1700,'active_memory_bytes':900,
+                                 'peak_memory_bytes':5000}})+'\n')
             with patch('run_metrics.BASE',root/'flow'),patch('remote_metrics.native_for',return_value=native):
                 result=collect({'session':str(session)},folder)
             self.assertTrue(result['server_rss_available'])
             self.assertEqual(result['server_rss_peak_sampled_bytes'],1234)
+            self.assertEqual(result['server_phys_footprint_peak_sampled_bytes'],1700)
+            self.assertEqual(result['active_allocation_peak_sampled_bytes'],900)
+            self.assertEqual(result['server_phys_footprint_samples'],1)
 
     def test_generic_early_session_uses_only_its_attempt_time_range(self):
         events=[{'timestamp':10000},{'timestamp':20000}]

@@ -67,6 +67,9 @@ def collect(result, folder):
         'server_rss_available':any((r.get('server_rss_bytes') or 0)>0 for r in memory),
         'admission_estimate': read(session / 'request-budget-result.json'),
         'note': 'Provider usage counts completed requests; native completion totals also include cancelled generation. Input sums repeat context, not maximum occupancy. Native peak is shared-backend high-water allocation. RSS is sampled separately; zero with server_rss_available=false means unavailable.'}
+    from memory_metrics import summarize as memory_summary
+    metrics.update(memory_summary(memory))
+    metrics['note'] += ' Physical footprint and active allocation have separate attempt-local sampled maxima; absent samples are null. These are shared-server measurements, not per-request ownership.'
     if not provider:
         gateway=BASE.parent/'reports/overnight-quake-20261006/gateway'
         events=rows(folder / 'pi.log')
