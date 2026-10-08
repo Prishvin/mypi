@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import time
-from difflib import SequenceMatcher, unified_diff
+from difflib import unified_diff
 from project_map import scan
 from policy import validate_change
 import shadow
@@ -166,17 +166,11 @@ def check(state: Path) -> dict:
     if missing:result['violations'].append('Declared new files are missing: '+', '.join(missing))
     if len(changed) > 8:
         result['violations'].append('More than 8 changed source/declaration files')
-    patch_lines = 0
-    root = Path(data['before']['root'])
-    for p in changed & data['declared_text'].keys():
-        original = data['declared_text'][p].splitlines()
-        current = (root / p).read_text().splitlines() if (root / p).is_file() else []
-        for tag, a, b, c, d in SequenceMatcher(a=original, b=current, autojunk=False).get_opcodes():
-            if tag != 'equal':
-                patch_lines += b - a + d - c
-    result['patch_lines'] = patch_lines
-    if patch_lines > 300:
-        result['violations'].append(f'Patch has {patch_lines} changed lines; split into atomic tasks')
+    from task_patch import measure
+    result['patch_budget'] = measure(data)
+    result['patch_lines'] = result['patch_budget']['changed_lines']
+    if result['patch_lines'] > result['patch_budget']['limit']:
+        result['violations'].append(f"Patch has {result['patch_lines']} changed lines; split into atomic tasks")
     evidence = data.get('evidence', {})
     if evidence.get('snapshot') != identity or evidence.get('finished_snapshot') != identity:
         result['violations'].append('Test evidence missing or stale after the latest edit')

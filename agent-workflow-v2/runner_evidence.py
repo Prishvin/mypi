@@ -118,6 +118,11 @@ def failure(root, plan_path, plan, task, result, gate, folder):
         'policy': 'Stop execution. Replan remaining authorized work; preserve accepted behavior, tests and scope. No application implementation bodies in planner handoff. Python may select bounded failing-test evidence for review.',
         'created_epoch': time.time()}
     # The failed baseline contains source bodies and remains only in the local session.
+    if result.get('session'):
+        from task_patch import measure
+        frozen = read(Path(result['session']) / 'task-state.json')
+        if frozen:
+            handoff['patch_budget'] = measure(frozen)
     for todo in handoff['remaining'] + [handoff['failed_todo']]:
         todo.pop('baseline', None)
     save(folder / 'replan-request.json', handoff)

@@ -28,6 +28,8 @@ def refresh(packet):
     from runner_evidence import failed_tests
     result = copy.deepcopy(packet)
     result['failed_tests'] = failed_tests(str(session))
+    from task_patch import measure
+    result['patch_budget'] = measure(state)
     result['diagnostics_refresh'] = {'method': 'Native bounded exception/count extraction from recorded logs',
         'session': str(session), 'state_sha256': hashlib.sha256(state_path.read_bytes()).hexdigest(),
         'logs': receipts, 'original_packet_preserved': True}

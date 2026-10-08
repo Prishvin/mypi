@@ -27,6 +27,15 @@ report passed/failed/collected counts separately. If tests contain an exception,
 address its observed interface or execution mismatch before attributing all
 failure to reasoning settings or rewriting the module from scratch.
 
+Read patch_budget when present. The limit applies to the cumulative final task
+diff against the original baseline, not just your next repair's edits. Failed
+new files remain new across retries. Explicitly address existing size debt in
+the strategy and estimated_changed_lines; a small repair to an oversized failed
+patch does not fit the gate merely because the incremental edit is small.
+Preserve readable code and all required coverage. Do not minify, delete tests or
+reset the baseline to bypass the gate. If a genuine task split is needed, stop
+and report it for authorized replanning.
+
 An assertion failure proves a mismatch, not which side is wrong. Use selected
 test setup and observed values to check the original frozen acceptance. Review
 prior corrective assumptions as hypotheses; do not keep asserting the same

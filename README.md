@@ -404,6 +404,13 @@ The active release profiles are **mtplx-quality** and **chatgpt-quality**. Histo
 
 ## CLI planning, execution and recovery
 
+Failure review receives the same cumulative patch measurement as the acceptance
+gate: changed lines per declared file and the 300-line task limit. A retry keeps
+the original unfinished task baseline, including failed new files; the estimate
+must cover the final task patch, not just the next edit. Reviews must address
+existing size debt without dropping coverage or minifying code. A necessary
+scope split requires explicit replanning rather than resetting the baseline.
+
 ~~~sh
 mypi plan /path/to/project "Implement a pure parser with edge-case tests" \
   --planner qwen --out /path/outside/project/plan.json

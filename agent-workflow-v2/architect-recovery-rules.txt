@@ -25,6 +25,11 @@ in failure_analysis. Adjust steps, estimates, retrieval, budgets or deadline onl
 when supported by evidence. New test cases/commands/coverage may be added within
 the existing file scope. Frozen commands and acceptance remain mandatory.
 
+patch_budget measures the cumulative final task diff from its original baseline.
+Retries inherit that baseline. Account for existing size debt in the strategy
+and estimate; do not count only the next edit or treat failed new files as legacy.
+Preserve readable code and coverage. Request a split if the contract cannot fit.
+
 Current reviewer limits apply to this model call. Future executor budgets remain
 independent. Account for tool instructions, selected prototypes/source, tests,
 history and admission safety margin. A larger server window does not enlarge a

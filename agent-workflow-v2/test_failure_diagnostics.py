@@ -71,6 +71,14 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(result['failed_tests'][0]['test_summary']['fail'], 2)
         self.assertEqual(len(result['diagnostics_refresh']['logs'][0]['sha256']), 64)
 
+    def test_refresh_recovers_cumulative_patch_debt_from_recorded_baseline(self):
+        (self.project/'unit.mjs').write_text('original_new_line\n'*310)
+        self.state['declared_text']={'unit.mjs':''}; self.save()
+        result=refresh(self.packet)
+        self.assertEqual(result['patch_budget']['changed_lines'],310)
+        self.assertEqual(result['patch_budget']['over_limit_by'],10)
+        self.assertNotIn('patch_budget',self.packet)
+
     def test_cross_project_or_changed_contract_cannot_supply_diagnostics(self):
         for key, value in [('project',str(self.base/'other')), ('failed_todo',{**self.task,'id':'T2'})]:
             with self.subTest(key=key), self.assertRaises(ValueError):
