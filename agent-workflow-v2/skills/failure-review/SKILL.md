@@ -21,6 +21,11 @@ evidence-gathering step rather than carrying it forward by default.
 Distinguish observed facts from hypotheses: implementation bug, contradictory API,
 missing prerequisite, invalid test assumption, tool/schema failure, scope/size,
 context, timeout or provider failure. More time/thinking is not itself a diagnosis.
+The stop reason is not necessarily the test-failure cause: a timeout can coexist
+with a concrete exception. Read failed_tests.observations and test_summary first;
+report passed/failed/collected counts separately. If tests contain an exception,
+address its observed interface or execution mismatch before attributing all
+failure to reasoning settings or rewriting the module from scratch.
 
 An assertion failure proves a mismatch, not which side is wrong. Use selected
 test setup and observed values to check the original frozen acceptance. Review

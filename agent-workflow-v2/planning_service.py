@@ -36,6 +36,13 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
         packet = json.loads(handoff.read_text())
         if Path(packet['project']).resolve() != project or packet['current_snapshot'] != scan(project, ['.'])['snapshot']:
             raise ValueError('Replanning evidence belongs to another project or is stale')
+        from failure_refresh import refresh as refresh_diagnostics
+        packet = refresh_diagnostics(packet)
+        # Historical packets can predate a reporter fix. Keep them immutable and
+        # pin the newly extracted observations separately for this review.
+        output.parent.mkdir(parents=True, exist_ok=True)
+        handoff = output.with_suffix('.evidence.json')
+        save(handoff, packet)
         from failure_context import build
         request,selection=build(project,packet,planner)
         request += '\nRECOVERY MODE: submit failure_analysis and only flat changes to the failed todo via plan_store. Python supplies its ID and preserves every untouched remaining contract, acceptance case and test command. Do not reproduce the full plan or modify other todos. If the contract cannot support a repair, explain the blocker and stop.'

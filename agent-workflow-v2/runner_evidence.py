@@ -84,12 +84,11 @@ def failed_tests(session):
     rows = []
     for result in state.get('evidence', {}).get('results', []):
         row = {k: result[k] for k in ('argv', 'exit_code', 'log')}
-        # Raw logs stay local. Assertion messages are bounded observations; no trace source lines.
-        lines = Path(result['log']).read_text(errors='replace').splitlines() if Path(result['log']).exists() else []
-        row['observations'] = [line.strip()[:300] for line in lines if line.strip().startswith(
-            ('AssertionError', 'Error:', 'TypeError:', 'ReferenceError:', 'SyntaxError:',
-             'FAILED ', 'ERROR:', 'FAIL:', 'Ran ', 'OK', 'ImportError:', 'ModuleNotFoundError:',
-             'not ok ', '✖ ', 'error:', 'failureType:', 'expected:', 'actual:', 'operator:'))][-16:]
+        # Raw logs stay local. Preserve decorated Node exceptions and measured
+        # totals; repeated failing names must not push causes out of the packet.
+        from failure_diagnostics import summarize
+        text = Path(result['log']).read_text(errors='replace') if Path(result['log']).exists() else ''
+        row.update(summarize(text))
         rows.append(row)
     return rows
 
