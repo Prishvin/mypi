@@ -49,7 +49,12 @@ export function commandFor(action, paths, query, state, offset = 0, sectionOffse
     return ['locate', query, ...(paths?.length ? ['--paths', ...paths] : [])];
   }
   if (action === 'inspect' && paths?.length) return ['context', ...paths, '--max-bytes', '24000', ...(query ? ['--symbol', query] : [])];
-  if (action === 'gate' && state) return ['check', '--state', state];
+  if (action === 'gate') {
+    const frozen=process.env.QWEN_WORKFLOW_STATE;
+    if(frozen&&state&&resolve(state)!==resolve(frozen))throw new Error('Gate state must be this worker\'s frozen task; omit state to use it.');
+    if(frozen||state)return ['check','--state',frozen||state];
+    throw new Error('No frozen task is active; gate requires a bound task state.');
+  }
   throw new Error('Supply paths for inspect, query for locate, or state for gate');
 }
 
@@ -105,7 +110,7 @@ function registerMap(pi) {
       action: Type.Union(['architecture', 'architecture-section', 'architecture-search', 'sync-check', 'catalog', 'locate', 'inspect', 'gate'].map(x => Type.Literal(x))),
       paths: Type.Optional(Type.Array(Type.String())),
       query: Type.Optional(Type.String({description:'Required for locate (symbol/filename keyword), architecture-search (keyword), and architecture-section (section ID). Optional symbol filter for inspect; omit to read all prototypes of its paths.'})),
-      state: Type.Optional(Type.String()),
+      state: Type.Optional(Type.String({description:'Gate defaults to this worker\'s frozen task state. Omit it during atomic execution; an explicit path must match the bound state.'})),
       section_offset: Type.Optional(Type.Integer({ minimum: 0 })),
       sha256: Type.Optional(Type.String()),
       offset: Type.Optional(Type.Integer({ minimum: 0 })),
@@ -115,12 +120,18 @@ function registerMap(pi) {
       const root = process.env.QWEN_WORKFLOW_PROJECT || ctx.cwd;
       const args = [...scopeArgs(root), ...commandFor(params.action, params.paths, params.query, params.state, params.offset, params.section_offset, params.sha256)];
       const result = await pi.exec(python, [cli, ...args], { signal, timeout: 30000 });
-      if (result.code) throw new Error((result.stdout + result.stderr).slice(0, 8000));
+      let gate;
+      if(params.action==='gate') {
+        try{gate=JSON.parse(result.stdout);}catch{}
+      }
+      const failedGate=params.action==='gate'&&result.code===1&&gate?.passed===false&&Array.isArray(gate.violations);
+      if (result.code&&!failedGate) throw new Error((result.stdout + result.stderr).slice(0, 8000));
       const text = result.stdout;
       return {
         content: [{ type: 'text', text: text.length <= 16000 ? text :
           text.slice(0, 16000) + '\n[Navigation truncated; use selected architecture paths/pages and narrower prototype queries.]' }],
-        details: { action: params.action, truncated: text.length > 16000 },
+        details: { action: params.action, truncated: text.length > 16000,
+          ...(gate?{gatePassed:gate.passed===true}: {}) },
       };
     },
   });
