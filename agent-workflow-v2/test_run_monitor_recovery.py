@@ -117,3 +117,22 @@ class RecoveryQueue(unittest.TestCase):
         self.assertEqual(result['implementation_tasks'], [])
         self.assertEqual([row['id'] for row in result['tasks']], ['A', 'FIX'])
         self.assertEqual(result['current_todo'], 'FIX')
+
+    def test_standalone_review_binds_queue_through_its_failure_evidence(self):
+        stage=self.root/'standalone.stages'
+        queue=self.save('standalone.stages/queue.json',{'tasks':[{'id':'FAILURE-REVIEW','files':[]}]})
+        evidence=self.save('standalone.evidence.json',{'project':str(self.root),'plan':str(self.plan),
+            'failed_todo':{'id':'B'},'local_log':str(self.owner/'02-B/pi.log')})
+        state={**self.state,'plan':str(queue),'recovery_evidence':str(evidence)}
+        self.save('standalone.stages/state.json',state)
+        with patch.object(self.monitor,'selected',return_value=stage):
+            result=self.monitor.snapshot()
+        self.assertEqual([r['status'] for r in result['implementation_tasks']],['Accepted','Failed','Blocked'])
+        self.assertEqual(result['implementation_state']['accepted'],1)
+        packet=read(evidence)
+        for change in [{'project':'/elsewhere'},{'plan':'/different.json'},
+                       {'failed_todo':{'id':'C'}},{'local_log':'/outside/run/attempt/pi.log'}]:
+            self.save('standalone.evidence.json',{**packet,**change})
+            with patch('run_monitor.task_rows') as rows:
+                self.assertIsNone(implementation(stage,state,self.root,read,rows))
+                rows.assert_not_called()

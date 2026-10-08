@@ -9,6 +9,19 @@ def implementation(stage, state, root, read, task_rows):
         return None
     owner = stage.parent.resolve()
     recovery = read(owner / 'recovery-state.json')
+    evidence_path=state.get('recovery_evidence')
+    if evidence_path:
+        packet=read(Path(evidence_path))
+        if packet.get('project')!=str(root) or not packet.get('local_log'):
+            return None
+        run=Path(packet['local_log']).resolve().parent.parent
+        if run!=owner and not run.is_relative_to(owner):return None
+        execution=read(run/'state.json')
+        if (execution.get('plan')!=packet.get('plan') or
+                execution.get('current_todo')!=packet.get('failed_todo',{}).get('id')):
+            return None
+        recovery={'project':str(root),'current_run':str(run),'current_plan':packet['plan'],
+                  'repairs':[{'plan':str(stage.with_suffix('.json'))}]}
     repairs = recovery.get('repairs') or []
     if not repairs or recovery.get('project') != str(root):
         return None
@@ -18,7 +31,7 @@ def implementation(stage, state, root, read, task_rows):
     if not recovery.get('current_run') or not recovery.get('current_plan'):
         return None
     run = Path(recovery['current_run']).resolve()
-    if run != owner and run.parent != owner:
+    if run != owner and run.parent != owner and not (evidence_path and run.is_relative_to(owner)):
         return None
     execution = read(run / 'state.json')
     if execution.get('project') != str(root) or execution.get('workflow_phase') == 'planning':

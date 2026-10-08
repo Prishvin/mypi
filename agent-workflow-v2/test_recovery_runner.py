@@ -47,6 +47,31 @@ class RecoveryTests(unittest.TestCase):
         with patch('role_selection.load',return_value={'planner':'qwen'}):
             return execute(self.root,self.path,self.folder,resume=resume,executor=self.runner,reviewer=self.reviewer,retry_review=retry_review,allow_repair=allow_repair)
 
+    def test_standalone_review_publishes_bound_running_and_completed_stages(self):
+        from recovery_runner import review
+        destination=self.base/'standalone.json';evidence=self.base/'evidence.json'
+        save(evidence,self.packet(self.path));folder=destination.with_suffix('.stages')
+        def create(*args):
+            state=read(folder/'state.json')
+            self.assertEqual(state['status'],'running')
+            self.assertEqual(state['recovery_evidence'],str(evidence))
+            return {'passed':True,'plan':str(destination)}
+        with patch('planning_service.create_draft',side_effect=create):
+            self.assertTrue(review(self.root,evidence,destination,'qwen',1200)['passed'])
+        self.assertEqual(read(folder/'state.json')['status'],'complete')
+        self.assertEqual(read(folder/'queue.json')['tasks'][0]['status'],'done')
+        before=(folder/'state.json').read_bytes()
+        with self.assertRaisesRegex(ValueError,'new review destination'):
+            review(self.root,evidence,destination,'qwen',1200)
+        self.assertEqual((folder/'state.json').read_bytes(),before)
+        with self.assertRaisesRegex(ValueError,'outside'):
+            review(self.root,evidence,self.root/'bad.json','qwen',1200)
+        interrupted=self.base/'interrupted.json'
+        with patch('planning_service.create_draft',side_effect=RuntimeError('fixture stop')):
+            with self.assertRaisesRegex(RuntimeError,'fixture stop'):
+                review(self.root,evidence,interrupted,'qwen',1200)
+        self.assertEqual(read(interrupted.with_suffix('.stages')/'state.json')['status'],'interrupted')
+
     def test_explicit_continuation_grants_only_one_further_repair_and_preserves_history(self):
         self.codes=[20,20];self.assertEqual(self.run_flow()['code'],20)
         before=read(self.folder/'recovery-state.json')

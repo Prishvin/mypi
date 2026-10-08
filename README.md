@@ -334,6 +334,8 @@ Recovery also receives effective executor limits inherited from the selected pro
 
 Interrupted work keeps partial edits and original baselines. Resume verifies the source/fixtures and accepted tasks, then gives a fresh worker a short continuation brief. Accepted todos are not replayed, and old full conversations are not fed into the next task.
 
+Standalone `mypi replan` publishes the same running/completed/interrupted review stages as automatic recovery. The monitor binds its saved failure evidence back to the stopped implementation queue, preserving accepted todos and their results while the review runs.
+
 Use **resume** for an interruption. **Replan** changes the repair strategy while preserving frozen scope, acceptance and test commands. For a stopped timeout/execution/acceptance failure with unchanged source and contracts, an explicit **retry** creates a new plan without asking an LLM to regenerate it. It preserves original baselines, completed tasks, files, criteria, tests and context budgets, and changes only the failed task's deadline. Changed source or immutable fixtures block this retry.
 
 If measured compaction pressure stopped a task before useful edits, an operator

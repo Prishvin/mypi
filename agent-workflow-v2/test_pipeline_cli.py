@@ -12,6 +12,16 @@ pi_local=importlib.util.module_from_spec(SPEC); SPEC.loader.exec_module(pi_local
 
 
 class CliTests(unittest.TestCase):
+    def test_standalone_replan_uses_the_monitored_review_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with (patch.object(pi_local,'initialize'),patch.object(pi_local,'start'),
+                  patch('recovery_runner.review',return_value={'passed':True}) as review,
+                  patch('planning_service.create') as create):
+                code=pi_local.main(['replan',folder,folder+'-evidence.json','--out',
+                                    folder+'-repair.json','--planner','qwen','--timeout','1200'])
+            self.assertEqual(code,0);create.assert_not_called()
+            self.assertEqual(review.call_args.args,(Path(folder).resolve(),Path(folder+'-evidence.json').resolve(),
+                Path(folder+'-repair.json').resolve(),'qwen',1200))
     def test_explicit_allow_repair_is_forwarded_and_cannot_combine_with_retry_review(self):
         with tempfile.TemporaryDirectory() as folder:
             argv=['resume',folder,folder+'-plan.json','--run-dir',folder+'-run','--allow-repair']

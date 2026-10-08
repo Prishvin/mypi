@@ -252,8 +252,10 @@ def main(argv=None):
                     from request_pipeline import prepare
                     result = prepare(args.project.resolve(), request, args.out.resolve(),args.planner,args.timeout, **options)
             else:
-                result = create(args.project, 'Repair the stopped plan from evidence.', args.out,
-                                args.planner, args.timeout, args.evidence.resolve())
+                from recovery_runner import review as failure_review
+                from role_selection import backend
+                result = failure_review(args.project.resolve(), args.evidence.resolve(),
+                                        args.out.resolve(), backend(args.planner), args.timeout)
             print(json.dumps(result, indent=2))
             return 0 if result['passed'] else 2 if result.get('stage')=='awaiting_clarification' else 1
         if args.action!='chat' or args.planner=='qwen':

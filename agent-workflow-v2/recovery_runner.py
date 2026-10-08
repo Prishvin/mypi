@@ -20,12 +20,16 @@ def review(root,packet_path,destination,provider,timeout):
     """Publish progress and run one isolated planner while source is locked."""
     from planning_service import create_draft
     from project_lock import exclusive
+    root,destination,packet_path=root.resolve(),destination.resolve(),packet_path.resolve()
+    if destination.is_relative_to(root):raise ValueError('Review output must be outside the project')
+    if (destination.with_suffix('.stages')/'state.json').exists():raise ValueError('Use a new review destination')
     folder=destination.with_suffix('.stages');folder.mkdir(parents=True,exist_ok=True)
     queue=folder/'queue.json'
     save(queue,{'goal':'Review failure and plan one corrective attempt','tasks':[
         {'id':'FAILURE-REVIEW','goal':'Diagnose failure against architecture, shadow and plan',
          'status':'todo','files':[],'steps':['Read measured context and observed failures','Save a corrective plan preserving acceptance']} ]})
     state={'project':str(root),'plan':str(queue),'workflow_phase':'planning','status':'running',
+           'recovery_evidence':str(packet_path),
            'current_todo':'FAILURE-REVIEW','started_epoch':time.time(),'updated_epoch':time.time(),
            'attempt_started_epoch':time.time(),'attempt_folder':str(destination.with_suffix('.planning'))}
     save(folder/'state.json',state)
