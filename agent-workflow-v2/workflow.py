@@ -71,6 +71,9 @@ def arguments():
     batch = sub.add_parser('read-symbols')
     batch.add_argument('path')
     batch.add_argument('names', nargs='+')
+    across = sub.add_parser('read-symbols-across')
+    across.add_argument('paths', nargs='+')
+    across.add_argument('--names', nargs='+', required=True)
     fixture = sub.add_parser('read-fixture')
     fixture.add_argument('path')
     fixture.add_argument('--offset', type=int, default=0)
@@ -212,6 +215,9 @@ def main() -> int:
         result = retrieval.read_page(root, args.path, args.offset, args.fixture_request)
     elif args.command == 'read-symbols':
         result = retrieval.read_symbols(root, args.path, args.names)
+    elif args.command == 'read-symbols-across':
+        from retrieval_batch import read_across
+        result = read_across(root, args.paths, args.names)
     elif args.command == 'variables':
         result = retrieval.variables(root, args.path, args.query)
     elif args.command == 'search':

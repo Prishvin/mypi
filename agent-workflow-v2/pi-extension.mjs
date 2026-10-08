@@ -141,7 +141,7 @@ function registerSource(pi) {
   /** Retrieve one symbol or bounded references for the local executor. */
   pi.registerTool({
     name: 'source_query', label: 'Targeted source',
-    description: 'Read qualified functions/classes or variable/constant definitions including initializers with symbol (short names must match uniquely). variables returns declaration metadata only and defaults to all. Also supports literal rg matches or one bounded source page. symbol/search require query. file reads one exact project file OR the exact test-log path reported by this current task, with optional line offset and no query. Test logs are read-only evidence; other session files are inaccessible. fixture reads an exact absolute pinned test file from frozen tests argv, with no query; project source passed as fixture is served as a bounded file page. Never pass a directory or test index. Symbol batches accept 1-8 whitespace-separated names. Line prefixes are navigation labels, not edit text. Read supplied spans first; use next_offset only when more=true.',
+    description: 'Read qualified functions/classes or variable/constant definitions including initializers with symbol (short names must match uniquely within each file). Symbol accepts 1-5 explicit file paths and returns all matching names with path labels under one combined 12 KB budget; filenames and names are never paired by position. For paging, select one file and one symbol. variables returns declaration metadata only and defaults to all. Also supports literal rg matches or one bounded source page. symbol/search require query. file reads one exact project file OR the exact test-log path reported by this current task, with optional line offset and no query. Test logs are read-only evidence; other session files are inaccessible. fixture reads an exact absolute pinned test file from frozen tests argv, with no query; project source passed as fixture is served as a bounded file page. Never pass a directory or test index. Symbol batches accept 1-8 whitespace-separated names. Line prefixes are navigation labels, not edit text. Read supplied spans first; use next_offset only when more=true.',
     parameters: Type.Object({
       action: Type.Union(['symbol', 'variables', 'search', 'file', 'fixture'].map(x => Type.Literal(x))),
       paths: Type.Array(Type.String(), { minItems: 1, maxItems: 5 }),
@@ -150,9 +150,11 @@ function registerSource(pi) {
     async execute(_id, params, signal, _update, ctx) {
       if (!active(ctx.model) || !['code','inspect'].includes(process.env.QWEN_WORKFLOW_ROLE)) throw new Error('Coding or read-only inspection phase only');
       if(['symbol','search'].includes(params.action)&&!params.query?.trim())throw new Error('source_query '+params.action+' requires a nonempty query. To read a project file page, use action=file and paths=[exact filename], with no query.');
-      if(params.action!=='search'&&params.paths.length!==1)throw new Error('Select exactly one file for '+params.action+'; only search accepts multiple paths.');
+      if(!['search','symbol'].includes(params.action)&&params.paths.length!==1)throw new Error('Select exactly one file for '+params.action+'; symbol/search accept multiple paths.');
       const names = params.action === 'symbol' ? params.query.trim().split(/\s+/) : [];
-      const subcommand = params.action === 'symbol' ? (names.length > 1 ?
+      if(params.action==='symbol'&&params.paths.length>1&&params.offset)throw new Error('Page one named symbol in one file when using offset.');
+      const subcommand = params.action === 'symbol' ? (params.paths.length>1 ?
+        ['read-symbols-across',...params.paths,'--names',...names] : names.length > 1 ?
         ['read-symbols', params.paths[0], ...names] :
         ['read-symbol', params.paths[0], names[0], '--offset', String(params.offset || 0)]) :
         ['file','fixture'].includes(params.action) ? ['read-file', params.paths[0], '--offset', String(params.offset || 0),...(params.action==='fixture'?['--fixture-request']:[])] :

@@ -29,6 +29,10 @@ test('source file reads accept the observed fixture call without query and prese
   assert.equal(JSON.stringify(batch).includes('exclude'),false);
   assert.equal(JSON.parse((await lookup(' FIRST ')).content[0].text).symbol,'FIRST');
   assert.equal(JSON.parse((await lookup('FIRST absent')).content[0].text).passed,true);
+  const across=JSON.parse((await tool.execute('',{action:'symbol',paths:['levels.mjs','constants.mjs'],query:'FIRST LEVELS'},null,null,ctx)).content[0].text);
+  assert.equal(across.passed,true);assert.equal(across.errors.length,0);
+  assert.deepEqual(across.symbols.map(row=>[row.path,row.symbol]),[['levels.mjs','LEVELS'],['constants.mjs','FIRST']]);
+  await assert.rejects(tool.execute('',{action:'symbol',paths:['levels.mjs','constants.mjs'],query:'FIRST',offset:1},null,null,ctx),/Page one named symbol/);
   await assert.rejects(lookup('missing absent'),/"passed": false/);
   await assert.rejects(tool.execute('',{action:'search',paths:['levels.mjs']},null,null,ctx),/requires a nonempty query/);
   await assert.rejects(tool.execute('',{action:'file',paths:['levels.mjs','other.mjs']},null,null,ctx),/exactly one file/);
