@@ -31,6 +31,8 @@ def validate(root, plan):
         raise ValueError('This replacement plan failed preservation checks; request a corrected plan')
     if plan.get('plan_version') != 3 or Path(plan.get('project', '')).resolve() != root.resolve():
         raise ValueError('Executor requires a V3 plan for this exact project; create a fresh plan')
+    from retry_handoff import target as retry_target
+    retry_target(plan)
     known = set()
     from tasks import hash_file
     for path, digest in plan.get('acceptance_fixtures', {}).items():
@@ -117,6 +119,16 @@ def execute(root, path, folder, invoke_fn=invoke, *, resume=False):
                 checkpoint(folder, state)
                 print('Interrupted; resume with pi-local resume using this same run directory.', flush=True)
                 return runner_resume.INTERRUPTED_EXIT
+            except Exception as error:
+                # Preserve a scheduler failure as infrastructure evidence, not a
+                # failing acceptance test or a reason for a model-authored repair.
+                state = read(folder / 'state.json')
+                save(folder / 'scheduler-error.json', {'type': type(error).__name__,
+                    'message': str(error), 'epoch': time.time(), 'plan': str(path)})
+                if state:
+                    checkpoint(folder, state, status='interrupted',
+                        reason='Scheduler error: '+type(error).__name__+': '+str(error))
+                raise
 
 
 def run_locked(root, path, plan, folder, invoke_fn, resume=False):
@@ -159,14 +171,11 @@ def run_locked(root, path, plan, folder, invoke_fn, resume=False):
         state = {'plan': str(path), 'project': str(root), 'contract_digest': digest,
                  'attempts': [], 'started_epoch': time.time(), 'snapshot': snapshot}
         state['architecture_seed'] = architecture_seed
-        retry=plan.get('operational_retry')
-        if retry:
-            if snapshot!=plan['replan_lineage']['snapshot']:raise ValueError('Retry source changed; replan from fresh evidence')
-            task=next(t for t in plan['tasks'] if t['id']==retry['todo'])
-            runner_resume.write_brief(folder,task,Path(retry['session']),task['files'],
-                                      [t['id'] for t in plan['replan_lineage']['completed']])
-            state.update(resume_prompt=str(folder/'resume-brief.txt'),resume_todo=task['id'])
-    checkpoint(folder, state, status='ready')
+        checkpoint(folder, state, status='ready',
+                   current_todo=next((t['id'] for t in plan['tasks'] if t['status']!='done'), None))
+        from retry_handoff import prepare as prepare_retry
+        prepare_retry(plan, folder, state, snapshot)
+    checkpoint(folder, state, status='ready', reason=None)
     return advance(root, path, plan, folder, state, invoke_fn)
 
 

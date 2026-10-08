@@ -87,6 +87,13 @@ def execute(root,plan,folder,*,resume=False,executor=None,reviewer=None,retry_re
             except KeyboardInterrupt:
                 save(folder/'recovery-state.json',state)
                 return {'code':130,'plan':Path(state['current_plan']),'run_dir':Path(state['current_run'])}
+            except Exception as error:
+                state.update(status='reviewing' if state.get('status')=='reviewing' else 'interrupted',
+                             reason='Coordinator error: '+type(error).__name__+': '+str(error))
+                save(folder/'recovery-state.json',state)
+                save(folder/'coordinator-error.json',{'epoch':time.time(),'type':type(error).__name__,
+                    'message':str(error),'plan':state['current_plan'],'run_dir':state['current_run']})
+                raise
 
 
 def advance(root,folder,state,resume,executor,reviewer,provider):
@@ -94,6 +101,9 @@ def advance(root,folder,state,resume,executor,reviewer,provider):
     while True:
         save(folder/'execution-target.json',{'plan':state['current_plan'],'run_dir':state['current_run']})
         retrying=state.get('status')=='retrying_review'
+        if not retrying:
+            state['status']='executing';state.pop('reason',None)
+            save(folder/'recovery-state.json',state)
         code=20 if retrying else executor(root,Path(state['current_plan']),Path(state['current_run']),resume=resume)
         if code!=20:
             state['status']='complete' if code==0 else 'executing';save(folder/'recovery-state.json',state)

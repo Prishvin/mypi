@@ -46,6 +46,9 @@ def restore(root, prefixes, packet, fields):
         patch['architecture_replacements'] = fields['architecture_replacements']
     result = apply(plan, patch)
     result.pop('draft_repair', None)
+    # This review supersedes the old operational launch instruction. Its original
+    # receipt stays on the parent plan; it is not a retry of that historical todo.
+    result.pop('operational_retry', None)
     result['failure_analysis'] = analysis
     if decision is not None:
         result['recovery_decision'] = decision

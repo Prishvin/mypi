@@ -77,6 +77,15 @@ class RecoveryPatchTests(unittest.TestCase):
         self.path.write_text(json.dumps(data))
         self.assertEqual(self.save()['tasks'][1], self.plan['tasks'][1])
 
+    def test_fresh_model_recovery_does_not_inherit_an_operational_launch_instruction(self):
+        original={**self.plan,'operational_retry':{'todo':'T1','session':'/prior/session'}}
+        self.path.write_text(json.dumps(original));before=self.path.read_bytes()
+        result=self.save()
+        self.assertNotIn('operational_retry',result)
+        self.assertEqual(result['tasks'][1],original['tasks'][1])
+        self.assertEqual(result['tasks'][0]['acceptance'],original['tasks'][0]['acceptance'])
+        self.assertEqual(self.path.read_bytes(),before)
+
     def test_bound_plan_hash_rejects_external_metadata_changes(self):
         from plan_draft import digest
         self.packet['recovery_plan_sha256'] = digest(self.plan)

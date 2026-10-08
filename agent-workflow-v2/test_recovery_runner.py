@@ -146,6 +146,24 @@ class RecoveryTests(unittest.TestCase):
         with patch.object(self,'reviewer',return_value={'passed':False}):result=self.run_flow()
         self.assertEqual(result['code'],20);self.assertEqual(len(self.runs),1)
 
+    def test_scheduler_exception_preserves_saved_review_and_allowance_for_explicit_resume(self):
+        original=self.runner
+        def crashed(*args,**kwargs):
+            code=original(*args,**kwargs)
+            if len(self.runs)==2:raise RuntimeError('scheduler fixture failed before worker launch')
+            return code
+        with patch.object(self,'runner',side_effect=crashed):
+            with self.assertRaisesRegex(RuntimeError,'scheduler fixture'):self.run_flow()
+        state=read(self.folder/'recovery-state.json')
+        self.assertEqual(state['status'],'interrupted');self.assertEqual(len(self.reviews),1)
+        self.assertTrue(Path(state['current_plan']).is_file())
+        self.assertEqual(read(self.folder/'coordinator-error.json')['type'],'RuntimeError')
+        self.codes=[0];self.assertEqual(self.run_flow(resume=True)['code'],0)
+        self.assertEqual(len(self.reviews),1)
+        after=read(self.folder/'recovery-state.json')
+        self.assertEqual(after['spent_ids'],state['spent_ids'])
+        self.assertEqual(after['spent_cases'],state['spent_cases'])
+
     def test_interrupted_repair_resumes_same_contract_without_new_review(self):
         self.codes=[20,130];result=self.run_flow();self.assertEqual(result['code'],130)
         self.codes=[0];self.assertEqual(self.run_flow(resume=True)['code'],0)
