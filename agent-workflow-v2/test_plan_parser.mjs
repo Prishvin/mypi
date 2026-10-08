@@ -123,6 +123,10 @@ packet={'project':str(root.resolve()),'plan':str(path),'current_snapshot':scan(r
    exec:async(binary,args)=>{const r=spawnSync(binary,args,{encoding:'utf8'});return {code:r.status,stdout:r.stdout,stderr:r.stderr};}});
   const values={failure_analysis:'Observed assertion evidence; adjust retrieval and rerun the unchanged frozen tests.',
    steps:['Read boundary evidence, including λ','Run acceptance'],context_overlay:{max_input_tokens:24576,window_tokens:65536}};
+  values.strategy_review={expectation_checks:[{criterion:original.tasks[0].acceptance[0].id,status:'unknown',
+   evidence:'The bounded assertion report lacks setup needed to establish the cause.'}],abandoned_assumptions:[],
+   strategy_change:'Observe the declared boundary case before choosing the next edit.',first_check:values.steps[0],
+   stop_condition:'Stop if the observation requires a change outside the frozen scope.'};
   const call=parse('plan_store',tools.plan_store.parameters,values);
   assert.deepEqual(call.arguments,values);
   const result=await runToolCall({...call,id:'repair'},{assistantMessage:{role:'assistant',content:[]},context:{messages:[],tools:Object.values(tools)}});

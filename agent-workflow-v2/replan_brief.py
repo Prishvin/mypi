@@ -2,7 +2,7 @@
 import copy
 
 REVISABLE_FIELDS = ('steps', 'assumptions', 'test_strategy', 'estimated_changed_lines',
-                    'context', 'execution')
+                    'context', 'execution', 'repair_strategy_review')
 
 
 def separate_strategy(task):

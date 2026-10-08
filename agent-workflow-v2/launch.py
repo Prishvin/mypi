@@ -127,6 +127,8 @@ def prepare(args) -> dict:
         if args.role!='architect' or evidence['project']!=str(root) or evidence['current_snapshot']!=summary['snapshot']:
             raise ValueError('Replan evidence does not match this architect and source snapshot')
         from plan_draft import digest
+        from strategy_review import POLICY
+        evidence['strategy_review_policy'] = dict(POLICY)
         evidence['recovery_plan_sha256']=digest(json.loads(Path(evidence['plan']).read_text()))
         evidence_path=str(session/'replan-evidence.json');Path(evidence_path).write_text(json.dumps(evidence))
     if getattr(args, 'plan_draft', None):

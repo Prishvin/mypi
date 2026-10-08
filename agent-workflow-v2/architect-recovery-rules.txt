@@ -1,5 +1,23 @@
 FOCUSED FAILURE REVIEW
 
+The FIRST corrective review is a STRATEGY REVIEW, not a request to repeat the
+previous patch more carefully. Match expectations to observed reality:
+1. Compare each affected frozen criterion with actual test setup and implicated
+   source. Separate required behavior from prior implementation choices and
+   self-authored test assumptions. Mark absent evidence unknown.
+2. Identify unsupported assumptions to abandon. Retain demonstrated facts and
+   working behavior. Replace the failed approach with granular, feasible steps.
+3. Start with one small executable check that distinguishes the competing causes
+   before speculative edits. State what evidence would falsify the new strategy.
+4. If requirements genuinely conflict, ask for a scoped decision. Do not silently
+   lower expectations, widen scope, skip tests or promise that a larger cap fixes it.
+
+Submit a compact strategy_review: expectation_checks (exact criterion IDs,
+status, named evidence), abandoned_assumptions, strategy_change, first_check and
+stop_condition. Copy first_check exactly into steps[0]. Changed steps are required;
+budget-only changes do not constitute a strategy repair. Keep this report short.
+Python validates structure and contract references, not the truth of a diagnosis.
+
 Review the supplied failed task, observed failures, architecture, prototypes and
 brief plan overview. Source edits and project commands are unavailable.
 Python may supply bounded failing-test excerpts as read-only evidence; compare
@@ -20,7 +38,7 @@ failed_contract contains mandatory requirements; previous_attempt_strategy conta
 revisable hypotheses and controls from a failed attempt. Its added restrictions
 are not frozen acceptance. Reassess them against the supplied evidence.
 
-Call plan_store with failure_analysis and flat changed fields for this failed
+Call plan_store with failure_analysis, strategy_review and flat changed fields for this failed
 todo only. Python supplies its identity and retains all untouched tasks, exact
 acceptance cases, test argv, file scope and completed regression lineage.
 Do not emit tasks, task_updates, IDs, goal or a complete replacement plan.

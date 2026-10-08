@@ -7,7 +7,7 @@ def planning(request: str, settings: dict, mode='draft') -> str:
     if mode not in ('draft','repair','coverage','refine','recovery'):
         raise ValueError('Unknown planning prompt mode: '+mode)
     if mode != 'draft':
-        contract = ('failure_analysis and flat changed fields for the failed task only' if mode=='recovery' else
+        contract = ('failure_analysis, strategy_review and changed steps for the failed task only' if mode=='recovery' else
                     'coverage_plan only; preserve the pinned tasks' if mode=='coverage' else
                     'flat changed fields or staged child_refs for the selected task' if mode=='refine' else
                     'sparse task_updates and optional architecture_replacements only')

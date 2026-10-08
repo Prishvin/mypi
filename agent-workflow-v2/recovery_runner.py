@@ -25,9 +25,11 @@ def review(root,packet_path,destination,provider,timeout):
     if (destination.with_suffix('.stages')/'state.json').exists():raise ValueError('Use a new review destination')
     folder=destination.with_suffix('.stages');folder.mkdir(parents=True,exist_ok=True)
     queue=folder/'queue.json'
-    save(queue,{'goal':'Review failure and plan one corrective attempt','tasks':[
-        {'id':'FAILURE-REVIEW','goal':'Diagnose failure against architecture, shadow and plan',
-         'status':'todo','files':[],'steps':['Read measured context and observed failures','Save a corrective plan preserving acceptance']} ]})
+    save(queue,{'goal':'Review the failed strategy and plan one corrective attempt','tasks':[
+        {'id':'FAILURE-REVIEW','goal':'Compare expectations with evidence and replace the failed strategy',
+         'status':'todo','files':[],'steps':['Compare affected criteria with actual source and tests',
+             'Discard unsupported assumptions and choose a small first verification',
+             'Save changed steps and an explicit stop condition preserving acceptance']} ]})
     state={'project':str(root),'plan':str(queue),'workflow_phase':'planning','status':'running',
            'recovery_evidence':str(packet_path),
            'current_todo':'FAILURE-REVIEW','started_epoch':time.time(),'updated_epoch':time.time(),

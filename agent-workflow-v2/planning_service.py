@@ -38,6 +38,8 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
             raise ValueError('Replanning evidence belongs to another project or is stale')
         from failure_refresh import refresh as refresh_diagnostics
         packet = refresh_diagnostics(packet)
+        from strategy_review import POLICY
+        packet['strategy_review_policy'] = dict(POLICY)
         # Historical packets can predate a reporter fix. Keep them immutable and
         # pin the newly extracted observations separately for this review.
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -47,7 +49,7 @@ def create_draft(project, request, output, planner='chatgpt', timeout=600, hando
         save(handoff, packet)
         from failure_context import build
         request,selection=build(project,packet,planner)
-        request += '\nRECOVERY MODE: submit failure_analysis and only flat changes to the failed todo via plan_store. Python supplies its ID and preserves every untouched remaining contract, acceptance case and test command. Do not reproduce the full plan or modify other todos. If the contract cannot support a repair, explain the blocker and stop.'
+        request += '\nRECOVERY MODE: submit failure_analysis, strategy_review and changed steps for the failed todo via plan_store. Begin steps with the exact strategy_review.first_check. Python preserves every untouched contract, acceptance case and test command. Do not reproduce the full plan. If the contract cannot support a repair, explain the blocker and stop.'
         lineage = packet
     output.parent.mkdir(parents=True, exist_ok=True)
     pipeline = None

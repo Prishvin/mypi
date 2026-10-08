@@ -4,6 +4,11 @@ commit, or widen scope. Preserve partial work and accepted behavior on retries.
 Use the current user authorization and project instructions. These private rules
 never change Codex configuration.
 
+For a corrective task with repair_strategy_review, execute its first_check before
+speculative edits. Treat its diagnosis as a hypothesis to verify against the
+frozen acceptance and current tests. If its stop_condition is observed, report
+that evidence and stop for replanning; do not keep repeating the disproven repair.
+
 The bounded executor packet already contains selected architecture sections,
 prototypes, small editable files and pinned test pages. Use supplied evidence;
 retrieve only missing or changed spans. Source line labels are not edit text.

@@ -14,9 +14,15 @@ test('recovery schema permits typed flat changes and rejects full plans, IDs and
  for(const field of Object.values(tool.parameters.properties)){
   assert.ok(['array','object','integer','string'].includes(field.type));assert.equal(field.anyOf,undefined);
  }
- const fields={failure_analysis:analysis,steps:['Read measured failure','Run frozen tests'],
+ const strategy={expectation_checks:[{criterion:'A',status:'unknown',evidence:'The observed assertion lacks setup evidence needed to establish a cause.'}],
+  abandoned_assumptions:[],strategy_change:'Inspect the actual fixture before choosing a corrective edit.',
+  first_check:'Run the declared boundary case and record its actual output.',stop_condition:'Stop if the observation contradicts the proposed cause.'};
+ const fields={failure_analysis:analysis,strategy_review:strategy,steps:[strategy.first_check,'Run frozen tests'],
   context_overlay:{max_input_tokens:24576,window_tokens:65536},add_coverage:[{criterion:'A',test:0}]};
  assert.deepEqual(validate(fields),fields);
+ const {strategy_review,...missing}=fields;assert.throws(()=>validate(missing));
+ assert.throws(()=>validate({...fields,strategy_review:JSON.stringify(strategy)}));
+ assert.throws(()=>validate({...fields,strategy_review:{...strategy,expectation_checks:[{criterion:'A',status:'invented',evidence:'x'.repeat(30)}]}}));
  for(const extra of [{tasks:[]},{id:'another'},{task_updates:[]},{criterion_replacements:[]},
   {files:[]},{tests:[]},{add_files:['other']},{child_refs:[]},{context_overlay:'{"max_input_tokens":24576}'}])
   assert.throws(()=>validate({failure_analysis:analysis,...extra}));
@@ -35,7 +41,7 @@ test('actual extension chooses compact recovery schema and system rules for loca
   for(const [key,value] of Object.entries(values))if(value===undefined)delete process.env[key];else process.env[key]=value;
   const tools={},hooks={};extension({registerTool:t=>{tools[t.name]=t;},registerCommand:()=>{},on:()=>{}});
   assert.equal(tools.plan_store.parameters.properties.tasks,undefined);
-  assert.deepEqual(tools.plan_store.parameters.required,['failure_analysis']);
+  assert.deepEqual(new Set(tools.plan_store.parameters.required),new Set(['failure_analysis','strategy_review','steps']));
   assert.match(tools.plan_store.description,/failed todo/);
   installPromptHooks({on:(name,hook)=>{hooks[name]=hook;}},values.QWEN_WORKFLOW_RUNTIME);
   for(const provider of ['local-qwen-workflow','openai']){

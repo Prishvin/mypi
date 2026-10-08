@@ -1,7 +1,27 @@
 ---
 name: failure-review
-description: Diagnose a failed atomic task against evidence, architecture, shadow and plan.
+description: Review the failed strategy against real evidence and plan one bounded corrective attempt.
 ---
+
+Make the first corrective review a strategy review. Its purpose is to align the
+approach with what the code and tests actually demonstrate, while retaining user
+requirements. Do not equate prior planning prose with verified behavior. Compare
+each affected criterion with observed setup/output, name unsupported assumptions
+to discard, and replace the failed approach with small achievable steps. Start
+with a minimal executable observation that distinguishes competing causes before
+speculative edits. State evidence that would falsify the new strategy, so an
+unchanged outcome causes a stop rather than another rewrite loop.
+Do not invent a diagnosis or discarded assumption to fill the report. Unknown is
+valid; prescribe how to resolve it. If the frozen contract is contradictory or
+requires different scope, report that conflict for a user decision. Matching
+expectations to reality never authorizes dropping required behavior or tests.
+
+Save strategy_review with expectation_checks (criterion, status, named evidence),
+abandoned_assumptions (possibly empty), strategy_change, first_check and
+stop_condition. Put the exact first_check at steps[0]. Python requires changed
+steps and exact criterion references, rejects a declared contract_conflict, and
+retains this report in the executor's task handoff. This verifies structure and
+lineage; it cannot establish that the model's causal diagnosis is correct.
 
 Review the failed todo before prescribing a repair. Inspect the supplied failure
 evidence, architecture, prototypes and original plan overview. If context selection
@@ -101,7 +121,7 @@ a future reasoning cap; frequent cap hits alone do not justify increasing it.
 
 Save failure_analysis: concise observed cause/evidence, uncertainty, the smallest
 corrective approach and the tests that will demonstrate the fix. Use plan_store
-with flat changes to the failed todo only: steps, test_strategy, assumptions,
+with strategy_review and flat changes to the failed todo only: steps, test_strategy, assumptions,
 estimated_changed_lines, context_overlay, execution, or additive tests/coverage/cases.
 Do not send tasks, task_updates, IDs or a complete replacement plan. Python retains
 all unchanged remaining contracts, exact acceptance objects and test argv, and

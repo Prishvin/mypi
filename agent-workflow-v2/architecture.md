@@ -30,6 +30,7 @@
 | coverage_plan.py and pi-coverage-plan.mjs | Typed coverage matrix, requirement references and mandatory gap incorporation |
 | planning_limits.py | Separate cloud planning ceilings and bounded local review packets |
 | failure_context.py and recovery_runner.py | Measured failure review, preserved corrective plans, one repair then user escalation |
+| strategy_review.py | Typed comparison of expectations with evidence, changed repair steps and a falsifiable first check; frozen acceptance remains unchanged |
 | intake_service.py and request_pipeline.py | Durable questions, consolidated prompt and phase ordering |
 | skill_registry.py and skill_runner.py | Typed purpose/pre/post contracts and fixed native pipelines |
 | research_service.py and knowledge.py | Source-backed brief, merging, caching and publication |
