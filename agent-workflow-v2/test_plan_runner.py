@@ -149,6 +149,9 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(packet['reason'],'no_progress')
         self.assertEqual(packet['execution_progress']['rounds_without_progress'],5)
         self.assertEqual(packet['failed_todo']['acceptance'],self.plan['tasks'][0]['acceptance'])
+        current=packet['current_task_gate']
+        self.assertTrue(current['available']);self.assertFalse(current['passed'])
+        self.assertIn('Declared tests have not all passed',current['violations'])
 
     def test_progress_stop_from_another_task_cannot_override_acceptance(self):
         self.save()

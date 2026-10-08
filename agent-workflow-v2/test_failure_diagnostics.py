@@ -71,6 +71,31 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(result['failed_tests'][0]['test_summary']['fail'], 2)
         self.assertEqual(len(result['diagnostics_refresh']['logs'][0]['sha256']), 64)
 
+    def test_current_gate_survives_an_operational_stop_without_changing_the_reason(self):
+        old=copy.deepcopy(self.packet)
+        with patch('tasks.check',return_value={'passed':False,'violations':['Function exceeds 60 lines'],
+                                              'patch_lines':281,'shadow_snapshot':'measured'}) as check:
+            result=refresh({**self.packet,'reason':'no_progress'})
+        check.assert_called_once_with(self.state_path.resolve())
+        self.assertEqual(result['reason'],'no_progress')
+        self.assertEqual(result['current_task_gate']['violations'],['Function exceeds 60 lines'])
+        self.assertFalse(result['current_task_gate']['passed'])
+        self.assertEqual(self.packet,old)
+
+    def test_unavailable_mismatched_or_large_current_gate_is_explicit(self):
+        from runner_evidence import current_task_gate
+        with patch('tasks.check') as check:
+            result=current_task_gate(self.session,self.base/'other',self.task)
+            check.assert_not_called();self.assertFalse(result['available']);self.assertFalse(result['passed'])
+        with patch('tasks.check',side_effect=ValueError('Invalid gate evidence')):
+            result=current_task_gate(self.session,self.project,self.task)
+            self.assertFalse(result['available']);self.assertIn('Invalid gate',result['error'])
+        with patch('tasks.check',return_value={'passed':False,'violations':['x'*400]*35}):
+            result=current_task_gate(self.session,self.project,self.task)
+            self.assertEqual(len(result['violations']),30)
+            self.assertEqual(result['omitted_violations'],5)
+            self.assertEqual(result['truncated_violations'],30)
+
     def test_refresh_recovers_cumulative_patch_debt_from_recorded_baseline(self):
         (self.project/'unit.mjs').write_text('original_new_line\n'*310)
         self.state['declared_text']={'unit.mjs':''}; self.save()

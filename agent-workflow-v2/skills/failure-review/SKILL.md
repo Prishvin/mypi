@@ -33,6 +33,15 @@ report passed/failed/collected counts separately. If tests contain an exception,
 address its observed interface or execution mismatch before attributing all
 failure to reasoning settings or rewriting the module from scratch.
 
+When failure_cases are supplied, keep each observed actual/expected value with
+its own test. Flat observations may omit or deduplicate values; do not assign
+one test's values to another. Values are reporter strings, not evaluated code.
+Read current_task_gate separately from the stop reason: no_progress, timeout or
+context rejection can coexist with description, size, navigation and test
+blockers. Address every current mechanical blocker in the repair strategy;
+do not omit them merely because the process stopped for another reason.
+Unavailable or truncated gate evidence remains unknown, not resolved.
+
 Read patch_budget when present. The limit applies to the cumulative final task
 diff against the original baseline, not just your next repair's edits. Failed
 new files remain new across retries. Explicitly address existing size debt in

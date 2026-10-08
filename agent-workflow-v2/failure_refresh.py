@@ -25,9 +25,10 @@ def refresh(packet):
         if path.parent != session or not path.is_file():
             raise ValueError('Diagnostic log must belong to the failed session')
         receipts.append({'log': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
-    from runner_evidence import failed_tests
+    from runner_evidence import failed_tests, current_task_gate
     result = copy.deepcopy(packet)
     result['failed_tests'] = failed_tests(str(session))
+    result['current_task_gate']=current_task_gate(session,Path(packet['project']),packet['failed_todo'])
     from task_patch import measure
     result['patch_budget'] = measure(state)
     result['diagnostics_refresh'] = {'method': 'Native bounded exception/count extraction from recorded logs',

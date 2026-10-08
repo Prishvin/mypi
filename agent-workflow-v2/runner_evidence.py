@@ -101,6 +101,29 @@ def failed_tests(session):
     return rows
 
 
+def current_task_gate(session, root, task):
+    """Keep current acceptance blockers distinct from why the process stopped."""
+    try:
+        state_path=Path(session)/'task-state.json'
+        frozen=read(state_path)
+        if Path(frozen.get('before',{}).get('root','')).resolve()!=root.resolve():
+            raise ValueError('Gate session belongs to another project')
+        if any(frozen.get('task',{}).get(key)!=task.get(key)
+               for key in ('id','files','acceptance','tests')):
+            raise ValueError('Gate session differs from failed contract')
+        gate=tasks.check(state_path)
+        violations=gate.get('violations',[])
+        return {'available':True,'passed':gate['passed'],
+                'violations':[str(value)[:300] for value in violations[:30]],
+                'omitted_violations':max(0,len(violations)-30),
+                'truncated_violations':sum(len(str(value))>300 for value in violations[:30]),
+                'patch_lines':gate.get('patch_lines'),'shadow_snapshot':gate.get('shadow_snapshot'),
+                'note':'Fresh read-only acceptance check; no tests executed and no stop reason replaced.'}
+    except (OSError,ValueError,KeyError,TypeError) as error:
+        return {'available':False,'passed':False,'error':str(error)[:500],
+                'note':'Current gate unavailable; this is not evidence that blockers were resolved.'}
+
+
 def failure(root, plan_path, plan, task, result, gate, folder):
     """Emit a stop checkpoint and a bounded packet suitable for either planner."""
     data = scan(root, ['.'])
@@ -125,6 +148,8 @@ def failure(root, plan_path, plan, task, result, gate, folder):
         'execution_progress':read(Path(result['session'])/'execution-progress.json').get('brief', {}) if result.get('session') else {},
         'policy': 'Stop execution. Replan remaining authorized work; preserve accepted behavior, tests and scope. No application implementation bodies in planner handoff. Python may select bounded failing-test evidence for review.',
         'created_epoch': time.time()}
+    if result.get('session'):
+        handoff['current_task_gate']=current_task_gate(result['session'],root,task)
     # The failed baseline contains source bodies and remains only in the local session.
     if result.get('session'):
         from task_patch import measure
