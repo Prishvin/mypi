@@ -5,6 +5,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync} fr
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import extension from './pi-extension.mjs';
 
 test('real source tool is active only for bound recovery and Python enforces its scope',async t=>{
@@ -30,8 +31,9 @@ test('real source tool is active only for bound recovery and Python enforces its
   await start();assert.ok(!active.includes('source_query'));
   assert.equal((await guarded({toolName:'source_query',input:{}})).block,true);
   await assert.rejects(call('fixture.py'),/bound failure recovery/);
-  const snapshot=spawnSync('./.venv/bin/python',['-c','from project_map import scan; import sys; print(scan(__import__("pathlib").Path(sys.argv[1]),["."])["snapshot"])',root],{encoding:'utf8'});
-  assert.equal(snapshot.status,0,snapshot.stderr);
+  const workflow=fileURLToPath(new URL('.',import.meta.url));
+  const snapshot=spawnSync(join(workflow,'.venv/bin/python'),['-c','from project_map import scan; import sys; print(scan(__import__("pathlib").Path(sys.argv[1]),["."])["snapshot"])',root],{encoding:'utf8',cwd:workflow});
+  assert.equal(snapshot.status,0,snapshot.error?.message||snapshot.stderr||'Snapshot command did not exit successfully');
   writeFileSync(evidence,JSON.stringify({project:root,current_snapshot:snapshot.stdout.trim(),failed_todo:{files:['fixture.py'],context:{interfaces:[]}}}));
   writeFileSync(join(session,'launch.json'),JSON.stringify({project:root,session,role:'architect',replan_evidence:evidence}));
   process.env.QWEN_WORKFLOW_REPLAN_EVIDENCE=evidence;
