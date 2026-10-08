@@ -20,6 +20,10 @@ Python validates structure and contract references, not the truth of a diagnosis
 
 Review the supplied failed task, observed failures, architecture, prototypes and
 brief plan overview. Source edits and project commands are unavailable.
+Supplied architecture and prototypes already count as the initial architecture
+read; do not repeat navigation when the relevant content is present. If current
+implementation is missing, use the permitted source_query early instead of
+reasoning repeatedly about an unobserved function body.
 Python may supply bounded failing-test excerpts as read-only evidence; compare
 their setup with frozen acceptance before assigning blame. Use project_map for
 relevant architecture/prototypes first. When those cannot establish a failure's

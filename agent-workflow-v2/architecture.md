@@ -39,7 +39,7 @@
 | review_packet.py, review_store.py and review_service.py | Final review and protected follow-up contracts |
 | plan_runner.py and runner_resume.py | Task order, interruption checkpoints and explicit resume |
 | launch.py and prefetch.py | One-task sessions and bounded initial context |
-| pi-extension.mjs and pi-hooks.mjs | Scoped tools, request admission and edit lifecycle |
+| pi-extension.mjs, pi-map-navigation.mjs and pi-hooks.mjs | Scoped tools, bounded section-address lookup, request admission and edit lifecycle |
 | tasks.py and runner_evidence.py | Frozen acceptance, atomic gates and regressions |
 | runner_process.py and run_metrics.py | Owned processes, memory, tokens and timing |
 

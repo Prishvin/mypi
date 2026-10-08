@@ -27,6 +27,7 @@ import {recoveryParameters} from './pi-replan-patch.mjs';
 import {installExecutionProgressHooks} from './pi-execution-progress.mjs';
 import {rememberSource} from './pi-source-memory.mjs';
 import {recoverySourceEnabled} from './pi-hooks.mjs';
+import {sectionLookup,navigationReply} from './pi-map-navigation.mjs';
 export { applies } from './pi-hooks.mjs';
 
 const home = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +44,8 @@ export function commandFor(action, paths, query, state, offset = 0, sectionOffse
   if (action === 'catalog') return ['catalog', '--offset', String(offset)];
   if (action === 'architecture') return ['architecture', '--offset', String(offset), '--section-offset', String(sectionOffset), ...(paths?.length ? ['--paths', ...paths] : [])];
   if (action === 'architecture-section' && query && sha256) return ['architecture-section', query, '--sha256', sha256, '--offset', String(offset)];
-  if (action === 'architecture-section') throw new Error('Supply query as a section ID returned by project_map architecture or architecture-search, and sha256 as its source_sha256. Pasted plan prose is not a section ID. If only reviewing a supplied draft, use its provided architecture directly.');
+  if (sectionLookup(action,query,sha256)) return ['architecture-search', query, '--offset', '0'];
+  if (action === 'architecture-section') throw new Error('Supply a section ID and its source_sha256, or a filename/keyword to look up matching IDs. No section was read.');
   if (action === 'architecture-search' && query) return ['architecture-search', query, '--offset', String(offset)];
   if (action === 'locate') {
     if (!query?.trim()) throw new Error('project_map locate requires a nonempty query (symbol or filename keyword). To read prototypes for known files, use action=inspect with paths and no query.');
@@ -110,7 +112,7 @@ function registerMap(pi) {
     parameters: Type.Object({
       action: Type.Union(['architecture', 'architecture-section', 'architecture-search', 'sync-check', 'catalog', 'locate', 'inspect', 'gate'].map(x => Type.Literal(x))),
       paths: Type.Optional(Type.Array(Type.String())),
-      query: Type.Optional(Type.String({description:'Required for locate (symbol/filename keyword), architecture-search (keyword), and architecture-section (section ID). Optional symbol filter for inspect; omit to read all prototypes of its paths.'})),
+      query: Type.Optional(Type.String({description:'Required for locate (symbol/filename keyword), architecture-search (keyword), and architecture-section (section ID). A section query without sha256 performs a bounded filename/keyword index lookup and returns next_calls, not section text. Optional symbol filter for inspect.'})),
       state: Type.Optional(Type.String({description:'Gate defaults to this worker\'s frozen task state. Omit it during atomic execution; an explicit path must match the bound state.'})),
       section_offset: Type.Optional(Type.Integer({ minimum: 0 })),
       sha256: Type.Optional(Type.String()),
@@ -127,11 +129,12 @@ function registerMap(pi) {
       }
       const failedGate=params.action==='gate'&&result.code===1&&gate?.passed===false&&Array.isArray(gate.violations);
       if (result.code&&!failedGate) throw new Error((result.stdout + result.stderr).slice(0, 8000));
-      const text = result.stdout;
+      const text = navigationReply(params,result.stdout);
       return {
         content: [{ type: 'text', text: text.length <= 16000 ? text :
           text.slice(0, 16000) + '\n[Navigation truncated; use selected architecture paths/pages and narrower prototype queries.]' }],
         details: { action: params.action, truncated: text.length > 16000,
+          ...(sectionLookup(params.action,params.query,params.sha256)?{resolvedAction:'architecture-search',sectionRead:false}:{}),
           ...(gate?{gatePassed:gate.passed===true}: {}) },
       };
     },

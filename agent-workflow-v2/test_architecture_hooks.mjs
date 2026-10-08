@@ -23,11 +23,10 @@ test('map adapter preserves section IDs, source hash and independent offsets',()
   assert.deepEqual(commandFor('architecture',[],null,null,20,10),['architecture','--offset','20','--section-offset','10']);
   assert.deepEqual(commandFor('architecture-section',[],'system/rules',null,8000,0,'abc'),['architecture-section','system/rules','--sha256','abc','--offset','8000']);
   assert.deepEqual(commandFor('architecture-search',[],'Game.step',null,10),['architecture-search','Game.step','--offset','10']);
-  assert.throws(()=>commandFor('architecture-section',[],'system/rules'),/Supply/);
-  for(const query of [undefined,'planned.module: API description']) {
-    assert.throws(()=>commandFor('architecture-section',[],query),/section ID.*source_sha256/);
-    assert.throws(()=>commandFor('architecture-section',[],query),/provided architecture directly/);
-  }
+  for(const query of ['system/rules','src/rules.py','planned.module: API description'])
+    assert.deepEqual(commandFor('architecture-section',[],query,null,8000),['architecture-search',query,'--offset','0']);
+  for(const query of [undefined,'','   '])
+    assert.throws(()=>commandFor('architecture-section',[],query),/Supply a section ID/);
 });
 
 test('each successful or partial failed source edit refreshes with frozen state',async t=>{
