@@ -88,6 +88,7 @@ test('actual compaction hook preserves retrieved interfaces without old conversa
   assert.match(result.compaction.summary,/sample/);
   assert.equal(result.compaction.details.sourceMemory.retained,1);
   assert.equal(result.compaction.details.sourceMemory.handoffCharacterLimit,18000);
+  assert.equal(result.compaction.details.sourceMemory.byteLimit,6000);
   assert.equal(result.compaction.details.retainedConversationEntries,0);
 });
 

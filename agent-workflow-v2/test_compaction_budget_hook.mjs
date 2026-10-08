@@ -6,7 +6,9 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {compactSummary,installFixedCompactionHooks} from './pi-compaction-fixed.mjs';
+import {rememberSource,recallSource} from './pi-source-memory.mjs';
 
 test('long valid handoff uses actual request envelope without model summaries or contract loss',async t=>{
   const folder=mkdtempSync(join(tmpdir(),'mypi-budget-handoff-')),old={...process.env};
@@ -18,6 +20,13 @@ test('long valid handoff uses actual request envelope without model summaries or
   writeFileSync(join(folder,'state.json'),JSON.stringify({task,before:{root:folder}}));
   writeFileSync(join(folder,'request-budget.json'),JSON.stringify({messages:[{role:'system',content:'Required instructions'},
     {role:'user',content:'Discarded previous conversation'}],tools:[{name:'fixture'}]}));
+  for(let i=0;i<3;i++){
+    const source='// '+('current observation '+i+' ').repeat(180),path='fixture'+i+'.mjs';
+    writeFileSync(join(folder,path),source);
+    rememberSource(folder,folder,JSON.stringify({path,source,
+      sha256:createHash('sha256').update(source).digest('hex')}));
+  }
+  assert.equal(recallSource(folder,folder).entries.length,1);
   Object.assign(process.env,{QWEN_WORKFLOW_ROLE:'code',QWEN_WORKFLOW_SESSION:folder,
     QWEN_WORKFLOW_STATE:join(folder,'state.json'),QWEN_WORKFLOW_INPUT_BUDGET:'40960'});
   const handlers={},calls=[];
@@ -37,6 +46,9 @@ test('long valid handoff uses actual request envelope without model summaries or
   assert.equal(result.compaction.details.tokenBudget.passed,true);
   assert.equal(result.compaction.details.modelCall,false);
   assert.equal(result.compaction.details.retainedConversationEntries,0);
+  assert.equal(result.compaction.details.sourceMemory.retained,3);
+  assert.equal(result.compaction.details.sourceMemory.omitted,0);
+  assert.equal(result.compaction.details.sourceMemory.byteLimit,16000);
   assert.equal(calls.filter(name=>name.endsWith('compaction_budget.py')).length,1);
   assert.equal(JSON.parse(readFileSync(join(folder,'compaction-budget-result.json'),'utf8')).input_limit,40960);
 });

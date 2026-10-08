@@ -73,8 +73,9 @@ export function installFixedCompactionHooks(pi, python, cli) {
       // input cap immediately after compaction. An omitted firstKeptEntryId makes
       // SessionManager use the new compaction entry as the boundary; all old
       // entries remain in the journal, but no partial tool turn is replayed.
-      const memory=recallSource(session,state.before?.root || process.env.QWEN_WORKFLOW_PROJECT);
       const measured=existsSync(join(session,'request-budget.json'));
+      const sourceBytes=measured?16000:6000;
+      const memory=recallSource(session,state.before?.root || process.env.QWEN_WORKFLOW_PROJECT,sourceBytes);
       const handoffLimit=measured?100000:sourceHandoffLimit(state.task);
       let handoff=attachSourceMemory(compactSummary(state.task,gate,failures,investigation,
         measured?100000:12000),memory,handoffLimit);
@@ -91,7 +92,7 @@ export function installFixedCompactionHooks(pi, python, cli) {
         tokensBefore:event.preparation.tokensBefore,
         details:{method:'complete frozen task plus bounded fresh diagnostics',modelCall:false,
           shadow:gate.shadow_snapshot,fullContractPreserved:true,retainedConversationEntries:0,
-          sourceMemory:{...handoff.stats,...(!measured?{handoffCharacterLimit:handoffLimit}:{})},
+          sourceMemory:{...handoff.stats,byteLimit:sourceBytes,...(!measured?{handoffCharacterLimit:handoffLimit}:{})},
           ...(handoff.budget?{tokenBudget:handoff.budget}:{}),
           previousRecentBoundary:event.preparation.firstKeptEntryId,
           historyPolicy:'Complete deterministic handoff; retrieve current source as needed. Original journal preserved.'}};
