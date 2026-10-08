@@ -14,6 +14,8 @@ header { position: sticky; top: 0; z-index: 3; background: #fffffff5; border-bot
 #connection { margin-left: auto; color: var(--muted); font-size: 12px; }
 button, select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid #d5dfea; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
 button:hover { background: #f0f5ff; border-color: #adc5f5; }
+.file-link { color: var(--blue); font-family: ui-monospace, monospace; overflow-wrap: anywhere; }
+.source-preview { overflow: auto; max-height: 80vh; white-space: pre; font: 13px/1.65 ui-monospace, monospace; }
 .copy-button { padding: 2px 7px; margin-left: 8px; color: var(--muted); font-size: 17px; line-height: 1.4; vertical-align: middle; flex-shrink: 0; }
 .task-head h2 { margin-right: auto; }
 .tool.error > .copy-button { float: right; }

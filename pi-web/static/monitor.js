@@ -97,7 +97,10 @@ function renderCases(task){
  const area=el('div');for(const c of task.acceptance||[]){const row=el('div',undefined,'case');row.append(el('strong',c.id));for(const k of ['given','when','then']){const p=el('p');p.append(el('b',k.toUpperCase()+' '),document.createTextNode(c[k]));row.append(p);}const commands=(task.coverage||[]).filter(x=>x.criterion===c.id).map(x=>x.test+1);row.append(el('p','Covered by frozen command '+commands.join(', '),'subtle'));area.append(row);}return area;
 }
 function renderFiles(task){
- const area=el('div');for(const file of task.files||[]){const row=el('div',undefined,'file-row');row.append(el('code',file.path),el('span',file.state+(file.lines!=null?' · '+file.lines+' lines':'')+(file.bytes!=null?' · '+number(file.bytes)+' B':'')));area.append(row);}return area;
+ const area=el('div');for(const file of task.files||[]){const row=el('div',undefined,'file-row'),link=el('a',file.path,'file-link');
+  const query=new URLSearchParams({path:file.path,run:data.run});if(conversation)query.set('conversation',conversation);
+  link.href='/file.html?'+query;link.target='_blank';link.rel='noopener';
+  row.append(link,el('span',file.state+(file.lines!=null?' · '+file.lines+' lines':'')+(file.bytes!=null?' · '+number(file.bytes)+' B':'')));area.append(row);}return area;
 }
 function renderTools(task){
  const area=el('div');for(const call of [...(task.tools||[])].reverse()){const row=el('div',undefined,'tool'+(call.error?' error':'')),left=el('div');left.append(el('strong',call.name),el('span',call.target||'','target'));row.append(left,badge(call.status),copyButton('tool '+call.name,()=>copiedText(row)));if(call.seconds!=null)row.append(el('span',duration(call.seconds)));if(call.error)row.append(el('pre',call.error));area.append(row);}if(!area.childElementCount)area.append(el('p','No recorded tool calls for this task yet.','subtle'));return area;
@@ -115,7 +118,7 @@ function renderTask(){
  area.append(el('h3','Planned atomic steps'),el('p','Steps are the plan. Actual activity and test evidence below show what has happened.','subtle'));const steps=el('ol',undefined,'step-list');for(const step of task.steps||[])steps.append(el('li',step));area.append(steps);
  area.append(el('h3','Recent tool activity'),el('p','Completed means the tool call returned. Test results and task acceptance are tracked separately.','subtle'),renderTools(task),section('Files and actual change state',renderFiles(task)),section('Acceptance criteria and coverage',renderCases(task)),section('Frozen test commands and results',renderTests(task)));
  if(task.attempts?.length)area.append(section('Attempt history and metrics',el('pre',JSON.stringify(task.attempts,null,2))));
- area.append(section('Context recipe and stopping policy',el('pre',JSON.stringify({context:task.context,execution:task.execution},null,2))));
+ area.append(section('Context recipe and stopping policy',el('pre',JSON.stringify({context:task.context,planned_context:task.planned_context,execution:task.execution},null,2))));
  if(prior===selected)for(const node of area.querySelectorAll('details'))node.open=open.has(node.dataset.key);
 }
 function render(d){

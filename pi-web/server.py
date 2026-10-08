@@ -20,6 +20,8 @@ class App:
         self.store=Store(data);self.jobs=Jobs(self.store);self.token=secrets.token_urlsafe(32)
         self.monitors={}
     def monitor(self,ident):
+        return self.run_monitor(ident).snapshot()
+    def run_monitor(self,ident):
         from run_monitor import RunMonitor
         row=self.store.get(ident)
         selected=row.get('planning_dir') or row.get('run_dir')
@@ -27,7 +29,7 @@ class App:
         folder=Path(selected).resolve()
         item=self.monitors.get(ident)
         if item is None or item.folder!=folder:self.monitors[ident]=item=RunMonitor(folder)
-        return item.snapshot()
+        return item
     def view(self,ident):
         row=self.store.get(ident);project=Path(row['project'])
         if row.get('run_dir'):
@@ -117,11 +119,15 @@ def handler(app,allowed_addresses=()):
                 if len(parts)>=3 and parts[:2]==['api','conversations']:
                     ident=parts[2]
                     if method=='GET' and len(parts)==4 and parts[3]=='monitor':return self.reply(200,app.monitor(ident))
+                    if method=='GET' and len(parts)==5 and parts[3:]==['monitor','file']:
+                        from monitor_files import preview
+                        return self.reply(200,preview(app.run_monitor(ident),urlsplit(self.path).query))
                     if method=='GET' and len(parts)==3:return self.reply(200,app.view(ident))
                     if method=='DELETE' and len(parts)==3:return self.reply(200,app.store.delete(ident))
                     if method=='POST' and len(parts)==4:return self.reply(200,app.action(ident,parts[3],data))
                 raise KeyError('Endpoint not found')
             except PermissionError as error:self.reply(403,{'error':str(error)})
+            except FileNotFoundError as error:self.reply(404,{'error':str(error)})
             except KeyError as error:self.reply(404,{'error':str(error)})
             except (ValueError,TypeError) as error:self.reply(400,{'error':str(error)})
             except (BrokenPipeError,ConnectionResetError):pass

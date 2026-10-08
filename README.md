@@ -155,6 +155,8 @@ mypi monitor /path/outside/project/evidence --listen 0.0.0.0 --allow-address UI_
 
 Open **http://localhost:8137/**, or **http://UI_MACHINE_LAN_IP:8137/**. The monitor is part of mypi, works on macOS/Linux and runs independently of the conversation UI. It reads run artifacts and polls the configured model's native metrics endpoint; it starts no model and generates no inference requests. Other compatible backends still show todos and evidence when native metrics are unavailable.
 
+Expand a task's files and click a filename to open its current source in a separate read-only tab, with line numbers and a refresh button. Previews are limited to 256 KiB and to files declared in the displayed project; unavailable files get an explicit message. HTML is displayed as source, never executed.
+
 Use the **Planning** and **Implementation** queue buttons to inspect both phases.
 During planning, implementation tasks are labeled **Awaiting planning**; their
 steps, budgets and tests are draft contracts. Click a completed planning step to

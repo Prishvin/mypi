@@ -23,7 +23,14 @@ def handler(monitor,addresses=()):
             if path=='/api/status':
                 try:return self.reply(200,monitor.snapshot())
                 except (OSError,ValueError,KeyError):return self.reply(503,{'error':'Run evidence is being updated; retry shortly'})
+            if path=='/api/file':
+                from monitor_files import preview
+                try:return self.reply(200,preview(monitor,urlsplit(self.path).query))
+                except PermissionError as error:return self.reply(403,{'error':str(error)})
+                except FileNotFoundError as error:return self.reply(404,{'error':str(error)})
+                except (ValueError,OSError,KeyError) as error:return self.reply(400,{'error':str(error)})
             assets={'/':('monitor.html','text/html'),'/monitor.html':('monitor.html','text/html'),
+                    '/file.html':('file.html','text/html'),'/file-viewer.mjs':('file-viewer.mjs','text/javascript'),
                     '/monitor.js':('monitor.js','text/javascript'),'/monitor-format.mjs':('monitor-format.mjs','text/javascript'),'/monitor.css':('monitor.css','text/css')}
             if path not in assets:return self.reply(404,{'error':'Not found'})
             name,kind=assets[path];self.reply(200,(STATIC/name).read_bytes(),kind)

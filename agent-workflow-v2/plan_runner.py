@@ -140,7 +140,8 @@ def run_locked(root, path, plan, folder, invoke_fn, resume=False):
             accepted = {row['todo'] for row in state['attempts'] if row.get('gate', {}).get('passed')}
             completed = [t for t in plan['tasks'] if t['status'] == 'done' and t['id'] in accepted]
             completed += plan.get('replan_lineage', {}).get('completed', [])
-            if not regression(root, completed, folder)['passed']:
+            from resume_regression import check as check_resume
+            if not check_resume(root, completed, [t for t in plan['tasks'] if t['status']!='done'], folder)['passed']:
                 raise ValueError('Accepted behavior changed before resume; replan explicitly')
             state = runner_resume.prepare(root, path, folder, plan, state)
             plan = read(path)
