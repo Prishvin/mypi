@@ -46,10 +46,11 @@ def main(argv=None):
         p=argparse.ArgumentParser(prog='mypi retry',description='Prepare an explicit unchanged-contract retry; does not start inference')
         p.add_argument('project',type=Path);p.add_argument('--from-run',type=Path,required=True)
         p.add_argument('--out',type=Path,required=True);p.add_argument('--task-timeout',type=int,default=2700)
-        p.add_argument('--input-tokens',type=int,help='Explicitly override only the failed task input cap; output, thinking and window stay fixed')
+        p.add_argument('--input-tokens',type=int,help='Explicitly override only the failed task input cap; output and thinking stay fixed')
+        p.add_argument('--window-tokens',type=int,help='Explicitly increase the failed task client window together with its input override')
         p.add_argument('--reason',help='Required audit reason for an input-cap override')
         a=p.parse_args(argv[1:]);print(json.dumps(create(a.project,a.from_run,a.out,a.task_timeout,
-            input_tokens=a.input_tokens,reason=a.reason),indent=2));return 0
+            input_tokens=a.input_tokens,window_tokens=a.window_tokens,reason=a.reason),indent=2));return 0
     if argv and argv[0]=='monitor':
         sys.path.insert(0,str(WORKFLOW))
         from monitor_server import main as monitor

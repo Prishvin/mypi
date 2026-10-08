@@ -102,3 +102,47 @@ class RetryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'window|context'):
             create(self.root,self.run,self.out,input_tokens=40960,reason='Too large for this window')
         self.assertFalse(self.out.exists())
+
+    def admission_failure(self, **updates):
+        state=read(self.run/'state.json');state['reason']='context_budget_exceeded'
+        (self.run/'state.json').write_text(json.dumps(state))
+        (self.base/'session/request-budget-result.json').write_text(json.dumps({
+            'passed':False,'admission_tokens':22000,'limit':16384,**updates}))
+
+    def test_measured_admission_retry_preserves_behavior_and_records_explicit_window(self):
+        self.admission_failure();before=self.plan.read_bytes();old=read(self.plan)
+        create(self.root,self.run,self.out,1200,input_tokens=32768,window_tokens=65536,
+               reason='Measured startup admission needs 22000 tokens')
+        plan=read(self.out);task=plan['tasks'][0];original=old['tasks'][0]
+        self.assertEqual(task['context'],{**original['context'],'max_input_tokens':32768,'window_tokens':65536})
+        for key in ('steps','assumptions','files','tests','acceptance','coverage'):
+            self.assertEqual(task[key],original[key])
+        self.assertEqual(plan['tasks'][1],old['tasks'][1])
+        self.assertEqual(self.plan.read_bytes(),before)
+        receipt=plan['operational_retry']
+        self.assertEqual(receipt['window_tokens_before'],32768)
+        self.assertEqual(receipt['window_tokens_after'],65536)
+        self.assertEqual(receipt['failed_admission']['admission_tokens'],22000)
+        self.assertTrue(receipt['output_thinking_unchanged'])
+        self.assertFalse(receipt['output_thinking_window_unchanged'])
+        self.assertEqual(task['baseline'],str(self.base/'session/task-state.json'))
+
+    def test_context_retry_requires_matching_failed_measurement_and_enough_headroom(self):
+        self.admission_failure()
+        for kwargs,match in [({},'increased input'),
+            ({'input_tokens':20000,'window_tokens':65536,'reason':'Too small'},'measured admission'),
+            ({'input_tokens':32768,'window_tokens':True,'reason':'Invalid'},'integer window'),
+            ({'window_tokens':65536},'explicit input'),
+            ({'input_tokens':32768,'window_tokens':32768,'reason':'Unchanged'},'increase'),
+            ({'input_tokens':32768,'window_tokens':12345,'reason':'Smaller'},'increase')]:
+            with self.subTest(kwargs=kwargs),self.assertRaisesRegex(ValueError,match):
+                create(self.root,self.run,self.out,**kwargs)
+            self.assertFalse(self.out.exists())
+        for updates in [{'passed':True},{'limit':8192},{'admission_tokens':True},
+                        {'admission_tokens':12000}]:
+            self.admission_failure(**updates)
+            with self.assertRaisesRegex(ValueError,'failed admission evidence'):
+                create(self.root,self.run,self.out,input_tokens=32768,window_tokens=65536,reason='Bound measurement required')
+        (self.base/'session/request-budget-result.json').unlink()
+        with self.assertRaisesRegex(ValueError,'failed admission evidence'):
+            create(self.root,self.run,self.out,input_tokens=32768,window_tokens=65536,reason='Missing evidence')

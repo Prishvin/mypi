@@ -10,20 +10,22 @@ from runner_resume import scope_changes
 import tasks
 
 
-def create(root,run_folder,output,timeout=2700,*,input_tokens=None,reason=None):
+def create(root,run_folder,output,timeout=2700,*,input_tokens=None,window_tokens=None,reason=None):
     """Preserve all contracts and baselines while authorizing a longer operational retry."""
     root,run_folder,output=root.resolve(),run_folder.resolve(),output.resolve()
     state=read(run_folder/'state.json')
     if state.get('status')!='needs_replan':raise ValueError('Retry requires a stopped failure checkpoint')
-    if state.get('reason') not in {'timeout','execution_failed','acceptance_failed','no_progress','compaction_failed'}:
+    if state.get('reason') not in {'timeout','execution_failed','acceptance_failed','no_progress','compaction_failed','context_budget_exceeded'}:
         raise ValueError('This failure needs architectural replanning, not an operational retry')
+    if window_tokens is not None and (type(window_tokens) is not int or input_tokens is None):
+        raise ValueError('A window override requires an integer window and an explicit input override')
     if input_tokens is not None:
         if type(input_tokens) is not int or input_tokens<512:
             raise ValueError('Input override must be an integer of at least 512 tokens')
         if not isinstance(reason,str) or not reason.strip() or len(reason)>1000:
             raise ValueError('An input override requires a bounded explicit operator reason')
-    if state.get('reason')=='no_progress' and input_tokens is None:
-        raise ValueError('No-progress retry requires explicit increased input headroom and an operator reason')
+    if state.get('reason') in {'no_progress','context_budget_exceeded'} and input_tokens is None:
+        raise ValueError('Context/progress retry requires explicit increased input headroom and an operator reason')
     if Path(state.get('project','')).resolve()!=root:raise ValueError('Run belongs to another project')
     if output.exists() or output.is_relative_to(root):raise ValueError('Use a new plan path outside the project')
     original=read(Path(state['plan']));validate(root,original)
@@ -35,6 +37,17 @@ def create(root,run_folder,output,timeout=2700,*,input_tokens=None,reason=None):
     session=Path(attempt['session']);frozen=read(session/'task-state.json')
     if Path(frozen['before']['root']).resolve()!=root:raise ValueError('Failed task belongs to another project')
     selected=next(t for t in original['tasks'] if t['id']==failed)
+    if window_tokens is not None and window_tokens <= selected['context'].get('window_tokens',98304):
+        raise ValueError('An operational window override must increase the selected client window')
+    if state.get('reason')=='context_budget_exceeded':
+        admission=read(session/'request-budget-result.json')
+        if (admission.get('passed') is not False or
+                admission.get('limit')!=selected['context']['max_input_tokens'] or
+                type(admission.get('admission_tokens')) is not int or
+                admission['admission_tokens']<=admission['limit']):
+            raise ValueError('Missing failed admission evidence for the bound task input cap')
+        if input_tokens<=selected['context']['max_input_tokens'] or input_tokens<admission['admission_tokens']:
+            raise ValueError('Context retry input must increase and cover the measured admission requirement')
     if state.get('reason')=='no_progress':
         stop=read(session/'progress-stop.json')
         if (stop.get('reason')!='no_progress' or stop.get('identity')!={'project':str(root),'task':failed}):
@@ -56,6 +69,7 @@ def create(root,run_folder,output,timeout=2700,*,input_tokens=None,reason=None):
             task['execution']['timeout_seconds']=timeout
             task['baseline']=str(session/'task-state.json')
             if input_tokens is not None:task['context']['max_input_tokens']=input_tokens
+            if window_tokens is not None:task['context']['window_tokens']=window_tokens
     plan={**copy.deepcopy(original),'tasks':pending,
           'replan_lineage':{'parent_plan':state['plan'],'reason':'Explicit operational retry: '+state['reason'],
                             'completed':accepted,'snapshot':current},
@@ -65,10 +79,16 @@ def create(root,run_folder,output,timeout=2700,*,input_tokens=None,reason=None):
     if input_tokens is not None:
         plan['operational_retry'].update(input_tokens_before=selected['context']['max_input_tokens'],
             input_tokens_after=input_tokens,operator_reason=reason.strip(),
-            output_thinking_window_unchanged=True)
+            output_thinking_window_unchanged=window_tokens is None,
+            output_thinking_unchanged=True)
+    if window_tokens is not None:
+        plan['operational_retry'].update(window_tokens_before=selected['context'].get('window_tokens',98304),
+            window_tokens_after=window_tokens)
+    if state.get('reason')=='context_budget_exceeded':
+        plan['operational_retry']['failed_admission']=admission
     if scan(root,['.'])['snapshot']!=current:raise ValueError('Source changed while preparing retry')
     output.parent.mkdir(parents=True,exist_ok=True)
     with output.open('x') as stream:json.dump(plan,stream,indent=2)
     return {'plan':str(output),'tasks':len(pending),'timeout_seconds':timeout,
             'note':'Behavior, files, criteria, test argv and original baselines preserved; original plan untouched. '
-                'Only the failed task deadline and any explicitly recorded input override change.'}
+                'Only the failed task deadline and any explicitly recorded input/window overrides change.'}

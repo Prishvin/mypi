@@ -339,9 +339,13 @@ Use **resume** for an interruption. **Replan** changes the repair strategy while
 If measured compaction pressure stopped a task before useful edits, an operator
 can also give that failed task more input headroom with `--input-tokens` and an
 explicit `--reason`. A `no_progress` retry requires this increase and bound stop
-evidence. Output, thinking, client window and all other pending task controls stay
-unchanged; the new input + output + reserve must fit the existing window. The
-runner records both input caps and the reason, creates a fresh plan and performs
+evidence. Output, thinking and all other pending task controls stay unchanged.
+The client window also stays fixed unless explicitly increased with
+`--window-tokens` alongside the input override; input + output + reserve must
+fit that window. A `context_budget_exceeded` retry requires the bound failed
+admission receipt, and the new input cap must cover its measured requirement.
+Missing or inconsistent measurements block the retry. The runner records the
+input/window changes and reason, creates a fresh plan and performs
 no inference until execution is requested. This does not disable progress guards
 or erase earlier failed attempts.
 
